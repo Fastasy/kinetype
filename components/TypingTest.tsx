@@ -364,7 +364,7 @@ export default function TypingTest() {
 
   const share = async () => {
     if (!result) return;
-    const text = `I typed ${result.wpm} WPM (${result.accuracy}% accuracy) on Kinetype! Test your speed: https://kinetype.com`;
+    const text = `I typed ${result.wpm} WPM (${result.accuracy}% accuracy) on Kinetype! Test your speed: https://kinetype.app`;
     try {
       if (navigator.share) {
         await navigator.share({ title: "Kinetype Result", text });

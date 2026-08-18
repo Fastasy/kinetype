@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     title: "Kinetype | Free Typing Test, WPM Speed and Accuracy",
     description:
       "Take a free typing test and get your WPM and accuracy in under a minute. English, punctuation and code modes.",
-    url: "https://kinetype.com/",
+    url: "https://kinetype.app/",
     images: [
       {
         url: "/og.png",
@@ -67,7 +67,7 @@ const jsonLd = {
     {
       "@type": "WebApplication",
       name: "Kinetype",
-      url: "https://kinetype.com/",
+      url: "https://kinetype.app/",
       applicationCategory: "UtilitiesApplication",
       operatingSystem: "Any",
       description:

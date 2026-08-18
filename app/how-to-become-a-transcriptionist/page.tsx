@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     title: "How to Become a Transcriptionist from Home",
     description:
       "The step by step path to transcription work: typing speed, accuracy, training and applications.",
-    url: "https://kinetype.com/how-to-become-a-transcriptionist",
+    url: "https://kinetype.app/how-to-become-a-transcriptionist",
     images: [
       {
         url: "/og.png",
@@ -69,7 +69,7 @@ const jsonLd = {
         "The step by step path to transcription work: typing speed, accuracy, training and applications.",
       author: { "@type": "Organization", name: "Kinetype" },
       publisher: { "@type": "Organization", name: "Kinetype" },
-      mainEntityOfPage: "https://kinetype.com/how-to-become-a-transcriptionist",
+      mainEntityOfPage: "https://kinetype.app/how-to-become-a-transcriptionist",
       datePublished: "2026-08-18",
     },
     {

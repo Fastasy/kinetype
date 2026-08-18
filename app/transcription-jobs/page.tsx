@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     title: "Transcription Jobs: Where to Find Them in 2026",
     description:
       "What transcription jobs pay, what you need, and which companies hire from home in 2026.",
-    url: "https://kinetype.com/transcription-jobs",
+    url: "https://kinetype.app/transcription-jobs",
     images: [
       {
         url: "/og.png",
@@ -70,7 +70,7 @@ const jsonLd = {
         "What transcription jobs pay, what you need, and which companies hire from home in 2026.",
       author: { "@type": "Organization", name: "Kinetype" },
       publisher: { "@type": "Organization", name: "Kinetype" },
-      mainEntityOfPage: "https://kinetype.com/transcription-jobs",
+      mainEntityOfPage: "https://kinetype.app/transcription-jobs",
       datePublished: "2026-08-18",
     },
     {

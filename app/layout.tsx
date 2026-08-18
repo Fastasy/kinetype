@@ -17,7 +17,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 const SITE_NAME = "Kinetype";
-const SITE_URL = "https://kinetype.com";
+const SITE_URL = "https://kinetype.app";
 const SITE_DESCRIPTION =
   "Free typing speed test. Measure your WPM and accuracy in English, punctuation or code, then get a free certificate of your result.";
 

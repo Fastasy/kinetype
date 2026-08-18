@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     title: "Rev Typing Test: WPM Requirements, Exam Tips & Practice",
     description:
       "Pass the Rev transcription typing test: required WPM speed, accuracy thresholds, and free test practice.",
-    url: "https://kinetype.com/rev-typing-test",
+    url: "https://kinetype.app/rev-typing-test",
     images: [
       {
         url: "/og.png",
@@ -54,7 +54,7 @@ const jsonLd = {
         "Comprehensive guide to passing the Rev freelancer transcriptionist test in 2026.",
       author: { "@type": "Organization", name: "Kinetype" },
       publisher: { "@type": "Organization", name: "Kinetype" },
-      mainEntityOfPage: "https://kinetype.com/rev-typing-test",
+      mainEntityOfPage: "https://kinetype.app/rev-typing-test",
       datePublished: "2026-08-18",
     },
     {

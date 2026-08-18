@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     title: "TranscribeMe Exam & Typing Test: Passing Guide",
     description:
       "Pass the TranscribeMe entrance exam: typing speed requirements, accuracy standards, and free typing practice.",
-    url: "https://kinetype.com/transcribeme-typing-test",
+    url: "https://kinetype.app/transcribeme-typing-test",
     images: [
       {
         url: "/og.png",
@@ -54,7 +54,7 @@ const jsonLd = {
         "Guide to passing the TranscribeMe transcriptionist exam in 2026.",
       author: { "@type": "Organization", name: "Kinetype" },
       publisher: { "@type": "Organization", name: "Kinetype" },
-      mainEntityOfPage: "https://kinetype.com/transcribeme-typing-test",
+      mainEntityOfPage: "https://kinetype.app/transcribeme-typing-test",
       datePublished: "2026-08-18",
     },
     {

@@ -6,6 +6,6 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: "*",
       allow: "/",
     },
-    sitemap: "https://kinetype.com/sitemap.xml",
+    sitemap: "https://kinetype.app/sitemap.xml",
   };
 }

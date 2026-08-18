@@ -4,31 +4,31 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
   return [
     {
-      url: "https://kinetype.com/",
+      url: "https://kinetype.app/",
       lastModified: now,
       changeFrequency: "weekly",
       priority: 1.0,
     },
     {
-      url: "https://kinetype.com/rev-typing-test",
+      url: "https://kinetype.app/rev-typing-test",
       lastModified: now,
       changeFrequency: "weekly",
       priority: 0.9,
     },
     {
-      url: "https://kinetype.com/transcribeme-typing-test",
+      url: "https://kinetype.app/transcribeme-typing-test",
       lastModified: now,
       changeFrequency: "weekly",
       priority: 0.9,
     },
     {
-      url: "https://kinetype.com/transcription-jobs",
+      url: "https://kinetype.app/transcription-jobs",
       lastModified: now,
       changeFrequency: "monthly",
       priority: 0.8,
     },
     {
-      url: "https://kinetype.com/how-to-become-a-transcriptionist",
+      url: "https://kinetype.app/how-to-become-a-transcriptionist",
       lastModified: now,
       changeFrequency: "monthly",
       priority: 0.8,

@@ -50,7 +50,7 @@ export default function Certificate({ wpm, accuracy, onClose }: CertificateProps
         <div className="mt-8 flex items-end justify-between">
           <div className="text-xs text-zinc-400">Verified result</div>
           <div className="text-right font-mono text-xs text-zinc-400">
-            kinetype.com
+            kinetype.app
             <div className="mt-1 border-t border-zinc-300 pt-1">Free typing speed test</div>
           </div>
         </div>
