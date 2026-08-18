@@ -14,6 +14,21 @@ export const metadata: Metadata = {
     description:
       "Take a free typing test and get your WPM and accuracy in under a minute. English, Afrikaans and code modes.",
     url: "https://kinetype.com/",
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: "Kinetype free typing speed test",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Kinetype | Free Typing Test, WPM Speed and Accuracy",
+    description:
+      "Take a free typing test and get your WPM and accuracy in under a minute. English, Afrikaans and code modes.",
+    images: ["/og.png"],
   },
 };
 

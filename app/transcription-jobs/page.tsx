@@ -14,6 +14,21 @@ export const metadata: Metadata = {
     description:
       "What transcription jobs pay, what you need, and which companies hire from home in 2026.",
     url: "https://kinetype.com/transcription-jobs",
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: "Kinetype free typing speed test",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Transcription Jobs: Where to Find Them in 2026",
+    description:
+      "What transcription jobs pay, what you need, and which companies hire from home in 2026.",
+    images: ["/og.png"],
   },
 };
 

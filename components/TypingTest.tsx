@@ -25,9 +25,21 @@ const LANGUAGE_OPTIONS: { id: Language; label: string }[] = [
   { id: "code", label: "Code" },
 ];
 
-function pickWords(language: Language, count: number): string[] {
+// Deterministic PRNG so the initial word list is identical on server and
+// client (avoids React hydration mismatch from Math.random).
+function mulberry32(seed: number) {
+  return () => {
+    seed |= 0;
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function pickWords(language: Language, count: number, rng: () => number = Math.random): string[] {
   if (language === "code") {
-    const snippet = CODE_SNIPPETS[Math.floor(Math.random() * CODE_SNIPPETS.length)];
+    const snippet = CODE_SNIPPETS[Math.floor(rng() * CODE_SNIPPETS.length)];
     const tokens = snippet.split(/\s+/).filter((t) => t.length > 0);
     const out: string[] = [];
     while (out.length < count) {
@@ -39,7 +51,7 @@ function pickWords(language: Language, count: number): string[] {
     return out;
   }
   const source = language === "afrikaans" ? AFRIKAANS_WORDS : ENGLISH_WORDS;
-  return Array.from({ length: count }, () => source[Math.floor(Math.random() * source.length)]);
+  return Array.from({ length: count }, () => source[Math.floor(rng() * source.length)]);
 }
 
 function wpm(correctChars: number, elapsedSec: number): number {
@@ -68,7 +80,9 @@ export default function TypingTest() {
   const [mode, setMode] = useState<Mode>("time");
   const [timeLimit, setTimeLimit] = useState<number>(30);
   const [wordCount, setWordCount] = useState<number>(25);
-  const [words, setWords] = useState<string[]>(() => pickWords("english", 400));
+  const [words, setWords] = useState<string[]>(() =>
+    pickWords("english", 400, mulberry32(20260818)),
+  );
   const [wordIndex, setWordIndex] = useState(0);
   const [typed, setTyped] = useState("");
   const [status, setStatus] = useState<Status>("idle");
@@ -104,8 +118,8 @@ export default function TypingTest() {
     if (pending.length > 0) {
       const scored = scoreWord(pending, target);
       correctCharsRef.current += scored.correct;
-      totalCharsRef.current += pending.length;
       errorsRef.current += scored.errors;
+      // totalCharsRef already counted these keystrokes via input deltas
     }
 
     const elapsedSec = Math.max((Date.now() - startedAtRef.current) / 1000, 0.1);
@@ -124,9 +138,8 @@ export default function TypingTest() {
     setStatus("finished");
   }, [words]);
 
-  const restart = useCallback(() => {
-    const count = mode === "time" ? 400 : wordCount;
-    setWords(pickWords(language, count));
+  const resetTest = useCallback((lang: Language, m: Mode, wc: number) => {
+    setWords(pickWords(lang, m === "time" ? 400 : wc));
     setWordIndex(0);
     wordIndexRef.current = 0;
     setTyped("");
@@ -138,13 +151,39 @@ export default function TypingTest() {
     setElapsed(0);
     resetRefs();
     inputRef.current?.focus();
-  }, [language, mode, wordCount, resetRefs]);
+  }, [resetRefs]);
 
-  // regenerate words + reset whenever config changes
-  useEffect(() => {
-    restart();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [language, mode, timeLimit, wordCount]);
+  const restart = useCallback(() => {
+    resetTest(language, mode, wordCount);
+  }, [language, mode, wordCount, resetTest]);
+
+  const changeLanguage = (lang: Language) => {
+    if (lang !== language) {
+      setLanguage(lang);
+      resetTest(lang, mode, wordCount);
+    }
+  };
+
+  const changeMode = (m: Mode) => {
+    if (m !== mode) {
+      setMode(m);
+      resetTest(language, m, wordCount);
+    }
+  };
+
+  const changeTimeLimit = (tl: number) => {
+    if (tl !== timeLimit) {
+      setTimeLimit(tl);
+      resetTest(language, mode, wordCount);
+    }
+  };
+
+  const changeWordCount = (wc: number) => {
+    if (wc !== wordCount) {
+      setWordCount(wc);
+      resetTest(language, mode, wc);
+    }
+  };
 
   // time mode countdown
   useEffect(() => {
@@ -184,8 +223,16 @@ export default function TypingTest() {
     if (shouldCommit) {
       const scored = scoreWord(typedPart, currentWord);
       correctCharsRef.current += scored.correct;
-      totalCharsRef.current += typedPart.length;
       errorsRef.current += scored.errors;
+      // the separator space: correct when the word was right, an error otherwise.
+      // Only when a space was actually typed (the last word can commit without one).
+      if (lastCharIsSpace) {
+        if (typedPart === currentWord) {
+          correctCharsRef.current += 1;
+        } else {
+          errorsRef.current += 1;
+        }
+      }
 
       const wrong = typedPart !== currentWord;
       setWrongFlags((prevFlags) => {
@@ -211,7 +258,6 @@ export default function TypingTest() {
     setTyped(value);
   };
 
-  const currentWord = words[wordIndex] ?? "";
   const timeLeft = mode === "time" ? Math.max(0, timeLimit - elapsed) : null;
 
   const share = async () => {
@@ -275,7 +321,7 @@ export default function TypingTest() {
             <button
               key={opt.id}
               type="button"
-              onClick={() => setLanguage(opt.id)}
+              onClick={() => changeLanguage(opt.id)}
               className={`rounded-lg px-3 py-1.5 font-medium transition ${
                 language === opt.id ? "bg-emerald-500 text-zinc-950" : "text-zinc-400 hover:text-zinc-200"
               }`}
@@ -287,7 +333,7 @@ export default function TypingTest() {
         <div className="flex items-center gap-1 rounded-xl bg-zinc-900 p-1">
           <button
             type="button"
-            onClick={() => setMode("time")}
+            onClick={() => changeMode("time")}
             className={`rounded-lg px-3 py-1.5 font-medium transition ${
               mode === "time" ? "bg-emerald-500 text-zinc-950" : "text-zinc-400 hover:text-zinc-200"
             }`}
@@ -296,7 +342,7 @@ export default function TypingTest() {
           </button>
           <button
             type="button"
-            onClick={() => setMode("words")}
+            onClick={() => changeMode("words")}
             className={`rounded-lg px-3 py-1.5 font-medium transition ${
               mode === "words" ? "bg-emerald-500 text-zinc-950" : "text-zinc-400 hover:text-zinc-200"
             }`}
@@ -309,7 +355,7 @@ export default function TypingTest() {
             <button
               key={opt}
               type="button"
-              onClick={() => (mode === "time" ? setTimeLimit(opt) : setWordCount(opt))}
+              onClick={() => (mode === "time" ? changeTimeLimit(opt) : changeWordCount(opt))}
               className={`rounded-lg px-3 py-1.5 font-medium transition ${
                 (mode === "time" ? timeLimit : wordCount) === opt
                   ? "bg-emerald-500 text-zinc-950"

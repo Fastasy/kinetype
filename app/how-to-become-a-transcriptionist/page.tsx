@@ -14,6 +14,21 @@ export const metadata: Metadata = {
     description:
       "The step by step path to transcription work: typing speed, accuracy, training and applications.",
     url: "https://kinetype.com/how-to-become-a-transcriptionist",
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: "Kinetype free typing speed test",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "How to Become a Transcriptionist from Home",
+    description:
+      "The step by step path to transcription work: typing speed, accuracy, training and applications.",
+    images: ["/og.png"],
   },
 };
 
