@@ -56,21 +56,26 @@ export default function Certificate({ wpm, accuracy, onClose }: CertificateProps
         </div>
       </div>
 
-      <div className="fixed bottom-6 left-1/2 flex -translate-x-1/2 gap-3 print:hidden">
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="rounded-xl bg-emerald-500 px-6 py-3 font-semibold text-zinc-950 transition hover:bg-emerald-400"
-        >
-          Print / Save PDF
-        </button>
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-xl border border-zinc-600 px-6 py-3 font-medium text-zinc-200 transition hover:border-zinc-400"
-        >
-          Close
-        </button>
+      <div className="fixed bottom-6 left-1/2 flex -translate-x-1/2 flex-col items-center gap-3 print:hidden">
+        <div className="text-xs text-zinc-300 bg-zinc-900/90 px-4 py-1.5 rounded-full border border-zinc-700 shadow">
+          Ready to get paid? Use your {wpm} WPM score to apply to <strong className="text-emerald-400">Rev</strong> & <strong className="text-emerald-400">TranscribeMe</strong>
+        </div>
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="rounded-xl bg-emerald-500 px-6 py-3 font-semibold text-zinc-950 transition hover:bg-emerald-400"
+          >
+            Print / Save PDF
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl border border-zinc-600 px-6 py-3 font-medium text-zinc-200 transition hover:border-zinc-400"
+          >
+            Close
+          </button>
+        </div>
       </div>
     </div>
   );

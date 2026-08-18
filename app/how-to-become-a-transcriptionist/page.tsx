@@ -152,7 +152,7 @@ export default function HowToBecomeTranscriptionistPage() {
             rel="noopener noreferrer sponsored"
             className="inline-block rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
           >
-            Apply to Rev
+            Apply to work at Rev
           </a>
           <a
             href={AFFILIATE.gotranscript}

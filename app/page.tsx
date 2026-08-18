@@ -1,18 +1,20 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import TypingTest from "@/components/TypingTest";
+import EarningsCalculator from "@/components/EarningsCalculator";
+import { AFFILIATE } from "@/lib/affiliate";
 
 export const metadata: Metadata = {
   title: "Kinetype | Free Typing Test, WPM Speed and Accuracy",
   description:
-    "Take a free typing test and get your WPM and accuracy in under a minute. English, Afrikaans and code modes. Share your result or print a free certificate.",
+    "Take a free typing test and get your WPM and accuracy in under a minute. English, punctuation and code modes. Share your result or print a free certificate.",
   alternates: {
     canonical: "/",
   },
   openGraph: {
     title: "Kinetype | Free Typing Test, WPM Speed and Accuracy",
     description:
-      "Take a free typing test and get your WPM and accuracy in under a minute. English, Afrikaans and code modes.",
+      "Take a free typing test and get your WPM and accuracy in under a minute. English, punctuation and code modes.",
     url: "https://kinetype.com/",
     images: [
       {
@@ -27,7 +29,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Kinetype | Free Typing Test, WPM Speed and Accuracy",
     description:
-      "Take a free typing test and get your WPM and accuracy in under a minute. English, Afrikaans and code modes.",
+      "Take a free typing test and get your WPM and accuracy in under a minute. English, punctuation and code modes.",
     images: ["/og.png"],
   },
 };
@@ -43,15 +45,11 @@ const FAQS = [
   },
   {
     q: "Is Kinetype free?",
-    a: "Yes. The typing test, the Afrikaans and code modes, and the printable certificate are all free. There is no account, no signup and no paywall.",
+    a: "Yes. The typing test, punctuation and code modes, and the printable certificate are all free. There is no account, no signup and no paywall.",
   },
   {
     q: "How is WPM calculated?",
     a: "WPM is calculated as correct characters typed, divided by 5 (the standard length of a word), divided by the minutes elapsed. Accuracy is correct characters divided by total characters typed. Backspaces do not count against your accuracy.",
-  },
-  {
-    q: "Can I take an Afrikaans typing test?",
-    a: "Yes. Switch the language to Afrikaans and the test uses common Afrikaans words, including characters like ê and ë. It works the same way as the English test.",
   },
   {
     q: "Can I get a typing certificate?",
@@ -73,7 +71,7 @@ const jsonLd = {
       applicationCategory: "UtilitiesApplication",
       operatingSystem: "Any",
       description:
-        "Free typing speed test with WPM and accuracy scores in English, Afrikaans and code modes.",
+        "Free typing speed test with WPM and accuracy scores in English, punctuation and code modes.",
       offers: {
         "@type": "Offer",
         price: "0",
@@ -102,24 +100,42 @@ export default function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      {/* Hero */}
-      <section className="pt-12 text-center sm:pt-16">
-        <h1 className="mx-auto max-w-2xl text-3xl font-bold tracking-tight text-zinc-50 sm:text-5xl">
-          The free typing test that gives you a real <span className="text-emerald-400">WPM score</span>
-        </h1>
-        <p className="mx-auto mt-4 max-w-xl text-zinc-400 sm:text-lg">
-          Measure your typing speed and accuracy in under a minute. No signup, no install,
-          no paywall. English, Afrikaans and code modes.
-        </p>
-      </section>
+      {/* First Section / Viewport: Clean & Focused Test */}
+      <div className="flex min-h-[calc(100vh-6rem)] flex-col justify-between pt-4 pb-8 sm:pt-8">
+        <div>
+          {/* Hero */}
+          <section className="text-center">
+            <h1 className="mx-auto max-w-2xl text-3xl font-bold tracking-tight text-zinc-50 sm:text-5xl">
+              The free typing test that gives you a real <span className="text-emerald-400">WPM score</span>
+            </h1>
+            <p className="mx-auto mt-4 max-w-xl text-zinc-400 sm:text-lg">
+              Measure your typing speed and accuracy in under a minute. No signup, no install,
+              no paywall. English, punctuation and code modes.
+            </p>
+          </section>
 
-      {/* Test */}
-      <section className="mt-8">
-        <TypingTest />
-      </section>
+          {/* Test */}
+          <section className="mt-8">
+            <TypingTest />
+          </section>
+        </div>
+
+        {/* Scroll down indicator at the bottom of the viewport */}
+        <div className="pt-8">
+          <a
+            href="#score-means"
+            className="flex flex-col items-center justify-center text-zinc-500 hover:text-zinc-300 transition cursor-pointer"
+          >
+            <span className="text-xs uppercase tracking-widest font-medium">Scroll down for WPM ranges</span>
+            <svg className="w-4 h-4 mt-1 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+            </svg>
+          </a>
+        </div>
+      </div>
 
       {/* What your score means */}
-      <section className="mt-16">
+      <section id="score-means" className="pt-20 border-t border-zinc-800/60">
         <h2 className="text-2xl font-bold text-zinc-50">What your score means</h2>
         <div className="mt-4 overflow-x-auto rounded-2xl border border-zinc-800">
           <table className="w-full text-left text-sm">
@@ -160,6 +176,11 @@ export default function HomePage() {
         </p>
       </section>
 
+      {/* Interactive Earnings Calculator */}
+      <section className="mt-16">
+        <EarningsCalculator initialWpm={60} />
+      </section>
+
       {/* Why it matters + funnel */}
       <section className="mt-16 grid gap-6 sm:grid-cols-2">
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-6">
@@ -173,21 +194,20 @@ export default function HomePage() {
             href="/transcription-jobs"
             className="mt-4 inline-block font-semibold text-emerald-400 transition hover:text-emerald-300"
           >
-            See transcription jobs that pay
+            See transcription jobs that pay &rarr;
           </Link>
         </div>
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-6">
           <h2 className="text-xl font-bold text-zinc-50">Practice daily, gain fast</h2>
           <p className="mt-3 text-zinc-400">
             A few minutes of focused typing practice each day beats an hour once a week.
-            Use the code mode to practice programming syntax or the Afrikaans mode if you
-            type in Afrikaans at work.
+            Use the code mode to practice programming syntax or punctuation mode to master sentences.
           </p>
           <Link
             href="/how-to-become-a-transcriptionist"
             className="mt-4 inline-block font-semibold text-emerald-400 transition hover:text-emerald-300"
           >
-            How to become a transcriptionist
+            How to become a transcriptionist &rarr;
           </Link>
         </div>
       </section>

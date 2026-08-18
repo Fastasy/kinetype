@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import EarningsCalculator from "@/components/EarningsCalculator";
 import { AFFILIATE, AFFILIATE_DISCLOSURE } from "@/lib/affiliate";
 
 export const metadata: Metadata = {
@@ -134,7 +135,12 @@ export default function TranscriptionJobsPage() {
           </li>
         </ul>
 
-        <h2 className="mt-10 text-2xl font-bold text-zinc-50">Where to apply</h2>
+        {/* Interactive Earnings Calculator */}
+        <div className="mt-10">
+          <EarningsCalculator initialWpm={55} />
+        </div>
+
+        <h2 className="mt-12 text-2xl font-bold text-zinc-50">Where to apply</h2>
         <p className="mt-3 text-zinc-400">
           These platforms hire beginners, pay via PayPal or bank transfer, and publish
           their own tests and rates. We may earn a commission if you sign up through the
@@ -155,7 +161,7 @@ export default function TranscriptionJobsPage() {
               rel="noopener noreferrer sponsored"
               className="mt-3 inline-block rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
             >
-              Apply to Rev
+              Apply to work at Rev
             </a>
           </div>
 
@@ -173,6 +179,32 @@ export default function TranscriptionJobsPage() {
             >
               Apply to GoTranscript
             </a>
+          </div>
+
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5">
+            <h3 className="text-lg font-bold text-zinc-50">AI transcription tools</h3>
+            <p className="mt-1 text-sm text-zinc-400">
+              If you produce podcasts, meetings or videos, these tools draft the transcript
+              for you and free you up for the jobs that need a human ear. Affiliate links.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <a
+                href={AFFILIATE.sonix}
+                target="_blank"
+                rel="noopener noreferrer sponsored"
+                className="rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-emerald-500 hover:text-emerald-400"
+              >
+                Sonix
+              </a>
+              <a
+                href={AFFILIATE.descript}
+                target="_blank"
+                rel="noopener noreferrer sponsored"
+                className="rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-emerald-500 hover:text-emerald-400"
+              >
+                Descript
+              </a>
+            </div>
           </div>
 
           <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5">

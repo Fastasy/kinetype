@@ -6,8 +6,20 @@ export default function sitemap(): MetadataRoute.Sitemap {
     {
       url: "https://kinetype.com/",
       lastModified: now,
-      changeFrequency: "monthly",
-      priority: 1,
+      changeFrequency: "weekly",
+      priority: 1.0,
+    },
+    {
+      url: "https://kinetype.com/rev-typing-test",
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.9,
+    },
+    {
+      url: "https://kinetype.com/transcribeme-typing-test",
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.9,
     },
     {
       url: "https://kinetype.com/transcription-jobs",

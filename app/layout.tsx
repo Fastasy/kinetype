@@ -19,7 +19,7 @@ const jetbrainsMono = JetBrains_Mono({
 const SITE_NAME = "Kinetype";
 const SITE_URL = "https://kinetype.com";
 const SITE_DESCRIPTION =
-  "Free typing speed test. Measure your WPM and accuracy in English, Afrikaans or code, then get a free certificate of your result.";
+  "Free typing speed test. Measure your WPM and accuracy in English, punctuation or code, then get a free certificate of your result.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     "WPM test",
     "words per minute",
     "typing accuracy",
-    "Afrikaans typing test",
+    "punctuation typing test",
     "code typing test",
     "free typing test",
   ],
@@ -70,8 +70,10 @@ export const metadata: Metadata = {
 
 const NAV_LINKS = [
   { href: "/", label: "Typing test" },
+  { href: "/rev-typing-test", label: "Rev test" },
+  { href: "/transcribeme-typing-test", label: "TranscribeMe test" },
   { href: "/transcription-jobs", label: "Transcription jobs" },
-  { href: "/how-to-become-a-transcriptionist", label: "Become a transcriptionist" },
+  { href: "/how-to-become-a-transcriptionist", label: "Career guide" },
 ];
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
