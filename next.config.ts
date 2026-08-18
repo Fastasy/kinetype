@@ -1,7 +1,16 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  async redirects() {
+    return [
+      // VA guide consolidated onto the Philippines-specific URL (2026-08-18)
+      {
+        source: "/become-a-virtual-assistant",
+        destination: "/how-to-become-a-virtual-assistant-philippines",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

@@ -384,7 +384,7 @@ export default function TranscriptionJobsPhilippinesPage() {
         <h2 className="mt-10 text-xl font-bold text-zinc-50">Related guides</h2>
         <ul className="mt-3 space-y-2 text-zinc-400">
           <li>
-            <Link href="/become-a-virtual-assistant" className="font-medium text-emerald-400 transition hover:text-emerald-300">
+            <Link href="/how-to-become-a-virtual-assistant-philippines" className="font-medium text-emerald-400 transition hover:text-emerald-300">
               How to become a virtual assistant in the Philippines
             </Link>
           </li>
