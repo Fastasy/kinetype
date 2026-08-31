@@ -579,7 +579,7 @@ export default function TypingTest() {
       </div>
 
       {/* Live Timer / Counter display */}
-      <div className="mb-4 flex h-10 items-center justify-between px-2 font-mono text-3xl text-zinc-600">
+      <div className="mb-4 flex h-10 items-center justify-between px-2 font-mono text-3xl text-zinc-300">
         <div>
           {status === "running" && mode === "time" && (
             <span className={timeLeft && timeLeft <= 5 ? "text-red-400 animate-pulse" : "text-emerald-400"}>
@@ -592,7 +592,7 @@ export default function TypingTest() {
             </span>
           )}
           {status === "idle" && (
-            <span className="text-zinc-600">
+            <span className="text-zinc-400">
               {mode === "time" ? `${timeLimit}s` : `${wordCount} words`}
             </span>
           )}
@@ -612,7 +612,7 @@ export default function TypingTest() {
         <input
           ref={inputRef}
           onKeyDown={handleKeyDown}
-          autoFocus
+          autoFocus={false}
           autoCapitalize="off"
           autoCorrect="off"
           autoComplete="off"
@@ -629,7 +629,6 @@ export default function TypingTest() {
             maskImage: "linear-gradient(to bottom, transparent 0%, black 18%, black 82%, transparent 100%)",
             WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 18%, black 82%, transparent 100%)",
           }}
-          aria-live="polite"
         >
           <div
             ref={wordsWrapperRef}
@@ -698,7 +697,7 @@ export default function TypingTest() {
                   <div className="flex items-center gap-2">
                     <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-400 animate-ping" />
                     <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
-                      Earning Potential Unlocked
+                      Earning Potential
                     </span>
                   </div>
                   <div className="font-mono text-sm text-emerald-400 font-bold bg-emerald-950/60 border border-emerald-500/30 px-3 py-1 rounded-lg">
@@ -719,7 +718,7 @@ export default function TypingTest() {
                     rel="noopener noreferrer sponsored"
                     className="inline-block rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
                   >
-                    <span>Apply to GoTranscript ($15–$30/hr)</span>
+                    <span>Apply to GoTranscript</span>
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                     </svg>
@@ -740,13 +739,15 @@ export default function TypingTest() {
             ) : (
               <div>
                 <div className="text-xs font-bold uppercase tracking-wider text-amber-400">
-                  Target: 45+ WPM for $20+/hr
+                  Target: 45+ WPM for the top of the $2-$6/hr band
                 </div>
                 <h3 className="mt-1 text-base font-bold text-zinc-100">
-                  Practice daily to qualify for GoTranscript & Rev ($15–$25/hr)
+                  Practice daily to qualify for GoTranscript &amp; Rev
                 </h3>
                 <p className="mt-1 text-sm text-zinc-400">
-                  At 45+ WPM you can easily make $15–$25/hr part-time from home. Just 5 minutes of practice a day on Kinetype will get you there!
+                  General transcription pays about $2 to $6 an hour effective. Faster,
+                  more accurate typists land toward the top of that range. Just 5 minutes
+                  of practice a day on Kinetype will get you there.
                 </p>
                 <div className="mt-3 flex items-center gap-3">
                   <a
@@ -755,7 +756,7 @@ export default function TypingTest() {
                     rel="noopener noreferrer sponsored"
                     className="inline-block rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
                   >
-                    View GoTranscript Job Requirements &rarr;
+                    Apply to GoTranscript &rarr;
                   </a>
                 </div>
               </div>

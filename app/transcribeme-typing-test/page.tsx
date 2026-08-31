@@ -4,7 +4,7 @@ import { AFFILIATE, AFFILIATE_DISCLOSURE } from "@/lib/affiliate";
 import ApplyBox from "@/components/ApplyBox";
 
 export const metadata: Metadata = {
-  title: "TranscribeMe Exam & Typing Test: Passing Guide (2026)",
+  title: "TranscribeMe Typing Test: Passing Guide",
   description:
     "How to pass the TranscribeMe entrance exam and typing test in 2026. Speed benchmarks, accuracy scoring, formatting rules, and free practice test.",
   alternates: {
@@ -14,6 +14,7 @@ export const metadata: Metadata = {
     title: "TranscribeMe Exam & Typing Test: Passing Guide",
     description:
       "Pass the TranscribeMe entrance exam: typing speed requirements, accuracy standards, and free typing practice.",
+    type: "article",
     url: "https://kinetype.app/transcribeme-typing-test",
     images: [
       {
@@ -24,16 +25,23 @@ export const metadata: Metadata = {
       },
     ],
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "TranscribeMe Exam & Typing Test: Passing Guide",
+    description:
+      "Pass the TranscribeMe entrance exam: typing speed requirements, accuracy standards, and free typing practice.",
+    images: ["/og.png"],
+  },
 };
 
 const FAQS = [
   {
     q: "What typing speed do I need for TranscribeMe?",
-    a: "TranscribeMe accepts beginners who type at least 40 to 50 WPM. Accuracy is weighted heavily—your exam submission must meet a 98% accuracy threshold according to their style guidelines.",
+    a: "TranscribeMe accepts beginners who type at least 40 to 50 WPM. Accuracy is weighted heavily: your exam submission must meet a 98% accuracy threshold according to their style guidelines.",
   },
   {
     q: "How does TranscribeMe pay?",
-    a: "TranscribeMe pays between $15 and $22 per audio hour for standard transcription, with higher rates for specialized legal and medical teams ($60–$70/audio hour). Payments are distributed weekly via PayPal.",
+    a: "TranscribeMe pays per audio minute for standard transcription, with published rates around $15 to $22 per audio hour. Specialized teams can pay more. Remember the honest math: real work time runs 2 to 4 times the audio length, so effective earnings usually land between $2 and $6 an hour. Payments are distributed weekly via PayPal.",
   },
   {
     q: "How long are TranscribeMe audio clips?",
@@ -53,10 +61,12 @@ const jsonLd = {
       headline: "TranscribeMe Exam & Typing Test: Passing Guide",
       description:
         "Guide to passing the TranscribeMe transcriptionist exam in 2026.",
-      author: { "@type": "Organization", name: "Kinetype" },
-      publisher: { "@type": "Organization", name: "Kinetype" },
+      keywords: ['transcribeme exam', 'transcribeme typing test', 'entrance exam'],
+      author: { "@type": "Organization", name: "Kinetype", url: "https://kinetype.app/", logo: "https://kinetype.app/og.png" },
+      publisher: { "@type": "Organization", name: "Kinetype", url: "https://kinetype.app/", logo: "https://kinetype.app/og.png" },
       mainEntityOfPage: "https://kinetype.app/transcribeme-typing-test",
       datePublished: "2026-08-18",
+      dateModified: "2026-08-31",
     },
     {
       "@type": "FAQPage",
@@ -82,7 +92,7 @@ export default function TranscribeMeTypingTestPage() {
           Beginner Friendly Platform
         </div>
         <h1 className="mt-3 text-3xl font-bold tracking-tight text-zinc-50 sm:text-4xl">
-          TranscribeMe Exam & Typing Speed Guide (2026)
+          TranscribeMe typing test: passing guide (2026)
         </h1>
         <p className="mt-4 text-lg text-zinc-400 leading-relaxed">
           TranscribeMe is widely considered one of the easiest remote transcription platforms for beginners to join. Learn the speed benchmarks, exam format, and how to pass on your first attempt.
@@ -92,7 +102,7 @@ export default function TranscribeMeTypingTestPage() {
         <div className="mt-8 rounded-2xl border border-emerald-500/40 bg-gradient-to-br from-emerald-950/40 to-zinc-900/80 p-6">
           <h2 className="text-xl font-bold text-zinc-100">Check your typing speed first</h2>
           <p className="mt-2 text-sm text-zinc-300">
-            TranscribeMe looks for clean accuracy and steady speed (40–50+ WPM). Test your WPM on Kinetype before opening your application.
+            TranscribeMe looks for clean accuracy and steady speed (40 to 50+ WPM). Test your WPM on Kinetype before opening your application.
           </p>
           <ApplyBox>
             <Link
@@ -135,8 +145,12 @@ export default function TranscribeMeTypingTestPage() {
               </tr>
               <tr>
                 <td className="px-4 py-3 font-semibold text-zinc-200">Average Rate</td>
-                <td className="px-4 py-3">$15 - $22 / audio hr</td>
-                <td className="px-4 py-3">$15 - $30 / audio hr</td>
+                <td className="px-4 py-3">$15 - $22 / audio hr (published)</td>
+                <td className="px-4 py-3">$18 - $66 / audio hr (published)</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 font-semibold text-zinc-200">Realistic Take-Home</td>
+                <td className="px-4 py-3" colSpan={2}>$2 - $6 / hr effective after real work time (2-4x the audio length)</td>
               </tr>
               <tr>
                 <td className="px-4 py-3 font-semibold text-zinc-200">Payment Schedule</td>
@@ -167,20 +181,42 @@ export default function TranscribeMeTypingTestPage() {
             Sign up, take their introductory style exam, and start earning weekly.
           </p>
           <a
-            href={AFFILIATE.transcribeme}
+            href={AFFILIATE.gotranscript}
             target="_blank"
             rel="noopener noreferrer sponsored"
             className="mt-4 inline-block rounded-xl bg-emerald-500 px-6 py-3 font-bold text-zinc-950 transition hover:bg-emerald-400 text-sm shadow-md"
           >
+            Apply to GoTranscript
+          </a>
+          <a
+            href={AFFILIATE.transcribeme}
+            target="_blank"
+            rel="noopener noreferrer sponsored"
+            className="mt-3 inline-block rounded-xl border border-zinc-700 px-6 py-3 font-semibold text-zinc-200 transition hover:border-emerald-500 hover:text-emerald-400 text-sm"
+          >
             Apply to TranscribeMe Team
           </a>
+          <p className="mt-3 text-xs text-zinc-500">
+            GoTranscript also hires beginners with no speed gate, pays per audio minute, and
+            is a strong second application alongside TranscribeMe.
+          </p>
         </div>
 
-        <p className="mt-8 text-xs text-zinc-600">{AFFILIATE_DISCLOSURE}</p>
+        <p className="mt-8 text-xs text-zinc-400">{AFFILIATE_DISCLOSURE}</p>
       </article>
 
       {/* FAQ */}
       <section className="mt-14">
+
+        <h2 className="mt-10 text-2xl font-bold text-zinc-50">Related guides</h2>
+        <ul className="mt-3 space-y-2 text-sm text-zinc-400">
+            <li>
+              <Link href="/how-to-get-transcription-jobs" className="font-medium text-emerald-400 transition hover:text-emerald-300">
+                how to get transcription jobs online
+              </Link>
+            </li>
+        </ul>
+
         <h2 className="text-2xl font-bold text-zinc-50">Frequently asked questions</h2>
         <div className="mt-4 divide-y divide-zinc-800 rounded-2xl border border-zinc-800">
           {FAQS.map((f) => (

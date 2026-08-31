@@ -3,13 +3,14 @@ import { ARTICLES } from "@/lib/articles";
 import ArticlesDirectory from "@/components/ArticlesDirectory";
 
 export const metadata: Metadata = {
-  title: "Articles: WFH Job Guides, Pay Research & Platform Tests",
+  title: "WFH Job Guides, Pay Research & Platform Tests",
   description:
     "Every Kinetype guide in one place: transcription, captioning and data entry jobs, typing test breakdowns, and honest pay research. Search and filter by topic.",
   alternates: {
     canonical: "/articles",
   },
   openGraph: {
+    type: "article",
     title: "Articles: WFH Job Guides, Pay Research & Platform Tests",
     description:
       "Every Kinetype guide in one place: transcription, captioning and data entry jobs, typing test breakdowns, and honest pay research.",

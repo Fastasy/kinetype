@@ -2,10 +2,17 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { AFFILIATE } from "@/lib/affiliate";
 
 export default function HeaderNav() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const pathname = usePathname();
+
+  const navLinkClass = (active: boolean) =>
+    `rounded-lg px-3 py-2 font-medium transition hover:bg-zinc-900 hover:text-emerald-400 ${
+      active ? "bg-zinc-900 text-emerald-400" : "text-zinc-300"
+    }`;
 
   return (
     <header className="sticky top-0 z-50 border-b border-zinc-800/80 bg-zinc-950/90 backdrop-blur-md">
@@ -27,13 +34,15 @@ export default function HeaderNav() {
         <nav className="hidden items-center gap-1 text-sm md:flex" aria-label="Main navigation">
           <Link
             href="/"
-            className="rounded-lg px-3 py-2 font-medium text-zinc-300 transition hover:bg-zinc-900 hover:text-emerald-400"
+            aria-current={pathname === "/" ? "page" : undefined}
+            className={navLinkClass(pathname === "/")}
           >
             Typing Test
           </Link>
           <Link
             href="/articles"
-            className="rounded-lg px-3 py-2 font-medium text-zinc-300 transition hover:bg-zinc-900 hover:text-emerald-400"
+            aria-current={pathname === "/articles" ? "page" : undefined}
+            className={navLinkClass(pathname === "/articles")}
           >
             Articles
           </Link>

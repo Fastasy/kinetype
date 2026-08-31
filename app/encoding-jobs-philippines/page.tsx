@@ -4,13 +4,14 @@ import { AFFILIATE, AFFILIATE_DISCLOSURE } from "@/lib/affiliate";
 import ApplyBox from "@/components/ApplyBox";
 
 export const metadata: Metadata = {
-  title: "Encoding Jobs in the Philippines: Pay and How to Start",
+  title: "Encoding Jobs Philippines: Pay and How to Start",
   description:
     "What encoding work really is, what encoder jobs pay in the Philippines, where the real jobs are posted, and how to avoid the scams.",
   alternates: {
     canonical: "/encoding-jobs-philippines",
   },
   openGraph: {
+    type: "article",
     title: "Encoding Jobs in the Philippines: Pay and How to Start",
     description:
       "What encoding work really is, what encoder jobs pay in the Philippines, where the real jobs are posted, and how to avoid the scams.",
@@ -68,10 +69,12 @@ const jsonLd = {
       headline: "Encoding Jobs in the Philippines: Pay and How to Start",
       description:
         "What encoding work really is, what encoder jobs pay in the Philippines, where the real jobs are posted, and how to avoid the scams.",
-      author: { "@type": "Organization", name: "Kinetype" },
-      publisher: { "@type": "Organization", name: "Kinetype" },
+      keywords: ['encoding jobs philippines', 'data encoder', 'encoder salary'],
+      author: { "@type": "Organization", name: "Kinetype", url: "https://kinetype.app/", logo: "https://kinetype.app/og.png" },
+      publisher: { "@type": "Organization", name: "Kinetype", url: "https://kinetype.app/", logo: "https://kinetype.app/og.png" },
       mainEntityOfPage: "https://kinetype.app/encoding-jobs-philippines",
       datePublished: "2026-08-31",
+      dateModified: "2026-08-31",
     },
     {
       "@type": "FAQPage",
@@ -259,7 +262,7 @@ export default function EncodingJobsPhilippinesPage() {
           Take the free typing test to start
         </Link>
 
-        <p className="mt-8 text-xs text-zinc-600">{AFFILIATE_DISCLOSURE}</p>
+        <p className="mt-8 text-xs text-zinc-400">{AFFILIATE_DISCLOSURE}</p>
       </article>
 
       {/* FAQ */}

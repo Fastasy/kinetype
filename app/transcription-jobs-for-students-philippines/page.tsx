@@ -4,13 +4,14 @@ import { AFFILIATE, AFFILIATE_DISCLOSURE } from "@/lib/affiliate";
 import ApplyBox from "@/components/ApplyBox";
 
 export const metadata: Metadata = {
-  title: "Transcription Jobs for Students in the Philippines",
+  title: "Transcription Jobs for Students (Philippines)",
   description:
-    "Part time transcription work that fits around class: realistic earnings for students, which platforms hire, and how to apply.",
+    "Part time transcription work that fits around class: realistic earnings for students, which platforms hire, and how to apply without experience.",
   alternates: {
     canonical: "/transcription-jobs-for-students-philippines",
   },
   openGraph: {
+    type: "article",
     title: "Transcription Jobs for Students in the Philippines",
     description:
       "Part time transcription work that fits around class: realistic earnings for students, which platforms hire, and how to apply.",
@@ -68,11 +69,13 @@ const jsonLd = {
       headline: "Transcription jobs for students in the Philippines",
       description:
         "Part time transcription work that fits around class: realistic earnings for students, which platforms hire, and how to apply.",
-      author: { "@type": "Organization", name: "Kinetype" },
-      publisher: { "@type": "Organization", name: "Kinetype" },
+      keywords: ['transcription students philippines', 'part time transcription', 'student jobs'],
+      author: { "@type": "Organization", name: "Kinetype", url: "https://kinetype.app/", logo: "https://kinetype.app/og.png" },
+      publisher: { "@type": "Organization", name: "Kinetype", url: "https://kinetype.app/", logo: "https://kinetype.app/og.png" },
       mainEntityOfPage:
         "https://kinetype.app/transcription-jobs-for-students-philippines",
       datePublished: "2026-08-31",
+      dateModified: "2026-08-31",
     },
     {
       "@type": "FAQPage",
@@ -291,7 +294,7 @@ export default function TranscriptionJobsForStudentsPhilippinesPage() {
           Take the free typing test to start
         </Link>
 
-        <p className="mt-8 text-xs text-zinc-600">{AFFILIATE_DISCLOSURE}</p>
+        <p className="mt-8 text-xs text-zinc-400">{AFFILIATE_DISCLOSURE}</p>
       </article>
 
       {/* FAQ */}

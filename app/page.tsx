@@ -65,6 +65,28 @@ const jsonLd = {
   "@context": "https://schema.org",
   "@graph": [
     {
+      "@type": "WebSite",
+      "@id": "https://kinetype.app/#website",
+      name: "Kinetype",
+      url: "https://kinetype.app/",
+      description:
+        "Free typing speed test with WPM and accuracy scores, plus work-from-home transcription and typing job guides.",
+      publisher: { "@id": "https://kinetype.app/#organization" },
+      inLanguage: "en",
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://kinetype.app/#organization",
+      name: "Kinetype",
+      url: "https://kinetype.app/",
+      logo: {
+        "@type": "ImageObject",
+        url: "https://kinetype.app/og.png",
+        width: 1200,
+        height: 630,
+      },
+    },
+    {
       "@type": "WebApplication",
       name: "Kinetype",
       url: "https://kinetype.app/",

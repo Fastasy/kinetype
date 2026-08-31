@@ -1,16 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import ApplyBox from "@/components/ApplyBox";
 import { AFFILIATE, AFFILIATE_DISCLOSURE } from "@/lib/affiliate";
 
 export const metadata: Metadata = {
-  title: "Transcription Jobs Philippines (2026): Real Pay & Requirements",
+  title: "Transcription Jobs Philippines: Real Pay",
   description:
     "Real 2026 pay for transcription jobs in the Philippines: GoTranscript, Rev, TranscribeMe and Scribie rates, application gates, AI reality, and scam red flags.",
   alternates: {
     canonical: "/transcription-jobs-philippines",
   },
   openGraph: {
-    title: "Transcription Jobs Philippines (2026): Real Pay & Requirements",
+    type: "article",
+    title: "Transcription Jobs Philippines: Real Pay",
     description:
       "Real 2026 pay for transcription jobs in the Philippines: rates, application gates, AI reality, and scam red flags.",
     url: "https://kinetype.app/transcription-jobs-philippines",
@@ -25,7 +27,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Transcription Jobs Philippines (2026): Real Pay & Requirements",
+    title: "Transcription Jobs Philippines: Real Pay",
     description:
       "Real 2026 pay for transcription jobs in the Philippines: rates, application gates, AI reality, and scam red flags.",
     images: ["/og.png"],
@@ -68,14 +70,15 @@ const jsonLd = {
   "@graph": [
     {
       "@type": "Article",
-      headline: "Transcription Jobs in the Philippines (2026): Real Pay, Real Requirements",
+      headline: "Transcription Jobs Philippines: Real Pay & Requirements",
       description:
         "Real 2026 pay for transcription jobs in the Philippines: platform rates, application gates, AI reality, and scam red flags.",
-      author: { "@type": "Organization", name: "Kinetype" },
-      publisher: { "@type": "Organization", name: "Kinetype" },
+      keywords: ['transcription jobs philippines', 'online transcription', 'filipino transcribers'],
+      author: { "@type": "Organization", name: "Kinetype", url: "https://kinetype.app/", logo: "https://kinetype.app/og.png" },
+      publisher: { "@type": "Organization", name: "Kinetype", url: "https://kinetype.app/", logo: "https://kinetype.app/og.png" },
       mainEntityOfPage: "https://kinetype.app/transcription-jobs-philippines",
       datePublished: "2026-08-18",
-      dateModified: "2026-08-18",
+      dateModified: "2026-08-31",
       image: "https://kinetype.app/og.png",
     },
     {
@@ -113,6 +116,33 @@ export default function TranscriptionJobsPhilippinesPage() {
           where AI has changed the work, and how to spot a scam. Every figure below is from
           employer pages and public reports checked in August 2026.
         </p>
+
+        <ApplyBox>
+          <a
+            href={AFFILIATE.gotranscript}
+            target="_blank"
+            rel="noopener noreferrer sponsored"
+            className="inline-block rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
+          >
+            Apply to GoTranscript
+          </a>
+          <a
+            href={AFFILIATE.rev}
+            target="_blank"
+            rel="noopener noreferrer sponsored"
+            className="inline-block rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-emerald-500 hover:text-emerald-400"
+          >
+            Start the Rev freelancer application
+          </a>
+          <a
+            href={AFFILIATE.transcribeme}
+            target="_blank"
+            rel="noopener noreferrer sponsored"
+            className="inline-block rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-emerald-500 hover:text-emerald-400"
+          >
+            Apply to TranscribeMe
+          </a>
+        </ApplyBox>
 
         <h2 className="mt-10 text-2xl font-bold text-zinc-50">The honest rate table</h2>
         <p className="mt-3 text-zinc-400">
@@ -359,27 +389,10 @@ export default function TranscriptionJobsPhilippinesPage() {
           </li>
         </ul>
         <p className="mt-4 text-sm text-zinc-400">
-          Once you are earning, AI editing tools like{" "}
-          <a
-            href={AFFILIATE.sonix}
-            target="_blank"
-            rel="noopener noreferrer sponsored"
-            className="font-medium text-emerald-400 transition hover:text-emerald-300"
-          >
-            Sonix
-          </a>{" "}
-          and{" "}
-          <a
-            href={AFFILIATE.descript}
-            target="_blank"
-            rel="noopener noreferrer sponsored"
-            className="font-medium text-emerald-400 transition hover:text-emerald-300"
-          >
-            Descript
-          </a>{" "}
-          can speed up the QC work that is actually in demand.
+          Once you are earning, AI editing tools like Sonix and Descript can speed up the
+          QC work that is actually in demand.
         </p>
-        <p className="mt-4 text-xs text-zinc-600">{AFFILIATE_DISCLOSURE}</p>
+        <p className="mt-4 text-xs text-zinc-400">{AFFILIATE_DISCLOSURE}</p>
 
         <h2 className="mt-10 text-xl font-bold text-zinc-50">Related guides</h2>
         <ul className="mt-3 space-y-2 text-zinc-400">

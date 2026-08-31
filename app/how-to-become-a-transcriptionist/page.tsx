@@ -6,11 +6,12 @@ import ApplyBox from "@/components/ApplyBox";
 export const metadata: Metadata = {
   title: "How to Become a Transcriptionist from Home",
   description:
-    "A step by step path to become a transcriptionist: test your typing speed, practice accuracy, pick general or specialized work, and apply.",
+    "The step by step path to become a transcriptionist from home: test your typing speed, practice accuracy, pick general or specialized work, and apply.",
   alternates: {
     canonical: "/how-to-become-a-transcriptionist",
   },
   openGraph: {
+    type: "article",
     title: "How to Become a Transcriptionist from Home",
     description:
       "The step by step path to transcription work: typing speed, accuracy, training and applications.",
@@ -68,10 +69,12 @@ const jsonLd = {
       headline: "How to Become a Transcriptionist from Home",
       description:
         "The step by step path to transcription work: typing speed, accuracy, training and applications.",
-      author: { "@type": "Organization", name: "Kinetype" },
-      publisher: { "@type": "Organization", name: "Kinetype" },
+      keywords: ['become a transcriptionist', 'transcription career', 'work from home'],
+      author: { "@type": "Organization", name: "Kinetype", url: "https://kinetype.app/", logo: "https://kinetype.app/og.png" },
+      publisher: { "@type": "Organization", name: "Kinetype", url: "https://kinetype.app/", logo: "https://kinetype.app/og.png" },
       mainEntityOfPage: "https://kinetype.app/how-to-become-a-transcriptionist",
       datePublished: "2026-08-18",
+      dateModified: "2026-08-31",
     },
     {
       "@type": "FAQPage",
@@ -133,7 +136,7 @@ export default function HowToBecomeTranscriptionistPage() {
         <a
           href={AFFILIATE.transcribeAnywhere}
           target="_blank"
-          rel="noopener noreferrer sponsored"
+          rel="noopener noreferrer"
           className="mt-3 inline-block rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-emerald-500 hover:text-emerald-400"
         >
           See TranscribeAnywhere training
@@ -197,11 +200,26 @@ export default function HowToBecomeTranscriptionistPage() {
           Take the free typing test to start
         </Link>
 
-        <p className="mt-8 text-xs text-zinc-600">{AFFILIATE_DISCLOSURE}</p>
+        <p className="mt-8 text-xs text-zinc-400">{AFFILIATE_DISCLOSURE}</p>
       </article>
 
       {/* FAQ */}
       <section className="mt-14">
+
+        <h2 className="mt-10 text-2xl font-bold text-zinc-50">Related guides</h2>
+        <ul className="mt-3 space-y-2 text-sm text-zinc-400">
+            <li>
+              <Link href="/how-to-pass-a-typing-test-for-a-job" className="font-medium text-emerald-400 transition hover:text-emerald-300">
+                how to pass the typing test employers run
+              </Link>
+            </li>
+            <li>
+              <Link href="/transcriptionist-salary" className="font-medium text-emerald-400 transition hover:text-emerald-300">
+                what transcription really pays
+              </Link>
+            </li>
+        </ul>
+
         <h2 className="text-2xl font-bold text-zinc-50">Frequently asked questions</h2>
         <div className="mt-4 divide-y divide-zinc-800 rounded-2xl border border-zinc-800">
           {FAQS.map((f) => (

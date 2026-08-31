@@ -8,17 +8,17 @@ interface CalculatorProps {
 }
 
 export function calculateEarnings(wpm: number, hoursPerWeek: number, accuracy: number = 98) {
-  // Speech averages ~150 words per minute
-  // Hours to finish 1 audio hour depends on typing speed
-  const hoursPerAudioHour = Math.max(1.15, 150 / Math.max(wpm, 20));
-  
-  // Base payout average across GoTranscript, Rev, TranscribeMe: ~$45 per audio hour ($0.75/audio min)
-  const baseAudioRate = 45;
-  
-  // Effective hourly rate adjusted by accuracy factor
+  // Honest model anchored to verified figures (2026-08-31):
+  // - Real effective earnings for general transcription run $2-$6/hour
+  //   (published per-audio-minute rates ÷ 2-4x real work time).
+  // - The site's salary guide uses $4/hr effective as its anchor
+  //   ($160/month at 10 hrs/week).
+  // - Faster typists earn toward the top of the band; accuracy adjusts within it.
+  const baseEffectiveHourly = 4; // verified mid-band anchor
+  const speedFactor = Math.min(1.5, wpm / 45); // 45 WPM = 1.0x, 67+ WPM = 1.5x cap
   const accuracyFactor = Math.min(1, Math.max(0.7, accuracy / 100));
-  const hourlyRate = Math.round((baseAudioRate / hoursPerAudioHour) * accuracyFactor);
-  
+  const hourlyRate = Math.round(baseEffectiveHourly * speedFactor * accuracyFactor);
+
   const weeklyEarnings = Math.round(hourlyRate * hoursPerWeek);
   const monthlyEarnings = Math.round(weeklyEarnings * 4.33);
   const annualEarnings = Math.round(weeklyEarnings * 52);
@@ -28,7 +28,7 @@ export function calculateEarnings(wpm: number, hoursPerWeek: number, accuracy: n
     weeklyEarnings,
     monthlyEarnings,
     annualEarnings,
-    hoursPerAudioHour: hoursPerAudioHour.toFixed(1),
+    hoursPerAudioHour: "2 to 4",
   };
 }
 
@@ -42,7 +42,7 @@ export default function EarningsCalculator({ initialWpm = 60 }: CalculatorProps)
   const { hourlyRate, weeklyEarnings, monthlyEarnings } = calculateEarnings(wpm, hoursPerWeek);
 
   return (
-    <div className="rounded-3xl border border-emerald-500/30 bg-gradient-to-br from-emerald-950/40 via-zinc-900 to-zinc-950 p-6 sm:p-8 shadow-2xl">
+    <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-950/40 via-zinc-900 to-zinc-950 p-6 sm:p-8 shadow-2xl">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-zinc-800/80 pb-6">
         <div>
           <div className="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400 border border-emerald-500/20">
@@ -146,7 +146,9 @@ export default function EarningsCalculator({ initialWpm = 60 }: CalculatorProps)
           </div>
 
           <p className="mt-4 text-xs text-zinc-400 text-left leading-relaxed">
-            Platforms pay per audio minute. Higher WPM allows you to transcribe files faster, multiplying your hourly payout.
+            Estimate based on verified effective earnings of $2 to $6 an hour for general
+            transcription (published rates divided by real work time of 2 to 4x the audio
+            length). Faster typists land toward the top of the band.
           </p>
 
           <div className="mt-6 space-y-2">
@@ -156,7 +158,7 @@ export default function EarningsCalculator({ initialWpm = 60 }: CalculatorProps)
               rel="noopener noreferrer sponsored"
               className="inline-block rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
             >
-              <span>Apply to GoTranscript ($15–$30/hr)</span>
+              <span>Apply to GoTranscript</span>
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
               </svg>

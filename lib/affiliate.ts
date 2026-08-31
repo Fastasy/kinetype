@@ -15,10 +15,12 @@ export const AFFILIATE = {
   // GoTranscript: Live transcriber affiliate / referral link.
   gotranscript: "https://gotranscript.com/english-transcription-job?ref=8311926",
   // Sonix: 10% of first-year Standard/Premium plan revenue per referred subscriber.
-  sonix: "https://sonix.ai/affiliates",
-  // Descript: $25 per new subscriber referred.
-  descript: "https://www.descript.com/affiliate",
-  // Transcription training course.
+  // PENDING approval: do NOT use as a sponsored affiliate link until approved.
+  sonix: "https://sonix.ai/",
+  // Descript: $25 per new subscriber referred. PENDING approval: do NOT use as a
+  // sponsored affiliate link until approved.
+  descript: "https://www.descript.com/",
+  // Transcription training course (informational resource, not a tracked affiliate).
   transcribeAnywhere: "https://www.transcribeanywhere.com/",
   // Keychron: from 5% commission per sale.
   keychron: "https://affiliate.keychron.com/",

@@ -6,11 +6,12 @@ import ApplyBox from "@/components/ApplyBox";
 export const metadata: Metadata = {
   title: "How to Pass a Typing Test for a Job",
   description:
-    "What employers test, the typing speed you need by job type, a two week practice plan, and how to pass on the day.",
+    "What employers test, the typing speed you need by job type, a two week practice plan, and how to pass on the day. Measure your WPM first.",
   alternates: {
     canonical: "/how-to-pass-a-typing-test-for-a-job",
   },
   openGraph: {
+    type: "article",
     title: "How to Pass a Typing Test for a Job",
     description:
       "What employers test, the typing speed you need by job type, a two week practice plan, and how to pass on the day.",
@@ -68,10 +69,12 @@ const jsonLd = {
       headline: "How to Pass a Typing Test for a Job",
       description:
         "What employers test, the typing speed you need by job type, a two week practice plan, and how to pass on the day.",
-      author: { "@type": "Organization", name: "Kinetype" },
-      publisher: { "@type": "Organization", name: "Kinetype" },
+      keywords: ['pass typing test', 'typing test for job', 'typing speed'],
+      author: { "@type": "Organization", name: "Kinetype", url: "https://kinetype.app/", logo: "https://kinetype.app/og.png" },
+      publisher: { "@type": "Organization", name: "Kinetype", url: "https://kinetype.app/", logo: "https://kinetype.app/og.png" },
       mainEntityOfPage: "https://kinetype.app/how-to-pass-a-typing-test-for-a-job",
       datePublished: "2026-08-31",
+      dateModified: "2026-08-31",
     },
     {
       "@type": "FAQPage",
@@ -247,7 +250,7 @@ export default function HowToPassTypingTestPage() {
           Take the free typing test to start
         </Link>
 
-        <p className="mt-8 text-xs text-zinc-600">{AFFILIATE_DISCLOSURE}</p>
+        <p className="mt-8 text-xs text-zinc-400">{AFFILIATE_DISCLOSURE}</p>
       </article>
 
       {/* FAQ */}

@@ -68,15 +68,6 @@ export const metadata: Metadata = {
   },
 };
 
-const NAV_LINKS = [
-  { href: "/", label: "Typing test" },
-  { href: "/how-to-become-a-virtual-assistant-philippines", label: "VA Philippines" },
-  { href: "/rev-typing-test", label: "Rev test" },
-  { href: "/transcribeme-typing-test", label: "TranscribeMe test" },
-  { href: "/transcription-jobs", label: "Transcription jobs" },
-  { href: "/how-to-become-a-transcriptionist", label: "Career guide" },
-];
-
 import HeaderNav from "@/components/HeaderNav";
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -88,7 +79,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <div className="flex-1">{children}</div>
 
         <footer className="mt-20 border-t border-zinc-800/80 bg-zinc-950">
-          <div className="mx-auto max-w-5xl px-4 py-12 text-sm text-zinc-500 sm:px-6">
+          <div className="mx-auto max-w-5xl px-4 py-12 text-sm text-zinc-400 sm:px-6">
             <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-4">
               <div className="md:col-span-2 max-w-sm">
                 <div className="flex items-center gap-2 font-mono text-lg font-bold text-zinc-100">

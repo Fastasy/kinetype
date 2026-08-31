@@ -11,6 +11,7 @@ export const metadata: Metadata = {
     canonical: "/tagalog-transcription-jobs",
   },
   openGraph: {
+    type: "article",
     title: "Tagalog Transcription Jobs (Work From Home)",
     description:
       "Who hires Tagalog transcribers, what the work pays, and how to pass the test. A bilingual niche with less competition than general transcription.",
@@ -68,10 +69,12 @@ const jsonLd = {
       headline: "Tagalog Transcription Jobs (Work From Home)",
       description:
         "Who hires Tagalog transcribers, what the work pays, and how to pass the test. A bilingual niche with less competition than general transcription.",
-      author: { "@type": "Organization", name: "Kinetype" },
-      publisher: { "@type": "Organization", name: "Kinetype" },
+      keywords: ['tagalog transcription', 'filipino transcription jobs', 'bilingual transcription'],
+      author: { "@type": "Organization", name: "Kinetype", url: "https://kinetype.app/", logo: "https://kinetype.app/og.png" },
+      publisher: { "@type": "Organization", name: "Kinetype", url: "https://kinetype.app/", logo: "https://kinetype.app/og.png" },
       mainEntityOfPage: "https://kinetype.app/tagalog-transcription-jobs",
       datePublished: "2026-08-31",
+      dateModified: "2026-08-31",
     },
     {
       "@type": "FAQPage",
@@ -250,7 +253,7 @@ export default function TagalogTranscriptionJobsPage() {
           Take the free typing test to start
         </Link>
 
-        <p className="mt-8 text-xs text-zinc-600">{AFFILIATE_DISCLOSURE}</p>
+        <p className="mt-8 text-xs text-zinc-400">{AFFILIATE_DISCLOSURE}</p>
       </article>
 
       {/* FAQ */}

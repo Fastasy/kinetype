@@ -4,13 +4,14 @@ import { AFFILIATE, AFFILIATE_DISCLOSURE } from "@/lib/affiliate";
 import ApplyBox from "@/components/ApplyBox";
 
 export const metadata: Metadata = {
-  title: "Data Entry Jobs in the Philippines Without Experience",
+  title: "Data Entry Jobs Philippines: No Experience Needed",
   description:
-    "Real data entry jobs for beginners in the Philippines, what they pay, where they are posted, and how to spot the scams.",
+    "Real data entry jobs for beginners in the Philippines: what they pay, where they are posted, and how to spot the scams targeting job seekers.",
   alternates: {
     canonical: "/data-entry-jobs-philippines",
   },
   openGraph: {
+    type: "article",
     title: "Data Entry Jobs in the Philippines Without Experience",
     description:
       "Real data entry jobs for beginners in the Philippines, what they pay, where they are posted, and how to spot the scams.",
@@ -68,10 +69,12 @@ const jsonLd = {
       headline: "Data entry jobs in the Philippines without experience",
       description:
         "Real data entry jobs for beginners in the Philippines, what they pay, where they are posted, and how to spot the scams.",
-      author: { "@type": "Organization", name: "Kinetype" },
-      publisher: { "@type": "Organization", name: "Kinetype" },
+      keywords: ['data entry philippines', 'data entry no experience', 'home based'],
+      author: { "@type": "Organization", name: "Kinetype", url: "https://kinetype.app/", logo: "https://kinetype.app/og.png" },
+      publisher: { "@type": "Organization", name: "Kinetype", url: "https://kinetype.app/", logo: "https://kinetype.app/og.png" },
       mainEntityOfPage: "https://kinetype.app/data-entry-jobs-philippines",
       datePublished: "2026-08-31",
+      dateModified: "2026-08-31",
     },
     {
       "@type": "FAQPage",
@@ -334,7 +337,7 @@ export default function DataEntryJobsPhilippinesPage() {
           Take the free typing test to start
         </Link>
 
-        <p className="mt-8 text-xs text-zinc-600">{AFFILIATE_DISCLOSURE}</p>
+        <p className="mt-8 text-xs text-zinc-400">{AFFILIATE_DISCLOSURE}</p>
       </article>
 
       {/* FAQ */}

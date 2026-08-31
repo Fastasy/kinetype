@@ -1,16 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import ApplyBox from "@/components/ApplyBox";
 import { AFFILIATE, AFFILIATE_DISCLOSURE } from "@/lib/affiliate";
 
 export const metadata: Metadata = {
-  title: "Free Typing Speed Test: Which WFH Jobs Can You Qualify For?",
+  title: "Typing Test for WFH Jobs: Speed Requirements",
   description:
     "Take a free typing speed test and see which work-from-home jobs in the Philippines you qualify for, from CSC clerical to BPO, VA and transcription roles.",
   alternates: {
     canonical: "/typing-test-wfh-jobs",
   },
   openGraph: {
-    title: "Free Typing Speed Test: Which WFH Jobs Can You Qualify For?",
+    type: "article",
+    title: "Typing Test for WFH Jobs: Speed Requirements",
     description:
       "Map your WPM to real jobs: CSC clerical, BPO, VA and transcription roles. Free typing test with accuracy scoring.",
     url: "https://kinetype.app/typing-test-wfh-jobs",
@@ -25,7 +27,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Free Typing Speed Test: Which WFH Jobs Can You Qualify For?",
+    title: "Typing Test for WFH Jobs: Speed Requirements",
     description:
       "Map your WPM to real jobs: CSC clerical, BPO, VA and transcription roles. Free typing test with accuracy scoring.",
     images: ["/og.png"],
@@ -55,7 +57,7 @@ const FAQS = [
   },
   {
     q: "How much do data entry jobs pay in the Philippines?",
-    a: "Local jobs pay about ₱12,000 to ₱16,000 a month. WFH roles with international employers pay ₱20,000 to ₱40,000, and EMAPTA posts permanent WFH data entry specialists at ₱30,000 to ₱40,000.",
+    a: "Local jobs pay about ₱12,000 to ₱16,000 a month, and international remote roles are the higher end of the verified ₱13,000 to ₱20,000 range for entry-level work. A transcriber role on OnlineJobs.ph was advertised at $600 to $700 a month, which is above the typical local entry band.",
   },
 ];
 
@@ -64,14 +66,15 @@ const jsonLd = {
   "@graph": [
     {
       "@type": "Article",
-      headline: "Free Typing Speed Test: Which WFH Jobs Can You Qualify For?",
+      headline: "Typing Test for WFH Jobs: Speed Requirements",
       description:
         "Map your WPM to real work-from-home jobs in the Philippines: CSC clerical, BPO, VA and transcription roles, with a free typing test.",
-      author: { "@type": "Organization", name: "Kinetype" },
-      publisher: { "@type": "Organization", name: "Kinetype" },
+      keywords: ['typing test', 'wfh jobs', 'typing speed requirements'],
+      author: { "@type": "Organization", name: "Kinetype", url: "https://kinetype.app/", logo: "https://kinetype.app/og.png" },
+      publisher: { "@type": "Organization", name: "Kinetype", url: "https://kinetype.app/", logo: "https://kinetype.app/og.png" },
       mainEntityOfPage: "https://kinetype.app/typing-test-wfh-jobs",
       datePublished: "2026-08-18",
-      dateModified: "2026-08-18",
+      dateModified: "2026-08-31",
       image: "https://kinetype.app/og.png",
     },
     {
@@ -112,6 +115,33 @@ export default function TypingTestWfhJobsPage() {
           where applicants actually lose the offer, and points you to a free typing test you
           can take right now. Kailangan mo lang malaman kung saan ka pasok.
         </p>
+
+        <ApplyBox>
+          <a
+            href={AFFILIATE.gotranscript}
+            target="_blank"
+            rel="noopener noreferrer sponsored"
+            className="inline-block rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
+          >
+            GoTranscript application
+          </a>
+          <a
+            href={AFFILIATE.transcribeme}
+            target="_blank"
+            rel="noopener noreferrer sponsored"
+            className="inline-block rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-emerald-500 hover:text-emerald-400"
+          >
+            TranscribeMe jobs
+          </a>
+          <a
+            href={AFFILIATE.rev}
+            target="_blank"
+            rel="noopener noreferrer sponsored"
+            className="inline-block rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-emerald-500 hover:text-emerald-400"
+          >
+            Rev freelancer application
+          </a>
+        </ApplyBox>
 
         <h2 className="mt-10 text-2xl font-bold text-zinc-50">Your WPM, mapped to real jobs</h2>
         <div className="mt-4 overflow-x-auto rounded-2xl border border-zinc-800">
@@ -158,10 +188,9 @@ export default function TypingTestWfhJobsPage() {
         <h3 className="mt-6 text-lg font-bold text-zinc-100">40 to 60 WPM: data entry, VA and BPO roles</h3>
         <p className="mt-2 text-zinc-400">
           This is the band most WFH applicants in the Philippines live in. Data entry pays
-          about ₱12,000 to ₱16,000 a month for local jobs, and ₱20,000 to ₱40,000 for
-          international employers. EMAPTA, for example, posts permanent WFH data entry
-          specialists at ₱30,000 to ₱40,000. VA agencies place Filipinos at $6.50 to $15 an
-          hour.
+          about ₱12,000 to ₱16,000 a month for local jobs, with verified entry-level rates
+          up to ₱20,000. A transcriber role on OnlineJobs.ph was advertised at $600 to
+          $700 a month. VA agencies place Filipinos at $6.50 to $15 an hour.
         </p>
         <p className="mt-2 text-zinc-400">
           The catch: these employers test you first. Most run a typing or data-entry screen
@@ -302,7 +331,7 @@ export default function TypingTestWfhJobsPage() {
             </a>
           </li>
         </ul>
-        <p className="mt-4 text-xs text-zinc-600">{AFFILIATE_DISCLOSURE}</p>
+        <p className="mt-4 text-xs text-zinc-400">{AFFILIATE_DISCLOSURE}</p>
         <p className="mt-3 leading-relaxed text-zinc-400">
           One last thing: legitimate employers never charge you to start. The CICC logged
           10,004 online-scam complaints in 2024, up 202% year on year. A pay-to-start job

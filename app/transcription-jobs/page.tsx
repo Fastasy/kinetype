@@ -1,16 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import EarningsCalculator from "@/components/EarningsCalculator";
+import ApplyBox from "@/components/ApplyBox";
 import { AFFILIATE, AFFILIATE_DISCLOSURE } from "@/lib/affiliate";
 
 export const metadata: Metadata = {
   title: "Transcription Jobs: Where to Find Them in 2026",
   description:
-    "Transcription jobs in 2026: what they pay, what you need, and which companies hire from home. Start with a free typing speed test.",
+    "Transcription jobs in 2026: what they pay after real work time, what you need, and which companies hire from home. Start with a free typing test.",
   alternates: {
     canonical: "/transcription-jobs",
   },
   openGraph: {
+    type: "article",
     title: "Transcription Jobs: Where to Find Them in 2026",
     description:
       "What transcription jobs pay, what you need, and which companies hire from home in 2026.",
@@ -68,10 +70,12 @@ const jsonLd = {
       headline: "Transcription Jobs: Where to Find Them in 2026",
       description:
         "What transcription jobs pay, what you need, and which companies hire from home in 2026.",
-      author: { "@type": "Organization", name: "Kinetype" },
-      publisher: { "@type": "Organization", name: "Kinetype" },
+      keywords: ['transcription jobs', 'work from home', 'transcriptionist'],
+      author: { "@type": "Organization", name: "Kinetype", url: "https://kinetype.app/", logo: "https://kinetype.app/og.png" },
+      publisher: { "@type": "Organization", name: "Kinetype", url: "https://kinetype.app/", logo: "https://kinetype.app/og.png" },
       mainEntityOfPage: "https://kinetype.app/transcription-jobs",
       datePublished: "2026-08-18",
+      dateModified: "2026-08-31",
     },
     {
       "@type": "FAQPage",
@@ -101,6 +105,33 @@ export default function TranscriptionJobsPage() {
           actual job requirement. If you can type fast and accurately, you already have
           the core skill. Here is what the market looks like in 2026 and where to apply.
         </p>
+
+        <ApplyBox>
+          <a
+            href={AFFILIATE.gotranscript}
+            target="_blank"
+            rel="noopener noreferrer sponsored"
+            className="inline-block rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
+          >
+            Apply to GoTranscript
+          </a>
+          <a
+            href={AFFILIATE.rev}
+            target="_blank"
+            rel="noopener noreferrer sponsored"
+            className="inline-block rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-emerald-500 hover:text-emerald-400"
+          >
+            Apply to work at Rev
+          </a>
+          <a
+            href={AFFILIATE.transcribeme}
+            target="_blank"
+            rel="noopener noreferrer sponsored"
+            className="inline-block rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-emerald-500 hover:text-emerald-400"
+          >
+            Apply to TranscribeMe
+          </a>
+        </ApplyBox>
 
         <h2 className="mt-10 text-2xl font-bold text-zinc-50">The honest picture</h2>
         <p className="mt-3 leading-relaxed text-zinc-400">
@@ -149,6 +180,22 @@ export default function TranscriptionJobsPage() {
 
         <div className="mt-4 space-y-4">
           <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5">
+            <h3 className="text-lg font-bold text-zinc-50">GoTranscript</h3>
+            <p className="mt-1 text-sm text-zinc-400">
+              Hires transcribers and editors in 140 languages, including Afrikaans and
+              English. You apply per language and take a test for each one.
+            </p>
+            <a
+              href={AFFILIATE.gotranscript}
+              target="_blank"
+              rel="noopener noreferrer sponsored"
+              className="inline-block rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
+            >
+              Apply to GoTranscript
+            </a>
+          </div>
+
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5">
             <h3 className="text-lg font-bold text-zinc-50">Rev</h3>
             <p className="mt-1 text-sm text-zinc-400">
               One of the largest transcription and captioning platforms. Applications start
@@ -166,56 +213,22 @@ export default function TranscriptionJobsPage() {
           </div>
 
           <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5">
-            <h3 className="text-lg font-bold text-zinc-50">GoTranscript</h3>
-            <p className="mt-1 text-sm text-zinc-400">
-              Hires transcribers and editors in 140 languages, including Afrikaans and
-              English. You apply per language and take a test for each one.
-            </p>
-            <a
-              href={AFFILIATE.gotranscript}
-              target="_blank"
-              rel="noopener noreferrer sponsored"
-              className="inline-block rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
-            >
-              Apply to GoTranscript
-            </a>
-          </div>
-
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5">
-            <h3 className="text-lg font-bold text-zinc-50">AI transcription tools</h3>
-            <p className="mt-1 text-sm text-zinc-400">
-              If you produce podcasts, meetings or videos, these tools draft the transcript
-              for you and free you up for the jobs that need a human ear. Affiliate links.
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <a
-                href={AFFILIATE.sonix}
-                target="_blank"
-                rel="noopener noreferrer sponsored"
-                className="rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-emerald-500 hover:text-emerald-400"
-              >
-                Sonix
-              </a>
-              <a
-                href={AFFILIATE.descript}
-                target="_blank"
-                rel="noopener noreferrer sponsored"
-                className="rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-emerald-500 hover:text-emerald-400"
-              >
-                Descript
-              </a>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5">
             <h3 className="text-lg font-bold text-zinc-50">TranscribeMe and Scribie</h3>
             <p className="mt-1 text-sm text-zinc-400">
               Smaller platforms that take beginners with short sample tests. Good for your
               first few jobs while you build a track record.
             </p>
+            <a
+              href={AFFILIATE.transcribeme}
+              target="_blank"
+              rel="noopener noreferrer sponsored"
+              className="mt-2 inline-block rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-emerald-500 hover:text-emerald-400"
+            >
+              Apply to TranscribeMe
+            </a>
             <p className="mt-2 text-sm text-zinc-500">
-              Search for their current openings; both are usually open to South African
-              applicants as contractors.
+              Scribie has its own five-step certification and pays per finished file; check
+              their current openings directly.
             </p>
           </div>
         </div>
@@ -243,11 +256,26 @@ export default function TranscriptionJobsPage() {
           Take the free typing test
         </Link>
 
-        <p className="mt-8 text-xs text-zinc-600">{AFFILIATE_DISCLOSURE}</p>
+        <p className="mt-8 text-xs text-zinc-400">{AFFILIATE_DISCLOSURE}</p>
       </article>
 
       {/* FAQ */}
       <section className="mt-14">
+
+        <h2 className="mt-10 text-2xl font-bold text-zinc-50">Related guides</h2>
+        <ul className="mt-3 space-y-2 text-sm text-zinc-400">
+            <li>
+              <Link href="/transcriptionist-salary" className="font-medium text-emerald-400 transition hover:text-emerald-300">
+                How much do transcriptionists actually earn
+              </Link>
+            </li>
+            <li>
+              <Link href="/how-to-get-transcription-jobs" className="font-medium text-emerald-400 transition hover:text-emerald-300">
+                how to get transcription jobs with no experience
+              </Link>
+            </li>
+        </ul>
+
         <h2 className="text-2xl font-bold text-zinc-50">Frequently asked questions</h2>
         <div className="mt-4 divide-y divide-zinc-800 rounded-2xl border border-zinc-800">
           {FAQS.map((f) => (

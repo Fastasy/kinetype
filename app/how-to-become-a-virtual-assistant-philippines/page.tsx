@@ -1,19 +1,21 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import ApplyBox from "@/components/ApplyBox";
 import { AFFILIATE, AFFILIATE_DISCLOSURE } from "@/lib/affiliate";
 
 export const metadata: Metadata = {
-  title: "How to Become a Virtual Assistant in the Philippines (2026 Guide)",
+  title: "Virtual Assistant Jobs Philippines: How to Start",
   description:
     "Real guide to VA jobs in the Philippines: hiring funnel stats, what agencies test, what VAs really earn, where to apply, and scam red flags.",
   alternates: {
     canonical: "/how-to-become-a-virtual-assistant-philippines",
   },
   openGraph: {
+    type: "article",
     title: "How to Become a Virtual Assistant in the Philippines (2026 Guide)",
     description:
       "Real guide to VA jobs in the Philippines: hiring funnel stats, what agencies test, what VAs really earn, where to apply, and scam red flags.",
-    url: "https://kinetype.com/how-to-become-a-virtual-assistant-philippines",
+    url: "https://kinetype.app/how-to-become-a-virtual-assistant-philippines",
     images: [
       {
         url: "/og.png",
@@ -71,10 +73,12 @@ const jsonLd = {
       headline: "How to Become a Virtual Assistant in the Philippines in 2026",
       description:
         "Real guide to VA jobs in the Philippines: hiring funnel stats, what agencies test, what VAs really earn, where to apply, and scam red flags.",
-      author: { "@type": "Organization", name: "Kinetype" },
-      publisher: { "@type": "Organization", name: "Kinetype" },
-      mainEntityOfPage: "https://kinetype.com/how-to-become-a-virtual-assistant-philippines",
+      keywords: ['virtual assistant philippines', 'VA jobs', 'work from home'],
+      author: { "@type": "Organization", name: "Kinetype", url: "https://kinetype.app/", logo: "https://kinetype.app/og.png" },
+      publisher: { "@type": "Organization", name: "Kinetype", url: "https://kinetype.app/", logo: "https://kinetype.app/og.png" },
+      mainEntityOfPage: "https://kinetype.app/how-to-become-a-virtual-assistant-philippines",
       datePublished: "2026-08-18",
+      dateModified: "2026-08-31",
     },
     {
       "@type": "FAQPage",
@@ -108,6 +112,33 @@ export default function HowToBecomeVAPhilippinesPage() {
         <p className="mt-4 text-zinc-400 leading-relaxed">
           So how to become a virtual assistant in the Philippines in 2026 without wasting months? The people who get hired are rarely the fastest typists or the ones with the fanciest CVs. They are the ones who pass the skill test. The short version: the real numbers, what agencies test, what VAs earn in USD and pesos, where to apply, and the scams that cost Filipinos around ₱198 million last year.
         </p>
+
+        <ApplyBox>
+          <a
+            href={AFFILIATE.gotranscript}
+            target="_blank"
+            rel="noopener noreferrer sponsored"
+            className="inline-block rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
+          >
+            Apply to GoTranscript
+          </a>
+          <a
+            href={AFFILIATE.rev}
+            target="_blank"
+            rel="noopener noreferrer sponsored"
+            className="inline-block rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-emerald-500 hover:text-emerald-400"
+          >
+            Apply to work at Rev
+          </a>
+          <a
+            href={AFFILIATE.transcribeme}
+            target="_blank"
+            rel="noopener noreferrer sponsored"
+            className="inline-block rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-emerald-500 hover:text-emerald-400"
+          >
+            Apply to TranscribeMe
+          </a>
+        </ApplyBox>
 
         {/* Quick Test Callout */}
         <div className="mt-8 rounded-2xl border border-emerald-500/40 bg-gradient-to-br from-emerald-950/40 to-zinc-900/80 p-6">
@@ -271,11 +302,21 @@ export default function HowToBecomeVAPhilippinesPage() {
           <li>Never pay to start. Walk away from anything that asks.</li>
         </ol>
 
-        <p className="mt-8 text-xs text-zinc-600">{AFFILIATE_DISCLOSURE}</p>
+        <p className="mt-8 text-xs text-zinc-400">{AFFILIATE_DISCLOSURE}</p>
       </article>
 
       {/* FAQ */}
       <section className="mt-14">
+
+        <h2 className="mt-10 text-2xl font-bold text-zinc-50">Related guides</h2>
+        <ul className="mt-3 space-y-2 text-sm text-zinc-400">
+            <li>
+              <Link href="/transcription-jobs-philippines" className="font-medium text-emerald-400 transition hover:text-emerald-300">
+                transcription jobs in the Philippines
+              </Link>
+            </li>
+        </ul>
+
         <h2 className="text-2xl font-bold text-zinc-50">Frequently asked questions</h2>
         <div className="mt-4 divide-y divide-zinc-800 rounded-2xl border border-zinc-800">
           {FAQS.map((f) => (

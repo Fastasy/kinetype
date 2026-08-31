@@ -4,7 +4,7 @@ import { AFFILIATE, AFFILIATE_DISCLOSURE } from "@/lib/affiliate";
 import ApplyBox from "@/components/ApplyBox";
 
 export const metadata: Metadata = {
-  title: "Rev Typing Test: WPM Requirements, Exam Tips & Practice (2026)",
+  title: "Rev Typing Test: Requirements, Tips & Practice",
   description:
     "Everything you need to pass the Rev transcriptionist typing test in 2026: WPM speed requirements, accuracy standards, exam breakdown, and free test practice.",
   alternates: {
@@ -14,6 +14,7 @@ export const metadata: Metadata = {
     title: "Rev Typing Test: WPM Requirements, Exam Tips & Practice",
     description:
       "Pass the Rev transcription typing test: required WPM speed, accuracy thresholds, and free test practice.",
+    type: "article",
     url: "https://kinetype.app/rev-typing-test",
     images: [
       {
@@ -23,6 +24,13 @@ export const metadata: Metadata = {
         alt: "Rev typing test speed guide and practice",
       },
     ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Rev Typing Test: WPM Requirements, Exam Tips & Practice",
+    description:
+      "Pass the Rev transcription typing test: required WPM speed, accuracy thresholds, and free test practice.",
+    images: ["/og.png"],
   },
 };
 
@@ -37,7 +45,7 @@ const FAQS = [
   },
   {
     q: "How much can you earn on Rev?",
-    a: "Rev transcriptionists earn between $0.30 and $1.10 per audio minute. Top typists earn between $15 and $30 per hour depending on audio quality and typing speed.",
+    a: "Rev transcriptionists earn between $0.30 and $1.10 per audio minute. That is the published rate; real work time runs 2 to 4 times the audio length, so effective earnings usually land between $2 and $6 an hour.",
   },
   {
     q: "Can I retake the Rev test if I fail?",
@@ -53,10 +61,12 @@ const jsonLd = {
       headline: "Rev Typing Test: WPM Requirements, Exam Tips & Practice",
       description:
         "Comprehensive guide to passing the Rev freelancer transcriptionist test in 2026.",
-      author: { "@type": "Organization", name: "Kinetype" },
-      publisher: { "@type": "Organization", name: "Kinetype" },
+      keywords: ['rev typing test', 'rev transcription', 'wpm requirements'],
+      author: { "@type": "Organization", name: "Kinetype", url: "https://kinetype.app/", logo: "https://kinetype.app/og.png" },
+      publisher: { "@type": "Organization", name: "Kinetype", url: "https://kinetype.app/", logo: "https://kinetype.app/og.png" },
       mainEntityOfPage: "https://kinetype.app/rev-typing-test",
       datePublished: "2026-08-18",
+      dateModified: "2026-08-31",
     },
     {
       "@type": "FAQPage",
@@ -92,7 +102,7 @@ export default function RevTypingTestPage() {
         <div className="mt-8 rounded-2xl border border-emerald-500/40 bg-gradient-to-br from-emerald-950/40 to-zinc-900/80 p-6">
           <h2 className="text-xl font-bold text-zinc-100">Test your speed before applying</h2>
           <p className="mt-2 text-sm text-zinc-300">
-            Rev requires <strong>45–50+ WPM</strong> with strict punctuation and capitalization accuracy. Check your WPM score on Kinetype right now.
+            Rev requires <strong>45 to 50+ WPM</strong> with strict punctuation and capitalization accuracy. Check your WPM score on Kinetype right now.
           </p>
           <ApplyBox>
             <Link
@@ -166,20 +176,42 @@ export default function RevTypingTestPage() {
             Pass the test, start claiming audio files, and receive weekly payouts via PayPal.
           </p>
           <a
-            href={AFFILIATE.rev}
+            href={AFFILIATE.gotranscript}
             target="_blank"
             rel="noopener noreferrer sponsored"
             className="mt-4 inline-block rounded-xl bg-emerald-500 px-6 py-3 font-bold text-zinc-950 transition hover:bg-emerald-400 text-sm shadow-md"
           >
+            Apply to GoTranscript
+          </a>
+          <a
+            href={AFFILIATE.rev}
+            target="_blank"
+            rel="noopener noreferrer sponsored"
+            className="mt-3 inline-block rounded-xl border border-zinc-700 px-6 py-3 font-semibold text-zinc-200 transition hover:border-emerald-500 hover:text-emerald-400 text-sm"
+          >
             Start Rev Freelancer Application
           </a>
+          <p className="mt-3 text-xs text-zinc-500">
+            GoTranscript also hires beginners, pays per audio minute, and is another solid
+            first application alongside Rev.
+          </p>
         </div>
 
-        <p className="mt-8 text-xs text-zinc-600">{AFFILIATE_DISCLOSURE}</p>
+        <p className="mt-8 text-xs text-zinc-400">{AFFILIATE_DISCLOSURE}</p>
       </article>
 
       {/* FAQ */}
       <section className="mt-14">
+
+        <h2 className="mt-10 text-2xl font-bold text-zinc-50">Related guides</h2>
+        <ul className="mt-3 space-y-2 text-sm text-zinc-400">
+            <li>
+              <Link href="/how-to-get-transcription-jobs" className="font-medium text-emerald-400 transition hover:text-emerald-300">
+                how to get transcription jobs online
+              </Link>
+            </li>
+        </ul>
+
         <h2 className="text-2xl font-bold text-zinc-50">Frequently asked questions</h2>
         <div className="mt-4 divide-y divide-zinc-800 rounded-2xl border border-zinc-800">
           {FAQS.map((f) => (

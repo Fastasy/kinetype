@@ -4,13 +4,14 @@ import { AFFILIATE, AFFILIATE_DISCLOSURE } from "@/lib/affiliate";
 import ApplyBox from "@/components/ApplyBox";
 
 export const metadata: Metadata = {
-  title: "How to Get Transcription Jobs Online (No Experience)",
+  title: "How to Get Transcription Jobs Online",
   description:
-    "The realistic path to your first transcription job: measure your typing speed, apply to the right platforms, pass the test, start small.",
+    "The realistic path to your first transcription job: measure your typing speed, apply to the right platforms, pass the test, and start small.",
   alternates: {
     canonical: "/how-to-get-transcription-jobs",
   },
   openGraph: {
+    type: "article",
     title: "How to Get Transcription Jobs Online (No Experience)",
     description:
       "How transcription beginners actually get hired: typing speed, the right platforms, the application test, and a realistic timeline to first pay.",
@@ -68,10 +69,12 @@ const jsonLd = {
       headline: "How to Get Transcription Jobs Online (No Experience)",
       description:
         "The realistic path to your first transcription job: measure your typing speed, apply to the right platforms, pass the test, start small.",
-      author: { "@type": "Organization", name: "Kinetype" },
-      publisher: { "@type": "Organization", name: "Kinetype" },
+      keywords: ['get transcription jobs', 'transcription no experience', 'beginner'],
+      author: { "@type": "Organization", name: "Kinetype", url: "https://kinetype.app/", logo: "https://kinetype.app/og.png" },
+      publisher: { "@type": "Organization", name: "Kinetype", url: "https://kinetype.app/", logo: "https://kinetype.app/og.png" },
       mainEntityOfPage: "https://kinetype.app/how-to-get-transcription-jobs",
       datePublished: "2026-08-31",
+      dateModified: "2026-08-31",
     },
     {
       "@type": "FAQPage",
@@ -339,7 +342,7 @@ export default function HowToGetTranscriptionJobsPage() {
           Take the free typing test to start
         </Link>
 
-        <p className="mt-8 text-xs text-zinc-600">{AFFILIATE_DISCLOSURE}</p>
+        <p className="mt-8 text-xs text-zinc-400">{AFFILIATE_DISCLOSURE}</p>
       </article>
 
       {/* FAQ */}

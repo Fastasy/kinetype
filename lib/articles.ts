@@ -40,7 +40,7 @@ export const ARTICLES: ArticleMeta[] = [
   {
     slug: "typing-test-wfh-jobs",
     title: "Typing Test to WFH Jobs",
-    blurb: "Which work-from-home jobs your WPM unlocks, with the speed requirements for each role.",
+    blurb: "Which work-from-home jobs your WPM opens up, with the speed requirements for each role.",
     category: "Typing Tests",
     tags: ["typing test", "wfh", "jobs", "wpm"],
   },
@@ -61,7 +61,7 @@ export const ARTICLES: ArticleMeta[] = [
   {
     slug: "transcribeme-typing-test",
     title: "TranscribeMe Exam",
-    blurb: "Entrance exam benchmarks for TranscribeMe: what the 39 page style guide tests and how to prepare.",
+    blurb: "Entrance exam benchmarks for TranscribeMe: what the style guide tests and how to prepare.",
     category: "Typing Tests",
     tags: ["transcribeme", "exam", "typing test", "transcription"],
   },

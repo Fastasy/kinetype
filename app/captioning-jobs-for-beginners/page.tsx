@@ -4,13 +4,14 @@ import { AFFILIATE, AFFILIATE_DISCLOSURE } from "@/lib/affiliate";
 import ApplyBox from "@/components/ApplyBox";
 
 export const metadata: Metadata = {
-  title: "Captioning Jobs for Beginners: Closed Captioning From Home",
+  title: "Captioning Jobs for Beginners: From Home",
   description:
-    "What captioning work really involves, how it differs from transcription, what it pays, and how to apply with no experience.",
+    "What captioning work really involves, how it differs from transcription, what beginners earn, and how to apply with no experience.",
   alternates: {
     canonical: "/captioning-jobs-for-beginners",
   },
   openGraph: {
+    type: "article",
     title: "Captioning Jobs for Beginners: Closed Captioning From Home",
     description:
       "What captioning work really involves, how it differs from transcription, and how to apply with no experience.",
@@ -68,10 +69,12 @@ const jsonLd = {
       headline: "Captioning Jobs for Beginners: Closed Captioning From Home",
       description:
         "What captioning work really involves, how it differs from transcription, what it pays, and how to apply with no experience.",
-      author: { "@type": "Organization", name: "Kinetype" },
-      publisher: { "@type": "Organization", name: "Kinetype" },
+      keywords: ['captioning jobs', 'closed captioning', 'beginner captioner'],
+      author: { "@type": "Organization", name: "Kinetype", url: "https://kinetype.app/", logo: "https://kinetype.app/og.png" },
+      publisher: { "@type": "Organization", name: "Kinetype", url: "https://kinetype.app/", logo: "https://kinetype.app/og.png" },
       mainEntityOfPage: "https://kinetype.app/captioning-jobs-for-beginners",
       datePublished: "2026-08-31",
+      dateModified: "2026-08-31",
     },
     {
       "@type": "FAQPage",
@@ -316,7 +319,7 @@ export default function CaptioningJobsForBeginnersPage() {
           Take the free typing test to start
         </Link>
 
-        <p className="mt-8 text-xs text-zinc-600">{AFFILIATE_DISCLOSURE}</p>
+        <p className="mt-8 text-xs text-zinc-400">{AFFILIATE_DISCLOSURE}</p>
       </article>
 
       {/* FAQ */}

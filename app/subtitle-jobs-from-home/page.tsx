@@ -4,13 +4,14 @@ import { AFFILIATE, AFFILIATE_DISCLOSURE } from "@/lib/affiliate";
 import ApplyBox from "@/components/ApplyBox";
 
 export const metadata: Metadata = {
-  title: "Subtitle Jobs From Home: What They Pay and Where to Apply",
+  title: "Subtitle Jobs From Home: Pay and Where to Apply",
   description:
-    "Subtitling vs captioning vs transcription, who hires subtitle freelancers, what it pays, and how to get your first job.",
+    "Subtitling vs captioning vs transcription, who hires subtitle freelancers, what the work pays, and how to land your first job from home without experience.",
   alternates: {
     canonical: "/subtitle-jobs-from-home",
   },
   openGraph: {
+    type: "article",
     title: "Subtitle Jobs From Home: What They Pay and Where to Apply",
     description:
       "Subtitling vs captioning vs transcription, who hires subtitle freelancers, what it pays, and how to get your first job.",
@@ -68,10 +69,12 @@ const jsonLd = {
       headline: "Subtitle Jobs From Home: What They Pay and Where to Apply",
       description:
         "Subtitling vs captioning vs transcription, who hires subtitle freelancers, what it pays, and how to get your first job.",
-      author: { "@type": "Organization", name: "Kinetype" },
-      publisher: { "@type": "Organization", name: "Kinetype" },
+      keywords: ['subtitle jobs', 'subtitling from home', 'subtitle freelancer'],
+      author: { "@type": "Organization", name: "Kinetype", url: "https://kinetype.app/", logo: "https://kinetype.app/og.png" },
+      publisher: { "@type": "Organization", name: "Kinetype", url: "https://kinetype.app/", logo: "https://kinetype.app/og.png" },
       mainEntityOfPage: "https://kinetype.app/subtitle-jobs-from-home",
       datePublished: "2026-08-31",
+      dateModified: "2026-08-31",
     },
     {
       "@type": "FAQPage",
@@ -329,7 +332,7 @@ export default function SubtitleJobsFromHomePage() {
           Take the free typing test to start
         </Link>
 
-        <p className="mt-8 text-xs text-zinc-600">{AFFILIATE_DISCLOSURE}</p>
+        <p className="mt-8 text-xs text-zinc-400">{AFFILIATE_DISCLOSURE}</p>
       </article>
 
       {/* FAQ */}

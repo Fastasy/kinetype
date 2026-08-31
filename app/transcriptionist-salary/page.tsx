@@ -4,13 +4,14 @@ import { AFFILIATE, AFFILIATE_DISCLOSURE } from "@/lib/affiliate";
 import ApplyBox from "@/components/ApplyBox";
 
 export const metadata: Metadata = {
-  title: "Transcriptionist Salary: Real Pay Per Hour in 2026",
+  title: "Transcriptionist Salary: Real Pay Per Hour",
   description:
-    "The honest math behind transcription pay: per audio minute rates, real work time, and what you can actually earn per month.",
+    "The honest math behind transcription pay: per audio minute rates, the 2 to 4x real work time reality, and what you can actually earn per month as a beginner.",
   alternates: {
     canonical: "/transcriptionist-salary",
   },
   openGraph: {
+    type: "article",
     title: "Transcriptionist Salary: Real Pay Per Hour in 2026",
     description:
       "The honest math behind transcription pay: per audio minute rates, real work time, and realistic monthly earnings.",
@@ -68,10 +69,12 @@ const jsonLd = {
       headline: "Transcriptionist Salary: Real Pay Per Hour in 2026",
       description:
         "The honest math behind transcription pay: per audio minute rates, real work time, and what you can actually earn per month.",
-      author: { "@type": "Organization", name: "Kinetype" },
-      publisher: { "@type": "Organization", name: "Kinetype" },
+      keywords: ['transcriptionist salary', 'transcription pay', 'per audio hour'],
+      author: { "@type": "Organization", name: "Kinetype", url: "https://kinetype.app/", logo: "https://kinetype.app/og.png" },
+      publisher: { "@type": "Organization", name: "Kinetype", url: "https://kinetype.app/", logo: "https://kinetype.app/og.png" },
       mainEntityOfPage: "https://kinetype.app/transcriptionist-salary",
       datePublished: "2026-08-31",
+      dateModified: "2026-08-31",
     },
     {
       "@type": "FAQPage",
@@ -94,7 +97,7 @@ export default function TranscriptionistSalaryPage() {
 
       <article className="pt-10 sm:pt-14">
         <h1 className="text-3xl font-bold tracking-tight text-zinc-50 sm:text-4xl">
-          How much do transcriptionists make
+          Transcriptionist salary: how much do transcriptionists make
         </h1>
         <p className="mt-3 text-zinc-400">
           How much do transcriptionists make depends on one number you will not
@@ -329,7 +332,7 @@ export default function TranscriptionistSalaryPage() {
           Take the free typing test to start
         </Link>
 
-        <p className="mt-8 text-xs text-zinc-600">{AFFILIATE_DISCLOSURE}</p>
+        <p className="mt-8 text-xs text-zinc-400">{AFFILIATE_DISCLOSURE}</p>
       </article>
 
       {/* FAQ */}

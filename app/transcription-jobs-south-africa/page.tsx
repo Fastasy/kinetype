@@ -4,13 +4,14 @@ import { AFFILIATE, AFFILIATE_DISCLOSURE } from "@/lib/affiliate";
 import ApplyBox from "@/components/ApplyBox";
 
 export const metadata: Metadata = {
-  title: "Transcription Jobs South Africa: Pay and Where to Apply",
+  title: "Transcription Jobs South Africa: Pay & Where",
   description:
-    "The honest state of transcription work in South Africa: which platforms hire locals, what it pays in rands, and how to start.",
+    "The honest state of transcription work in South Africa: which platforms hire locals, what it pays in rands, and how to start from home.",
   alternates: {
     canonical: "/transcription-jobs-south-africa",
   },
   openGraph: {
+    type: "article",
     title: "Transcription Jobs South Africa: Pay and Where to Apply",
     description:
       "The honest state of transcription work in South Africa: which platforms hire locals, what it pays in rands, and how to start.",
@@ -68,10 +69,12 @@ const jsonLd = {
       headline: "Transcription jobs in South Africa",
       description:
         "The honest state of transcription work in South Africa: which platforms hire locals, what it pays in rands, and how to start.",
-      author: { "@type": "Organization", name: "Kinetype" },
-      publisher: { "@type": "Organization", name: "Kinetype" },
+      keywords: ['transcription jobs south africa', 'transcriber jobs sa', 'rands'],
+      author: { "@type": "Organization", name: "Kinetype", url: "https://kinetype.app/", logo: "https://kinetype.app/og.png" },
+      publisher: { "@type": "Organization", name: "Kinetype", url: "https://kinetype.app/", logo: "https://kinetype.app/og.png" },
       mainEntityOfPage: "https://kinetype.app/transcription-jobs-south-africa",
       datePublished: "2026-08-31",
+      dateModified: "2026-08-31",
     },
     {
       "@type": "FAQPage",
@@ -312,7 +315,7 @@ export default function TranscriptionJobsSouthAfricaPage() {
           Take the free typing test to start
         </Link>
 
-        <p className="mt-8 text-xs text-zinc-600">{AFFILIATE_DISCLOSURE}</p>
+        <p className="mt-8 text-xs text-zinc-400">{AFFILIATE_DISCLOSURE}</p>
       </article>
 
       {/* FAQ */}
