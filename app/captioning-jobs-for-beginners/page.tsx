@@ -180,23 +180,23 @@ export default function CaptioningJobsForBeginnersPage() {
           .
         </p>
         <div className="mt-3 flex flex-wrap gap-3">
-          <a
-            href={AFFILIATE.rev}
+<a
+            href={AFFILIATE.gotranscript}
             target="_blank"
             rel="noopener noreferrer sponsored"
             className="inline-block rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
           >
-            Apply for captioning at Rev
+            Apply to GoTranscript
           </a>
-          <a
-            href={AFFILIATE.gotranscript}
+<a
+            href={AFFILIATE.rev}
             target="_blank"
             rel="noopener noreferrer sponsored"
             className="inline-block rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-emerald-500 hover:text-emerald-400"
           >
-            Apply to GoTranscript
+            Apply for captioning at Rev
           </a>
-        </div>
+</div>
         <p className="mt-3 leading-relaxed text-zinc-400">
           You can also approach creators directly once you have a few samples,
           offering captioning for a flat rate per video. That route takes

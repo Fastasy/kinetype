@@ -192,15 +192,15 @@ export default function TranscriptionJobsForStudentsPhilippinesPage() {
           rates.
         </p>
         <div className="mt-3 flex flex-wrap gap-3">
-          <a
+<a
             href={AFFILIATE.gotranscript}
             target="_blank"
             rel="noopener noreferrer sponsored"
-            className="inline-block rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-emerald-500 hover:text-emerald-400"
+            className="inline-block rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
           >
             Apply to GoTranscript
           </a>
-          <a
+<a
             href={AFFILIATE.transcribeme}
             target="_blank"
             rel="noopener noreferrer sponsored"
@@ -208,7 +208,7 @@ export default function TranscriptionJobsForStudentsPhilippinesPage() {
           >
             Apply to TranscribeMe
           </a>
-        </div>
+</div>
 
         <h2 className="mt-10 text-2xl font-bold text-zinc-50">
           Balancing transcription with class

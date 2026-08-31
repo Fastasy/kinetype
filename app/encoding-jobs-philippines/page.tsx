@@ -182,23 +182,15 @@ export default function EncodingJobsPhilippinesPage() {
           platforms hire from the Philippines and test you during the application:
         </p>
         <div className="mt-3 flex flex-wrap gap-3">
-          <a
+<a
             href={AFFILIATE.gotranscript}
             target="_blank"
             rel="noopener noreferrer sponsored"
-            className="inline-block rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-emerald-500 hover:text-emerald-400"
+            className="inline-block rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
           >
             Apply to GoTranscript
           </a>
-          <a
-            href={AFFILIATE.transcribeme}
-            target="_blank"
-            rel="noopener noreferrer sponsored"
-            className="inline-block rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-emerald-500 hover:text-emerald-400"
-          >
-            Apply to TranscribeMe
-          </a>
-          <a
+<a
             href={AFFILIATE.rev}
             target="_blank"
             rel="noopener noreferrer sponsored"
@@ -206,7 +198,15 @@ export default function EncodingJobsPhilippinesPage() {
           >
             Apply to work at Rev
           </a>
-        </div>
+<a
+            href={AFFILIATE.transcribeme}
+            target="_blank"
+            rel="noopener noreferrer sponsored"
+            className="inline-block rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-emerald-500 hover:text-emerald-400"
+          >
+            Apply to TranscribeMe
+          </a>
+</div>
         <p className="mt-3 leading-relaxed text-zinc-400">
           The{" "}
           <Link href="/transcription-jobs-philippines" className="font-medium text-emerald-400 transition hover:text-emerald-300">

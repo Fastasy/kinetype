@@ -146,15 +146,7 @@ export default function HowToBecomeTranscriptionistPage() {
           options when you start.
         </p>
         <div className="mt-3 flex flex-wrap gap-3">
-          <a
-            href={AFFILIATE.rev}
-            target="_blank"
-            rel="noopener noreferrer sponsored"
-            className="inline-block rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
-          >
-            Apply to work at Rev
-          </a>
-          <a
+<a
             href={AFFILIATE.gotranscript}
             target="_blank"
             rel="noopener noreferrer sponsored"
@@ -162,7 +154,15 @@ export default function HowToBecomeTranscriptionistPage() {
           >
             Apply to GoTranscript
           </a>
-        </div>
+<a
+            href={AFFILIATE.rev}
+            target="_blank"
+            rel="noopener noreferrer sponsored"
+            className="inline-block rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-emerald-500 hover:text-emerald-400"
+          >
+            Apply to work at Rev
+          </a>
+</div>
 
         <h2 className="mt-10 text-2xl font-bold text-zinc-50">Step 5: Set up your workspace</h2>
         <p className="mt-3 leading-relaxed text-zinc-400">

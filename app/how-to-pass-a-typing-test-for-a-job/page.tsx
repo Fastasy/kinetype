@@ -138,15 +138,15 @@ export default function HowToPassTypingTestPage() {
           skill. These platforms hire beginners and test you during the application:
         </p>
         <div className="mt-3 flex flex-wrap gap-3">
-          <a
+<a
             href={AFFILIATE.gotranscript}
             target="_blank"
             rel="noopener noreferrer sponsored"
-            className="inline-block rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-emerald-500 hover:text-emerald-400"
+            className="inline-block rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
           >
             Apply to GoTranscript
           </a>
-          <a
+<a
             href={AFFILIATE.rev}
             target="_blank"
             rel="noopener noreferrer sponsored"
@@ -154,7 +154,7 @@ export default function HowToPassTypingTestPage() {
           >
             Apply to work at Rev
           </a>
-        </div>
+</div>
         <p className="mt-3 leading-relaxed text-zinc-400">
           For the wider picture, the{" "}
           <Link href="/transcription-jobs" className="font-medium text-emerald-400 transition hover:text-emerald-300">

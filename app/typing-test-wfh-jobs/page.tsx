@@ -276,7 +276,7 @@ export default function TypingTestWfhJobsPage() {
               href={AFFILIATE.gotranscript}
               target="_blank"
               rel="noopener noreferrer sponsored"
-              className="font-medium text-emerald-400 transition hover:text-emerald-300"
+              className="inline-block rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
             >
               GoTranscript application
             </a>
@@ -286,7 +286,7 @@ export default function TypingTestWfhJobsPage() {
               href={AFFILIATE.transcribeme}
               target="_blank"
               rel="noopener noreferrer sponsored"
-              className="font-medium text-emerald-400 transition hover:text-emerald-300"
+              className="inline-block rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-emerald-500 hover:text-emerald-400"
             >
               TranscribeMe jobs
             </a>
@@ -296,7 +296,7 @@ export default function TypingTestWfhJobsPage() {
               href={AFFILIATE.rev}
               target="_blank"
               rel="noopener noreferrer"
-              className="font-medium text-emerald-400 transition hover:text-emerald-300"
+              className="inline-block rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-emerald-500 hover:text-emerald-400"
             >
               Rev freelancer application
             </a>

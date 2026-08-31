@@ -145,7 +145,7 @@ export default function TagalogTranscriptionJobsPage() {
           language specifically:
         </p>
         <div className="mt-3 flex flex-wrap gap-3">
-          <a
+<a
             href={AFFILIATE.gotranscript}
             target="_blank"
             rel="noopener noreferrer sponsored"
@@ -153,7 +153,7 @@ export default function TagalogTranscriptionJobsPage() {
           >
             Apply to GoTranscript
           </a>
-          <a
+<a
             href={AFFILIATE.rev}
             target="_blank"
             rel="noopener noreferrer sponsored"
@@ -161,7 +161,7 @@ export default function TagalogTranscriptionJobsPage() {
           >
             Apply to work at Rev
           </a>
-        </div>
+</div>
 
         <h2 className="mt-10 text-2xl font-bold text-zinc-50">What it pays</h2>
         <p className="mt-3 leading-relaxed text-zinc-400">

@@ -160,7 +160,15 @@ export default function SubtitleJobsFromHomePage() {
           lists the main options.
         </p>
         <div className="mt-3 flex flex-wrap gap-3">
-          <a
+<a
+            href={AFFILIATE.gotranscript}
+            target="_blank"
+            rel="noopener noreferrer sponsored"
+            className="inline-block rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
+          >
+            Apply to GoTranscript
+          </a>
+<a
             href={AFFILIATE.rev}
             target="_blank"
             rel="noopener noreferrer sponsored"
@@ -168,15 +176,7 @@ export default function SubtitleJobsFromHomePage() {
           >
             Apply to work at Rev
           </a>
-          <a
-            href={AFFILIATE.gotranscript}
-            target="_blank"
-            rel="noopener noreferrer sponsored"
-            className="inline-block rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-emerald-500 hover:text-emerald-400"
-          >
-            Apply to GoTranscript
-          </a>
-        </div>
+</div>
         <p className="mt-3 leading-relaxed text-zinc-400">
           Some subtitle work never touches a platform at all. Creators and
           small studios post subtitle gigs directly on freelance marketplaces,

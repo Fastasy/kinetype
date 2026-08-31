@@ -154,7 +154,7 @@ export default function EarningsCalculator({ initialWpm = 60 }: CalculatorProps)
               href={AFFILIATE.gotranscript}
               target="_blank"
               rel="noopener noreferrer sponsored"
-              className="flex items-center justify-center gap-2 w-full rounded-xl bg-emerald-500 px-4 py-3 text-sm font-bold text-zinc-950 transition hover:bg-emerald-400 shadow-md"
+              className="inline-block rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
             >
               <span>Apply to GoTranscript ($15–$30/hr)</span>
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -165,7 +165,7 @@ export default function EarningsCalculator({ initialWpm = 60 }: CalculatorProps)
               href={AFFILIATE.rev}
               target="_blank"
               rel="noopener noreferrer sponsored"
-              className="flex items-center justify-center gap-2 w-full rounded-xl border border-zinc-700 bg-zinc-800/80 px-4 py-2.5 text-xs font-semibold text-zinc-200 transition hover:border-emerald-500 hover:text-emerald-400"
+              className="inline-block rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-emerald-500 hover:text-emerald-400"
             >
               <span>Apply to Rev</span>
             </a>

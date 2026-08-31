@@ -717,7 +717,7 @@ export default function TypingTest() {
                     href={AFFILIATE.gotranscript}
                     target="_blank"
                     rel="noopener noreferrer sponsored"
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400 shadow-md"
+                    className="inline-block rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
                   >
                     <span>Apply to GoTranscript ($15–$30/hr)</span>
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -728,7 +728,7 @@ export default function TypingTest() {
                     href={AFFILIATE.rev}
                     target="_blank"
                     rel="noopener noreferrer sponsored"
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 bg-zinc-800/80 px-4 py-2.5 text-sm font-semibold text-zinc-200 transition hover:border-emerald-500 hover:text-emerald-400"
+                    className="inline-block rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-emerald-500 hover:text-emerald-400"
                   >
                     <span>Apply to Rev</span>
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -753,7 +753,7 @@ export default function TypingTest() {
                     href={AFFILIATE.gotranscript}
                     target="_blank"
                     rel="noopener noreferrer sponsored"
-                    className="text-xs font-medium text-emerald-400 hover:underline inline-flex items-center gap-1"
+                    className="inline-block rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
                   >
                     View GoTranscript Job Requirements &rarr;
                   </a>

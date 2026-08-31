@@ -204,7 +204,7 @@ export default function HowToBecomeVAPhilippinesPage() {
               href={AFFILIATE.gotranscript}
               target="_blank"
               rel="noopener noreferrer sponsored"
-              className="mt-3 inline-block rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
+              className="inline-block rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
             >
               Apply to GoTranscript &rarr;
             </a>
@@ -219,7 +219,7 @@ export default function HowToBecomeVAPhilippinesPage() {
               href={AFFILIATE.transcribeme}
               target="_blank"
               rel="noopener noreferrer sponsored"
-              className="mt-3 inline-block rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
+              className="inline-block rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-emerald-500 hover:text-emerald-400"
             >
               Apply to TranscribeMe &rarr;
             </a>
@@ -234,7 +234,7 @@ export default function HowToBecomeVAPhilippinesPage() {
               href={AFFILIATE.rev}
               target="_blank"
               rel="noopener noreferrer sponsored"
-              className="mt-3 inline-block rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
+              className="inline-block rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-emerald-500 hover:text-emerald-400"
             >
               Apply to Rev &rarr;
             </a>
