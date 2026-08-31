@@ -10,6 +10,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 1.0,
     },
     {
+      url: "https://kinetype.app/articles",
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.9,
+    },
+    {
       url: "https://kinetype.app/rev-typing-test",
       lastModified: now,
       changeFrequency: "weekly",

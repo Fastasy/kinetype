@@ -4,28 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { AFFILIATE } from "@/lib/affiliate";
 
-const GUIDE_GROUPS = [
-  {
-    label: "WFH Job Guides",
-    links: [
-      { href: "/transcription-jobs-philippines", title: "Transcription Jobs Philippines", blurb: "Real pay, real requirements" },
-      { href: "/how-to-become-a-virtual-assistant-philippines", title: "Become a VA in the Philippines", blurb: "Hiring funnel and what agencies test" },
-      { href: "/typing-test-wfh-jobs", title: "Typing Test to WFH Jobs", blurb: "Which jobs your WPM unlocks" },
-      { href: "/transcription-jobs", title: "Transcription Jobs (Global)", blurb: "Where to find them in 2026" },
-      { href: "/how-to-become-a-transcriptionist", title: "Become a Transcriptionist", blurb: "The full career path" },
-    ],
-  },
-  {
-    label: "Platform Tests",
-    links: [
-      { href: "/rev-typing-test", title: "Rev Typing Test", blurb: "Passing score and accuracy tips" },
-      { href: "/transcribeme-typing-test", title: "TranscribeMe Exam", blurb: "Entrance exam benchmarks" },
-    ],
-  },
-];
-
 export default function HeaderNav() {
-  const [guidesOpen, setGuidesOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -52,63 +31,12 @@ export default function HeaderNav() {
           >
             Typing Test
           </Link>
-
-          {/* Guides Dropdown */}
-          <div
-            className="group relative"
-            onMouseEnter={() => setGuidesOpen(true)}
-            onMouseLeave={() => setGuidesOpen(false)}
+          <Link
+            href="/articles"
+            className="rounded-lg px-3 py-2 font-medium text-zinc-300 transition hover:bg-zinc-900 hover:text-emerald-400"
           >
-            <button
-              type="button"
-              onClick={() => setGuidesOpen(!guidesOpen)}
-              className="flex items-center gap-1.5 rounded-lg px-3 py-2 font-medium text-zinc-300 transition hover:bg-zinc-900 hover:text-emerald-400"
-              aria-expanded={guidesOpen}
-              aria-haspopup="true"
-            >
-              <span>Guides</span>
-              <svg
-                className={`h-3.5 w-3.5 transition-transform duration-200 ${
-                  guidesOpen ? "rotate-180 text-emerald-400" : "text-zinc-500"
-                }`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-
-            {/* Links stay in the DOM (crawlable); CSS shows them on hover / click */}
-            <div
-              className={`absolute left-0 top-full z-50 w-80 pt-1.5 transition-opacity duration-150 ${
-                guidesOpen ? "visible opacity-100" : "invisible opacity-0 group-hover:visible group-hover:opacity-100"
-              }`}
-            >
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/95 p-2 shadow-2xl backdrop-blur-md">
-                {GUIDE_GROUPS.map((group) => (
-                  <div key={group.label}>
-                    <div className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-                      {group.label}
-                    </div>
-                    {group.links.map((link) => (
-                      <Link
-                        key={link.href}
-                        href={link.href}
-                        onClick={() => setGuidesOpen(false)}
-                        className="group/link flex flex-col rounded-xl px-3 py-2 transition hover:bg-zinc-800/80"
-                      >
-                        <span className="text-sm font-medium text-zinc-200 group-hover/link:text-emerald-400">
-                          {link.title}
-                        </span>
-                        <span className="text-xs text-zinc-500">{link.blurb}</span>
-                      </Link>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+            Articles
+          </Link>
         </nav>
 
         {/* Right CTA Button */}
@@ -158,24 +86,13 @@ export default function HeaderNav() {
           >
             Typing Test
           </Link>
-
-          {GUIDE_GROUPS.map((group) => (
-            <div key={group.label}>
-              <div className="px-3 pt-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-                {group.label}
-              </div>
-              {group.links.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block rounded-xl px-3 py-1.5 text-sm text-zinc-400 hover:bg-zinc-900 hover:text-emerald-400"
-                >
-                  {link.title}
-                </Link>
-              ))}
-            </div>
-          ))}
+          <Link
+            href="/articles"
+            onClick={() => setMobileMenuOpen(false)}
+            className="block rounded-xl px-3 py-2 text-sm font-medium text-zinc-200 hover:bg-zinc-900"
+          >
+            Articles
+          </Link>
 
           <div className="pt-3">
             <a

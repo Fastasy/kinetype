@@ -4,6 +4,7 @@ Kinetype is a free typing speed test with WPM and accuracy scores, plus practica
 
 ## Tools
 - [Free typing test](https://kinetype.app/) - WPM, accuracy and error tracking in 15/30/60/120 second or word-count modes
+- [All articles](https://kinetype.app/articles) - searchable directory of every WFH job guide and pay research piece
 - [Rev typing test guide](https://kinetype.app/rev-typing-test) - what the Rev application tests and how to pass it
 - [TranscribeMe typing test guide](https://kinetype.app/transcribeme-typing-test) - TranscribeMe application requirements and practice
 

@@ -129,6 +129,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                 <div className="font-semibold text-zinc-200 text-xs uppercase tracking-wider">Career Guides</div>
                 <ul className="mt-3 space-y-2 text-xs">
                   <li>
+                    <Link href="/articles" className="transition hover:text-emerald-400">
+                      All Articles
+                    </Link>
+                  </li>
+                  <li>
                     <Link href="/how-to-become-a-virtual-assistant-philippines" className="transition hover:text-emerald-400">
                       VA Philippines Guide
                     </Link>
