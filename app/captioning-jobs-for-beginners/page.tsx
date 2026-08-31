@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AFFILIATE, AFFILIATE_DISCLOSURE } from "@/lib/affiliate";
+import ApplyBox from "@/components/ApplyBox";
 
 export const metadata: Metadata = {
   title: "Captioning Jobs for Beginners: Closed Captioning From Home",
@@ -179,7 +180,7 @@ export default function CaptioningJobsForBeginnersPage() {
           </Link>
           .
         </p>
-        <div className="mt-3 flex flex-wrap gap-3">
+        <ApplyBox>
 <a
             href={AFFILIATE.gotranscript}
             target="_blank"
@@ -196,7 +197,7 @@ export default function CaptioningJobsForBeginnersPage() {
           >
             Apply for captioning at Rev
           </a>
-</div>
+</ApplyBox>
         <p className="mt-3 leading-relaxed text-zinc-400">
           You can also approach creators directly once you have a few samples,
           offering captioning for a flat rate per video. That route takes

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AFFILIATE, AFFILIATE_DISCLOSURE } from "@/lib/affiliate";
+import ApplyBox from "@/components/ApplyBox";
 
 export const metadata: Metadata = {
   title: "How to Get Transcription Jobs Online (No Experience)",
@@ -179,7 +180,7 @@ export default function HowToGetTranscriptionJobsPage() {
           </Link>
           .
         </p>
-        <div className="mt-3 flex flex-wrap gap-3">
+        <ApplyBox>
 <a
             href={AFFILIATE.gotranscript}
             target="_blank"
@@ -204,7 +205,7 @@ export default function HowToGetTranscriptionJobsPage() {
           >
             Apply to TranscribeMe
           </a>
-</div>
+</ApplyBox>
 
         <h2 className="mt-10 text-2xl font-bold text-zinc-50">
           Pass the application test

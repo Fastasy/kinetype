@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AFFILIATE, AFFILIATE_DISCLOSURE } from "@/lib/affiliate";
+import ApplyBox from "@/components/ApplyBox";
 
 export const metadata: Metadata = {
   title: "TranscribeMe Exam & Typing Test: Passing Guide (2026)",
@@ -93,7 +94,7 @@ export default function TranscribeMeTypingTestPage() {
           <p className="mt-2 text-sm text-zinc-300">
             TranscribeMe looks for clean accuracy and steady speed (40–50+ WPM). Test your WPM on Kinetype before opening your application.
           </p>
-          <div className="mt-4 flex flex-wrap gap-3">
+          <ApplyBox>
             <Link
               href="/"
               className="rounded-xl bg-emerald-500 px-5 py-2.5 font-semibold text-zinc-950 transition hover:bg-emerald-400 text-sm shadow-md"
@@ -108,7 +109,7 @@ export default function TranscribeMeTypingTestPage() {
             >
               Apply to TranscribeMe &rarr;
             </a>
-          </div>
+          </ApplyBox>
         </div>
 
         <h2 className="mt-12 text-2xl font-bold text-zinc-50">TranscribeMe vs Other Platforms</h2>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AFFILIATE, AFFILIATE_DISCLOSURE } from "@/lib/affiliate";
+import ApplyBox from "@/components/ApplyBox";
 
 export const metadata: Metadata = {
   title: "Rev Typing Test: WPM Requirements, Exam Tips & Practice (2026)",
@@ -93,7 +94,7 @@ export default function RevTypingTestPage() {
           <p className="mt-2 text-sm text-zinc-300">
             Rev requires <strong>45–50+ WPM</strong> with strict punctuation and capitalization accuracy. Check your WPM score on Kinetype right now.
           </p>
-          <div className="mt-4 flex flex-wrap gap-3">
+          <ApplyBox>
             <Link
               href="/"
               className="rounded-xl bg-emerald-500 px-5 py-2.5 font-semibold text-zinc-950 transition hover:bg-emerald-400 text-sm shadow-md"
@@ -108,7 +109,7 @@ export default function RevTypingTestPage() {
             >
               Apply to Rev Directly &rarr;
             </a>
-          </div>
+          </ApplyBox>
         </div>
 
         <h2 className="mt-12 text-2xl font-bold text-zinc-50">Rev Typing Speed & Accuracy Requirements</h2>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AFFILIATE, AFFILIATE_DISCLOSURE } from "@/lib/affiliate";
+import ApplyBox from "@/components/ApplyBox";
 
 export const metadata: Metadata = {
   title: "Encoding Jobs in the Philippines: Pay and How to Start",
@@ -181,7 +182,7 @@ export default function EncodingJobsPhilippinesPage() {
           If you want paid typing work while you look for a full-time encoder role, transcription
           platforms hire from the Philippines and test you during the application:
         </p>
-        <div className="mt-3 flex flex-wrap gap-3">
+        <ApplyBox>
 <a
             href={AFFILIATE.gotranscript}
             target="_blank"
@@ -206,7 +207,7 @@ export default function EncodingJobsPhilippinesPage() {
           >
             Apply to TranscribeMe
           </a>
-</div>
+</ApplyBox>
         <p className="mt-3 leading-relaxed text-zinc-400">
           The{" "}
           <Link href="/transcription-jobs-philippines" className="font-medium text-emerald-400 transition hover:text-emerald-300">

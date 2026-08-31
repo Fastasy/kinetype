@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AFFILIATE, AFFILIATE_DISCLOSURE } from "@/lib/affiliate";
+import ApplyBox from "@/components/ApplyBox";
 
 export const metadata: Metadata = {
   title: "How to Become a Transcriptionist from Home",
@@ -145,7 +146,7 @@ export default function HowToBecomeTranscriptionistPage() {
           transfer. Apply to two or three at once; approval times vary and you want
           options when you start.
         </p>
-        <div className="mt-3 flex flex-wrap gap-3">
+        <ApplyBox>
 <a
             href={AFFILIATE.gotranscript}
             target="_blank"
@@ -162,7 +163,7 @@ export default function HowToBecomeTranscriptionistPage() {
           >
             Apply to work at Rev
           </a>
-</div>
+</ApplyBox>
 
         <h2 className="mt-10 text-2xl font-bold text-zinc-50">Step 5: Set up your workspace</h2>
         <p className="mt-3 leading-relaxed text-zinc-400">

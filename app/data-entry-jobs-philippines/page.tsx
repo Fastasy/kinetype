@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AFFILIATE, AFFILIATE_DISCLOSURE } from "@/lib/affiliate";
+import ApplyBox from "@/components/ApplyBox";
 
 export const metadata: Metadata = {
   title: "Data Entry Jobs in the Philippines Without Experience",
@@ -206,7 +207,7 @@ export default function DataEntryJobsPhilippinesPage() {
           Transcription is the closest beginner-accessible cousin of data entry,
           and these platforms hire without experience and pay in dollars:
         </p>
-        <div className="mt-3 flex flex-wrap gap-3">
+        <ApplyBox>
 <a
             href={AFFILIATE.gotranscript}
             target="_blank"
@@ -231,7 +232,7 @@ export default function DataEntryJobsPhilippinesPage() {
           >
             Apply to TranscribeMe
           </a>
-</div>
+</ApplyBox>
 
         <h2 className="mt-10 text-2xl font-bold text-zinc-50">
           What you need to get hired

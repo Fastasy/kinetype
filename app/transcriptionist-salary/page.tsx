@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AFFILIATE, AFFILIATE_DISCLOSURE } from "@/lib/affiliate";
+import ApplyBox from "@/components/ApplyBox";
 
 export const metadata: Metadata = {
   title: "Transcriptionist Salary: Real Pay Per Hour in 2026",
@@ -165,7 +166,7 @@ export default function TranscriptionistSalaryPage() {
           </Link>{" "}
           compares the main platforms directly.
         </p>
-        <div className="mt-3 flex flex-wrap gap-3">
+        <ApplyBox>
 <a
             href={AFFILIATE.gotranscript}
             target="_blank"
@@ -182,7 +183,7 @@ export default function TranscriptionistSalaryPage() {
           >
             Apply to work at Rev
           </a>
-</div>
+</ApplyBox>
 
         <h2 className="mt-10 text-2xl font-bold text-zinc-50">
           How much can you actually earn per month

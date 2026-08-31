@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AFFILIATE, AFFILIATE_DISCLOSURE } from "@/lib/affiliate";
+import ApplyBox from "@/components/ApplyBox";
 
 export const metadata: Metadata = {
   title: "Subtitle Jobs From Home: What They Pay and Where to Apply",
@@ -159,7 +160,7 @@ export default function SubtitleJobsFromHomePage() {
           </Link>{" "}
           lists the main options.
         </p>
-        <div className="mt-3 flex flex-wrap gap-3">
+        <ApplyBox>
 <a
             href={AFFILIATE.gotranscript}
             target="_blank"
@@ -176,7 +177,7 @@ export default function SubtitleJobsFromHomePage() {
           >
             Apply to work at Rev
           </a>
-</div>
+</ApplyBox>
         <p className="mt-3 leading-relaxed text-zinc-400">
           Some subtitle work never touches a platform at all. Creators and
           small studios post subtitle gigs directly on freelance marketplaces,

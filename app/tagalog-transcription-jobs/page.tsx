@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AFFILIATE, AFFILIATE_DISCLOSURE } from "@/lib/affiliate";
+import ApplyBox from "@/components/ApplyBox";
 
 export const metadata: Metadata = {
   title: "Tagalog Transcription Jobs (Work From Home)",
@@ -144,7 +145,7 @@ export default function TagalogTranscriptionJobsPage() {
           GoTranscript is the most direct route for Filipino speakers, because it hires for the
           language specifically:
         </p>
-        <div className="mt-3 flex flex-wrap gap-3">
+        <ApplyBox>
 <a
             href={AFFILIATE.gotranscript}
             target="_blank"
@@ -161,7 +162,7 @@ export default function TagalogTranscriptionJobsPage() {
           >
             Apply to work at Rev
           </a>
-</div>
+</ApplyBox>
 
         <h2 className="mt-10 text-2xl font-bold text-zinc-50">What it pays</h2>
         <p className="mt-3 leading-relaxed text-zinc-400">

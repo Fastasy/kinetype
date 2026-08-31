@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AFFILIATE, AFFILIATE_DISCLOSURE } from "@/lib/affiliate";
+import ApplyBox from "@/components/ApplyBox";
 
 export const metadata: Metadata = {
   title: "How to Pass a Typing Test for a Job",
@@ -137,7 +138,7 @@ export default function HowToPassTypingTestPage() {
           If your target role needs 50 WPM or more, transcription is the biggest employer of that
           skill. These platforms hire beginners and test you during the application:
         </p>
-        <div className="mt-3 flex flex-wrap gap-3">
+        <ApplyBox>
 <a
             href={AFFILIATE.gotranscript}
             target="_blank"
@@ -154,7 +155,7 @@ export default function HowToPassTypingTestPage() {
           >
             Apply to work at Rev
           </a>
-</div>
+</ApplyBox>
         <p className="mt-3 leading-relaxed text-zinc-400">
           For the wider picture, the{" "}
           <Link href="/transcription-jobs" className="font-medium text-emerald-400 transition hover:text-emerald-300">
