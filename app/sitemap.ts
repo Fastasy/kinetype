@@ -22,6 +22,18 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.9,
     },
     {
+      url: "https://kinetype.app/how-to-pass-a-typing-test-for-a-job",
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.9,
+    },
+    {
+      url: "https://kinetype.app/how-to-get-transcription-jobs",
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.9,
+    },
+    {
       url: "https://kinetype.app/transcription-jobs",
       lastModified: now,
       changeFrequency: "monthly",
@@ -49,6 +61,54 @@ export default function sitemap(): MetadataRoute.Sitemap {
       url: "https://kinetype.app/typing-test-wfh-jobs",
       lastModified: now,
       changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
+      url: "https://kinetype.app/encoding-jobs-philippines",
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
+      url: "https://kinetype.app/tagalog-transcription-jobs",
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
+      url: "https://kinetype.app/transcription-jobs-south-africa",
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
+      url: "https://kinetype.app/data-entry-jobs-philippines",
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
+      url: "https://kinetype.app/transcription-jobs-for-students-philippines",
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
+      url: "https://kinetype.app/captioning-jobs-for-beginners",
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
+      url: "https://kinetype.app/subtitle-jobs-from-home",
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
+      url: "https://kinetype.app/transcriptionist-salary",
+      lastModified: now,
+      changeFrequency: "monthly",
       priority: 0.8,
     },
   ];
