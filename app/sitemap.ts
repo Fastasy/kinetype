@@ -117,5 +117,65 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly",
       priority: 0.8,
     },
+    {
+      url: "https://kinetype.app/medical-transcription-jobs-philippines",
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
+      url: "https://kinetype.app/how-to-pass-gotranscript-test",
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
+      url: "https://kinetype.app/captioning-jobs-philippines",
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
+      url: "https://kinetype.app/sideline-jobs-philippines",
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
+      url: "https://kinetype.app/medical-transcription-jobs-from-home",
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
+      url: "https://kinetype.app/virtual-assistant-salary-philippines",
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
+      url: "https://kinetype.app/online-jobs-for-moms-philippines",
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
+      url: "https://kinetype.app/online-typing-jobs-south-africa",
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
+      url: "https://kinetype.app/legal-transcription-jobs-from-home",
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
+      url: "https://kinetype.app/free-transcription-test-practice",
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
   ];
 }
