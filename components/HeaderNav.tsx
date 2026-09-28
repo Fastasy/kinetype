@@ -24,22 +24,22 @@ export default function HeaderNav() {
   );
 
   const linkClass = (active: boolean) =>
-    `rounded-lg px-3 py-2 text-sm font-medium transition hover:bg-zinc-900 hover:text-emerald-400 ${
-      active ? "bg-zinc-900 text-emerald-400" : "text-zinc-300"
+    `rounded-lg px-3 py-2 text-sm font-medium transition hover:bg-panel hover:text-brand-bright ${
+      active ? "bg-panel text-brand-bright" : "text-body"
     }`;
 
   return (
-    <header className="sticky top-0 z-50 border-b border-zinc-800/80 bg-zinc-950/90 backdrop-blur-md">
+    <header className="sticky top-0 z-50 border-b border-edge/80 bg-ink/90 backdrop-blur-md">
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
         <Link
           href="/"
-          className="flex items-center gap-2 font-mono text-xl font-bold tracking-tight text-zinc-100 transition hover:opacity-90"
+          className="flex items-center gap-2 font-mono text-xl font-bold tracking-tight text-strong transition hover:opacity-90"
         >
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-sm text-emerald-400">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-brand/30 bg-brand/10 text-sm text-brand-bright">
             ⌨
           </span>
           <span>
-            kine<span className="text-emerald-400">type</span>
+            kine<span className="text-brand-bright">type</span>
           </span>
         </Link>
 
@@ -59,15 +59,15 @@ export default function HeaderNav() {
         <div className="flex items-center gap-2">
           <Link
             href="/shop"
-            className="hidden rounded-lg border border-zinc-800 px-2.5 py-1.5 font-mono text-xs text-zinc-300 transition hover:border-amber-500/50 hover:text-amber-300 sm:block"
+            className="hidden rounded-lg border border-edge px-2.5 py-1.5 font-mono text-xs text-body transition hover:border-flag/50 hover:text-flag sm:block"
             aria-label="Your coin balance"
           >
-            <span className="text-amber-400">{save.coins.toLocaleString("en-US")}</span> coins
+            <span className="text-flag">{save.coins.toLocaleString("en-US")}</span> coins
           </Link>
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
-            className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200 md:hidden"
+            className="rounded-lg p-2 text-muted hover:bg-panel hover:text-body md:hidden"
             aria-label="Toggle navigation menu"
             aria-expanded={open}
           >
@@ -83,13 +83,13 @@ export default function HeaderNav() {
       </div>
 
       {open && (
-        <div className="space-y-1 border-b border-zinc-800 bg-zinc-950 px-4 py-3 md:hidden">
+        <div className="space-y-1 border-b border-edge bg-ink px-4 py-3 md:hidden">
           {LINKS.map((l) => (
             <Link
               key={l.href}
               href={l.href}
               onClick={() => setOpen(false)}
-              className="block rounded-xl px-3 py-2 text-sm font-medium text-zinc-200 hover:bg-zinc-900"
+              className="block rounded-xl px-3 py-2 text-sm font-medium text-body hover:bg-panel"
             >
               {l.label}
             </Link>

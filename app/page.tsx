@@ -72,10 +72,10 @@ export default function HomePage() {
       <JsonLd data={schema} />
 
       <section className="mx-auto max-w-5xl px-4 sm:px-6">
-        <h1 className="font-mono text-3xl font-black leading-tight text-zinc-50 sm:text-5xl">
+        <h1 className="font-mono text-3xl font-black leading-tight text-strong sm:text-5xl">
           Typing fighting game: type to knock them off the stage
         </h1>
-        <p className="mt-4 max-w-2xl text-sm leading-relaxed text-zinc-400 sm:text-base">
+        <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted sm:text-base">
           Kinetype is a browser fighting game where the only weapon is your keyboard. Words appear
           on screen, finishing one lands a hit, and every hit shoves your opponent closer to the
           edge. Long words hurt more but take longer to land, so a slower typist who reads the fight
@@ -88,27 +88,29 @@ export default function HomePage() {
       </div>
 
       <section className="mx-auto mt-14 max-w-5xl px-4 sm:px-6" aria-labelledby="how">
-        <h2 id="how" className="font-mono text-xl font-bold text-zinc-50 sm:text-2xl">
+        <h2 id="how" className="font-mono text-xl font-bold text-strong sm:text-2xl">
           Three decisions every exchange
         </h2>
         <div className="mt-5 grid gap-4 sm:grid-cols-3">
-          <article className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
-            <h3 className="font-semibold text-zinc-100">Which word you take</h3>
-            <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+          <article className="rounded-2xl border border-edge bg-panel/40 p-5">
+            <h3 className="font-semibold text-strong">Which word you take</h3>
+            <p className="mt-2 text-sm leading-relaxed text-muted">
               Three words are live. A four letter word lands quickly and nudges them. An eight letter
-              word lands slowly and sends them flying. The choice is the strategy.
+              word lands slowly and sends them flying. Which one you take is the decision that decides
+              most exchanges.
             </p>
           </article>
-          <article className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
-            <h3 className="font-semibold text-zinc-100">How much damage is on you</h3>
-            <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-              Damage is not a health bar, it is a clock. The more you have taken, the further the same
-              hit throws you. Watch your colour change from white through amber to red.
+          <article className="rounded-2xl border border-edge bg-panel/40 p-5">
+            <h3 className="font-semibold text-strong">How much damage is on you</h3>
+            <p className="mt-2 text-sm leading-relaxed text-muted">
+              Damage does not knock you out on its own. It makes the next hit throw you further, so the
+              same word that nudged you at 10 percent sends you off the stage at 120. Watch your colour
+              shift from white through amber into red.
             </p>
           </article>
-          <article className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
-            <h3 className="font-semibold text-zinc-100">Whether to parry or race</h3>
-            <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+          <article className="rounded-2xl border border-edge bg-panel/40 p-5">
+            <h3 className="font-semibold text-strong">Whether to parry or race</h3>
+            <p className="mt-2 text-sm leading-relaxed text-muted">
               When a heavy word is coming you get a GUARD word. Finish it and you take a third of the
               knockback and answer twice as hard. Guess wrong and you gave up an exchange.
             </p>
@@ -117,23 +119,23 @@ export default function HomePage() {
       </section>
 
       <section className="mx-auto mt-14 max-w-5xl px-4 sm:px-6" aria-labelledby="rounds">
-        <h2 id="rounds" className="font-mono text-xl font-bold text-zinc-50 sm:text-2xl">
+        <h2 id="rounds" className="font-mono text-xl font-bold text-strong sm:text-2xl">
           Built for one more round
         </h2>
-        <ul className="mt-4 grid gap-3 text-sm text-zinc-400 sm:grid-cols-2">
-          <li className="rounded-xl border border-zinc-800 bg-zinc-900/30 px-4 py-3">
+        <ul className="mt-4 grid gap-3 text-sm text-muted sm:grid-cols-2">
+          <li className="rounded-xl border border-edge bg-panel/30 px-4 py-3">
             Matches are best of three rounds, which keeps a session short enough that your hands do
             not quit before your head does.
           </li>
-          <li className="rounded-xl border border-zinc-800 bg-zinc-900/30 px-4 py-3">
+          <li className="rounded-xl border border-edge bg-panel/30 px-4 py-3">
             Your best words per minute and accuracy are saved on your own device. No account, no
             server, no email.
           </li>
-          <li className="rounded-xl border border-zinc-800 bg-zinc-900/30 px-4 py-3">
+          <li className="rounded-xl border border-edge bg-panel/30 px-4 py-3">
             Every match pays coins. Win rounds, type clean, and hold a streak to earn more.
           </li>
-          <li className="rounded-xl border border-zinc-800 bg-zinc-900/30 px-4 py-3">
-            <Link href="/shop" className="text-emerald-400 underline underline-offset-2">
+          <li className="rounded-xl border border-edge bg-panel/30 px-4 py-3">
+            <Link href="/shop" className="text-brand-bright underline underline-offset-2">
               Skins and HUD overlays
             </Link>{" "}
             are unlocked with those coins. Every one is drawn in code, so nothing to download.
@@ -142,39 +144,39 @@ export default function HomePage() {
       </section>
 
       <section className="mx-auto mt-14 max-w-5xl px-4 sm:px-6" aria-labelledby="faq">
-        <h2 id="faq" className="font-mono text-xl font-bold text-zinc-50 sm:text-2xl">
+        <h2 id="faq" className="font-mono text-xl font-bold text-strong sm:text-2xl">
           Questions
         </h2>
-        <dl className="mt-5 divide-y divide-zinc-800 border-y border-zinc-800">
+        <dl className="mt-5 divide-y divide-edge border-y border-edge">
           {FAQ.map((f) => (
             <div key={f.q} className="py-4">
-              <dt className="font-semibold text-zinc-100">{f.q}</dt>
-              <dd className="mt-1.5 text-sm leading-relaxed text-zinc-400">{f.a}</dd>
+              <dt className="font-semibold text-strong">{f.q}</dt>
+              <dd className="mt-1.5 text-sm leading-relaxed text-muted">{f.a}</dd>
             </div>
           ))}
         </dl>
       </section>
 
       <section className="mx-auto mt-14 max-w-5xl px-4 sm:px-6" aria-labelledby="more">
-        <h2 id="more" className="font-mono text-xl font-bold text-zinc-50 sm:text-2xl">
+        <h2 id="more" className="font-mono text-xl font-bold text-strong sm:text-2xl">
           Keep going
         </h2>
         <div className="mt-4 flex flex-wrap gap-3 text-sm">
           <Link
             href="/how-to-play"
-            className="rounded-xl border border-zinc-700 px-4 py-2 font-semibold text-zinc-200 transition hover:border-emerald-500/60 hover:text-emerald-400"
+            className="rounded-xl border border-edge-bright px-4 py-2 font-semibold text-body transition hover:border-brand/60 hover:text-brand-bright"
           >
             Strategy guide
           </Link>
           <Link
             href="/typing-games-unblocked"
-            className="rounded-xl border border-zinc-700 px-4 py-2 font-semibold text-zinc-200 transition hover:border-emerald-500/60 hover:text-emerald-400"
+            className="rounded-xl border border-edge-bright px-4 py-2 font-semibold text-body transition hover:border-brand/60 hover:text-brand-bright"
           >
             Playing from school
           </Link>
           <Link
             href="/typing-speed-test"
-            className="rounded-xl border border-zinc-700 px-4 py-2 font-semibold text-zinc-200 transition hover:border-emerald-500/60 hover:text-emerald-400"
+            className="rounded-xl border border-edge-bright px-4 py-2 font-semibold text-body transition hover:border-brand/60 hover:text-brand-bright"
           >
             Plain typing speed test
           </Link>

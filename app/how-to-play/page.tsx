@@ -20,8 +20,8 @@ const STEPS = [
     p: "You do not have to click anything. The first letter you type locks onto the word that starts with it, and once a word is locked you are committed to it. You can also press 1, 2 or 3 to pick a slot deliberately. If two words start with the same letter, pressing the number is faster.",
   },
   {
-    h: "Watch your damage colour, not a health bar",
-    p: "There is no health bar, because damage does not kill you. It makes you easier to kill. Your outline shifts from white to yellow to orange to red as it climbs, and the same hit throws you further at 100 percent than it did at 10. Once you are deep in the red, a single well placed long word ends the round.",
+    h: "Watch the damage colour",
+    p: "There is no health bar, because damage does not knock you out on its own. It makes you easier to knock out. Your outline shifts from white to yellow to orange to red as it climbs, and the same hit throws you further at 100 percent than it did at 10. Once you are deep in the red, a single well placed long word ends the round.",
   },
   {
     h: "Parry the heavy shots",
@@ -87,10 +87,10 @@ export default function HowToPlayPage() {
       />
 
       <article className="mx-auto max-w-3xl px-4 sm:px-6">
-        <h1 className="font-mono text-3xl font-black leading-tight text-zinc-50 sm:text-4xl">
+        <h1 className="font-mono text-3xl font-black leading-tight text-strong sm:text-4xl">
           How to play Kinetype
         </h1>
-        <p className="mt-4 text-sm leading-relaxed text-zinc-400 sm:text-base">
+        <p className="mt-4 text-sm leading-relaxed text-muted sm:text-base">
           Kinetype looks like a fighting game and plays like a typing test with consequences. These
           five things decide almost every exchange, and they are worth two minutes before your first
           match.
@@ -98,55 +98,55 @@ export default function HowToPlayPage() {
 
         <div className="mt-8 space-y-6">
           {STEPS.map((s, i) => (
-            <section key={s.h} className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
-              <h2 className="flex items-baseline gap-3 font-semibold text-zinc-100">
-                <span className="font-mono text-sm text-emerald-400">{i + 1}</span>
+            <section key={s.h} className="rounded-2xl border border-edge bg-panel/40 p-5">
+              <h2 className="flex items-baseline gap-3 font-semibold text-strong">
+                <span className="font-mono text-sm text-brand-bright">{i + 1}</span>
                 {s.h}
               </h2>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-400">{s.p}</p>
+              <p className="mt-2 text-sm leading-relaxed text-muted">{s.p}</p>
             </section>
           ))}
         </div>
 
         <section className="mt-10" aria-labelledby="controls">
-          <h2 id="controls" className="font-mono text-xl font-bold text-zinc-50">
+          <h2 id="controls" className="font-mono text-xl font-bold text-strong">
             Controls
           </h2>
-          <div className="mt-4 overflow-hidden rounded-xl border border-zinc-800">
+          <div className="mt-4 overflow-hidden rounded-xl border border-edge">
             <table className="w-full text-left text-sm">
-              <thead className="bg-zinc-900/60 text-xs uppercase tracking-wider text-zinc-400">
+              <thead className="bg-panel/60 text-xs uppercase tracking-wider text-muted">
                 <tr>
                   <th className="px-4 py-2 font-semibold">Key</th>
                   <th className="px-4 py-2 font-semibold">Does</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-800 text-zinc-300">
+              <tbody className="divide-y divide-edge text-body">
                 <tr>
-                  <td className="px-4 py-2 font-mono text-emerald-400">A to Z</td>
+                  <td className="px-4 py-2 font-mono text-brand-bright">A to Z</td>
                   <td className="px-4 py-2">Types into the locked word, or locks a word by its first letter</td>
                 </tr>
                 <tr>
-                  <td className="px-4 py-2 font-mono text-emerald-400">1 2 3</td>
+                  <td className="px-4 py-2 font-mono text-brand-bright">1 2 3</td>
                   <td className="px-4 py-2">Picks a word slot deliberately</td>
                 </tr>
               </tbody>
             </table>
           </div>
-          <p className="mt-3 text-xs text-zinc-500">
+          <p className="mt-3 text-xs text-muted">
             That is the whole control scheme. There is no jump, no block button and no movement keys,
             because typing is the only verb in the game.
           </p>
         </section>
 
         <section className="mt-10" aria-labelledby="faq">
-          <h2 id="faq" className="font-mono text-xl font-bold text-zinc-50">
+          <h2 id="faq" className="font-mono text-xl font-bold text-strong">
             Common questions
           </h2>
-          <dl className="mt-4 divide-y divide-zinc-800 border-y border-zinc-800">
+          <dl className="mt-4 divide-y divide-edge border-y border-edge">
             {FAQ.map((f) => (
               <div key={f.q} className="py-4">
-                <dt className="font-semibold text-zinc-100">{f.q}</dt>
-                <dd className="mt-1.5 text-sm leading-relaxed text-zinc-400">{f.a}</dd>
+                <dt className="font-semibold text-strong">{f.q}</dt>
+                <dd className="mt-1.5 text-sm leading-relaxed text-muted">{f.a}</dd>
               </div>
             ))}
           </dl>
@@ -155,13 +155,13 @@ export default function HowToPlayPage() {
         <div className="mt-10 flex flex-wrap gap-3 text-sm">
           <Link
             href="/"
-            className="rounded-xl bg-emerald-500 px-5 py-2.5 font-bold text-zinc-950 transition hover:bg-emerald-400"
+            className="rounded-xl bg-brand px-5 py-2.5 font-bold text-ink transition hover:bg-brand-bright"
           >
             Play now
           </Link>
           <Link
             href="/shop"
-            className="rounded-xl border border-zinc-700 px-5 py-2.5 font-semibold text-zinc-200 transition hover:border-emerald-500/60 hover:text-emerald-400"
+            className="rounded-xl border border-edge-bright px-5 py-2.5 font-semibold text-body transition hover:border-brand/60 hover:text-brand-bright"
           >
             See the skins
           </Link>

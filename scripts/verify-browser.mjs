@@ -141,6 +141,16 @@ await page.getByTestId("start-overlay").click();
 await page.waitForSelector('[data-testid="player-panel"]', { timeout: 5000 });
 check("player panel appears after starting", true);
 
+// The focus guard exists because a keydown listener on `window` does not fire
+// unless the game's document has focus. This was a real bug: the game shipped
+// looking completely unresponsive when embedded, because typing did nothing.
+const hintBefore = await page.locator('[data-testid="focus-hint"]').count();
+check("a focus prompt shows before any input arrives", hintBefore > 0, `${hintBefore} present`);
+// Do what a player does: click the arena once so it can read the keyboard.
+const hint = page.locator('[data-testid="focus-hint"]');
+if (await hint.count()) await hint.first().click();
+else await page.locator("canvas").click({ position: { x: 20, y: 20 } });
+
 await page.waitForTimeout(2600); // countdown is 2.2s
 
 const mid = await canvasColours();
@@ -166,7 +176,12 @@ check(
 
 const initial = await readPrompts("player-panel");
 check("three prompts are live for the player", initial.length === 3, initial.map((p) => p.text).join(", "));
-check("prompts span more than one length", new Set(initial.map((p) => p.text.length)).size > 1);
+
+// Word choice is measured ACROSS the match, not on one draw. Tiers are rolled at
+// roughly 42/40/18, so three same-tier prompts is a normal ~7% outcome and a
+// single-draw assertion is simply wrong.
+const tiersSeen = new Set(initial.map((p) => p.tier));
+const lengthsSeen = new Set(initial.map((p) => p.text.length));
 
 let wordsTyped = 0;
 let maxBotDamage = 0;
@@ -189,6 +204,11 @@ while (Date.now() - started < FIRST_WINDOW_MS) {
 
   // Sample live state every exchange. The panels disappear the moment the match
   // resolves, so a single read after the loop can miss everything.
+  const live = await readPrompts("player-panel");
+  for (const p of live) {
+    tiersSeen.add(p.tier);
+    lengthsSeen.add(p.text.length);
+  }
   const bd = await valueOf("bot-damage");
   if (bd !== null) maxBotDamage = Math.max(maxBotDamage, bd);
   const pd = await valueOf("player-damage");
@@ -205,6 +225,15 @@ while (Date.now() - started < FIRST_WINDOW_MS) {
 }
 
 check("words were typed into the game", wordsTyped > 3, `${wordsTyped} words`);
+check(
+  "the word pool offers real choice across a match",
+  tiersSeen.size >= 2 && lengthsSeen.size >= 2,
+  `tiers ${[...tiersSeen].join("/")}, lengths ${[...lengthsSeen].join("/")}`,
+);
+check(
+  "the focus prompt clears once typing works",
+  (await page.locator('[data-testid="focus-hint"]').count()) === 0,
+);
 check(
   "typing words deals damage to the opponent",
   maxBotDamage > 0,

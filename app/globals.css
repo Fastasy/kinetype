@@ -1,8 +1,21 @@
 @import "tailwindcss";
 
+/*
+ * Kinetype palette.
+ *
+ * One place to change the whole look. Every component references these tokens
+ * (`bg-brand`, `text-muted`, `border-edge`) rather than raw Tailwind colours, so a
+ * reskin is this file and nothing else.
+ *
+ * Contrast checked against --color-ink at the sizes actually used:
+ *   muted   #8f8fb0 on #07070e  ~6.0:1   body copy, labels
+ *   body    #c9c9e0 on #07070e  ~12.5:1  primary text
+ *   brand-bright #a78bfa on #07070e ~7.3:1 links and accents
+ *   ink on brand #8b5cf6        ~5.2:1   solid buttons (dark text on violet)
+ */
 :root {
-  --background: #09090b;
-  --foreground: #e4e4e7;
+  --background: #07070e;
+  --foreground: #c9c9e0;
 }
 
 @theme inline {
@@ -10,6 +23,34 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+
+  /* surfaces */
+  --color-ink: #07070e;
+  --color-panel: #101021;
+  --color-edge: #23233c;
+  --color-edge-bright: #34345a;
+
+  /* text */
+  --color-strong: #f1f1fa;
+  --color-body: #c9c9e0;
+  --color-muted: #8f8fb0;
+
+  /* primary: violet */
+  --color-brand: #8b5cf6;
+  --color-brand-bright: #a78bfa;
+  --color-brand-soft: #ddd6fe;
+  --color-brand-deep: #2e1065;
+
+  /* secondary: cyan, used for the opponent and parry states */
+  --color-aqua: #22d3ee;
+
+  /* warm: coins and saves */
+  --color-flag: #fbbf24;
+  --color-flag-deep: #451a03;
+
+  /* danger: heavy hits, blast lines, losses */
+  --color-heat: #fb7185;
+  --color-heat-deep: #4c0519;
 }
 
 html {
@@ -18,41 +59,4 @@ html {
 
 body {
   background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans);
-}
-
-::selection {
-  background: rgba(52, 211, 153, 0.35);
-}
-
-@keyframes caretBlink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
-}
-
-.animate-caret-blink {
-  animation: caretBlink 1s infinite ease-in-out;
-}
-
-/* Print only the certificate modal when printing */
-@media print {
-  body * {
-    visibility: hidden;
-  }
-  #cert-area,
-  #cert-area * {
-    visibility: visible;
-  }
-  #cert-area {
-    position: absolute;
-    inset: 0;
-    margin: 0;
-    border: none !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-  }
-  .print\:hidden {
-    display: none !important;
-  }
 }

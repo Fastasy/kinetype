@@ -186,6 +186,28 @@ Hard constraints, from CrazyGames' published launch metrics.
 | Session target | 10+ min average | Best-of-3 plus a visible personal best and streak. |
 | Mobile | Playable, touch keyboard prompts | Desktop is the real target; mobile must not be broken. |
 
+## 11.5 Palette
+
+Every colour is a token in `app/globals.css`, and components reference tokens (`bg-brand`,
+`text-muted`, `border-edge`) rather than raw Tailwind colours, so a full reskin is that one file.
+The engine's own colours (stage, blast lines, platform edges) live in `game/render.ts`, and the
+default HUD theme lives in `game/skins.ts`.
+
+| Token | Value | Used for |
+|---|---|---|
+| `ink` | `#07070e` | page background |
+| `panel` | `#101021` | cards, prompt panels |
+| `edge` | `#23233c` | borders |
+| `strong` / `body` / `muted` | `#f1f1fa` / `#c9c9e0` / `#8f8fb0` | text, descending emphasis |
+| `brand` / `brand-bright` | `#8b5cf6` / `#a78bfa` | primary actions, player accent |
+| `aqua` | `#22d3ee` | parry states |
+| `flag` | `#fbbf24` | coins, save prompts |
+| `heat` | `#fb7185` | heavy hits, blast lines, losses |
+
+The damage gradient in `game/knockback.ts` is deliberately independent of the theme. White through
+yellow, orange and red to near-black reads as "how close to death" in any palette, and it is the one
+thing a player must never have to relearn.
+
 ## 12. Out of scope for MVP
 
 Explicitly not built, and not to be smuggled in:
@@ -218,3 +240,4 @@ The MVP is done when all of these are true.
 15. `npm run build`, `npm run lint` and `tsc --noEmit` all pass clean.
 16. The engine's pure logic has unit tests that pass under plain Node.
 17. `node scripts/verify-browser.mjs` plays a real match in Chromium and confirms damage lands.
+18. Keyboard input reaches the game when it is embedded, and a player who cannot type is told to click the arena instead of assuming the game is broken.

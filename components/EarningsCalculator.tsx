@@ -42,16 +42,16 @@ export default function EarningsCalculator({ initialWpm = 60 }: CalculatorProps)
   const { hourlyRate, weeklyEarnings, monthlyEarnings } = calculateEarnings(wpm, hoursPerWeek);
 
   return (
-    <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-950/40 via-zinc-900 to-zinc-950 p-6 sm:p-8 shadow-2xl">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-zinc-800/80 pb-6">
+    <div className="rounded-2xl border border-brand/30 bg-gradient-to-br from-brand-deep/40 via-panel to-ink p-6 sm:p-8 shadow-2xl">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-edge/80 pb-6">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400 border border-emerald-500/20">
+          <div className="inline-flex items-center gap-2 rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold text-brand-bright border border-brand/20">
             Transcription Income Estimator
           </div>
-          <h3 className="mt-2 text-2xl font-bold text-zinc-50">
+          <h3 className="mt-2 text-2xl font-bold text-strong">
             How much can you earn typing from home?
           </h3>
-          <p className="mt-1 text-sm text-zinc-400">
+          <p className="mt-1 text-sm text-muted">
             Adjust your typing speed and available hours to estimate your remote earnings.
           </p>
         </div>
@@ -61,13 +61,13 @@ export default function EarningsCalculator({ initialWpm = 60 }: CalculatorProps)
         {/* Sliders Area (7 cols) */}
         <div className="space-y-6 lg:col-span-7">
           {/* WPM Slider */}
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
+          <div className="rounded-2xl border border-edge bg-panel/60 p-5">
             <div className="flex items-center justify-between">
-              <label htmlFor={wpmInputId} className="text-sm font-medium text-zinc-300">
+              <label htmlFor={wpmInputId} className="text-sm font-medium text-body">
                 Your Typing Speed
               </label>
-              <span className="font-mono text-xl font-bold text-emerald-400">
-                {wpm} <span className="text-xs text-zinc-500 font-normal">WPM</span>
+              <span className="font-mono text-xl font-bold text-brand-bright">
+                {wpm} <span className="text-xs text-muted font-normal">WPM</span>
               </span>
             </div>
             <input
@@ -79,9 +79,9 @@ export default function EarningsCalculator({ initialWpm = 60 }: CalculatorProps)
               value={wpm}
               onChange={(e) => setWpm(Number(e.target.value))}
               aria-label="Typing speed in words per minute"
-              className="mt-4 w-full h-2 rounded-lg bg-zinc-800 accent-emerald-500 cursor-pointer"
+              className="mt-4 w-full h-2 rounded-lg bg-edge accent-brand cursor-pointer"
             />
-            <div className="mt-2 flex justify-between text-xs text-zinc-500 font-mono">
+            <div className="mt-2 flex justify-between text-xs text-muted font-mono">
               <span>30 WPM (Beginner)</span>
               <span>70 WPM (Fast)</span>
               <span>120+ WPM (Pro)</span>
@@ -89,13 +89,13 @@ export default function EarningsCalculator({ initialWpm = 60 }: CalculatorProps)
           </div>
 
           {/* Hours per week Slider */}
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
+          <div className="rounded-2xl border border-edge bg-panel/60 p-5">
             <div className="flex items-center justify-between">
-              <label htmlFor={hoursInputId} className="text-sm font-medium text-zinc-300">
+              <label htmlFor={hoursInputId} className="text-sm font-medium text-body">
                 Weekly Working Hours
               </label>
-              <span className="font-mono text-xl font-bold text-zinc-100">
-                {hoursPerWeek} <span className="text-xs text-zinc-500 font-normal">hrs/week</span>
+              <span className="font-mono text-xl font-bold text-strong">
+                {hoursPerWeek} <span className="text-xs text-muted font-normal">hrs/week</span>
               </span>
             </div>
             <input
@@ -107,9 +107,9 @@ export default function EarningsCalculator({ initialWpm = 60 }: CalculatorProps)
               value={hoursPerWeek}
               onChange={(e) => setHoursPerWeek(Number(e.target.value))}
               aria-label="Weekly working hours"
-              className="mt-4 w-full h-2 rounded-lg bg-zinc-800 accent-emerald-500 cursor-pointer"
+              className="mt-4 w-full h-2 rounded-lg bg-edge accent-brand cursor-pointer"
             />
-            <div className="mt-2 flex justify-between text-xs text-zinc-500 font-mono">
+            <div className="mt-2 flex justify-between text-xs text-muted font-mono">
               <span>5 hrs (Side Gig)</span>
               <span>20 hrs (Part-time)</span>
               <span>40 hrs (Full-time)</span>
@@ -118,34 +118,34 @@ export default function EarningsCalculator({ initialWpm = 60 }: CalculatorProps)
         </div>
 
         {/* Output & Conversion Card (5 cols) */}
-        <div className="rounded-2xl border border-emerald-500/40 bg-zinc-900/90 p-6 text-center lg:col-span-5 shadow-xl">
-          <div className="text-xs uppercase font-semibold tracking-wider text-zinc-400">
+        <div className="rounded-2xl border border-brand/40 bg-panel/90 p-6 text-center lg:col-span-5 shadow-xl">
+          <div className="text-xs uppercase font-semibold tracking-wider text-muted">
             Estimated Earnings
           </div>
 
           <div className="mt-3 flex items-baseline justify-center gap-1">
-            <span className="text-4xl sm:text-5xl font-extrabold text-emerald-400 font-mono">
+            <span className="text-4xl sm:text-5xl font-extrabold text-brand-bright font-mono">
               ${hourlyRate}
             </span>
-            <span className="text-zinc-400 font-medium">/ hour</span>
+            <span className="text-muted font-medium">/ hour</span>
           </div>
 
-          <div className="mt-6 grid grid-cols-2 gap-3 border-t border-zinc-800 pt-4 text-left font-mono">
-            <div className="rounded-xl bg-zinc-950/60 p-3">
-              <div className="text-[11px] text-zinc-500 uppercase">Monthly</div>
-              <div className="text-lg font-bold text-zinc-100 mt-0.5">
+          <div className="mt-6 grid grid-cols-2 gap-3 border-t border-edge pt-4 text-left font-mono">
+            <div className="rounded-xl bg-ink/60 p-3">
+              <div className="text-[11px] text-muted uppercase">Monthly</div>
+              <div className="text-lg font-bold text-strong mt-0.5">
                 ${monthlyEarnings.toLocaleString()}
               </div>
             </div>
-            <div className="rounded-xl bg-zinc-950/60 p-3">
-              <div className="text-[11px] text-zinc-500 uppercase">Weekly</div>
-              <div className="text-lg font-bold text-zinc-100 mt-0.5">
+            <div className="rounded-xl bg-ink/60 p-3">
+              <div className="text-[11px] text-muted uppercase">Weekly</div>
+              <div className="text-lg font-bold text-strong mt-0.5">
                 ${weeklyEarnings.toLocaleString()}
               </div>
             </div>
           </div>
 
-          <p className="mt-4 text-xs text-zinc-400 text-left leading-relaxed">
+          <p className="mt-4 text-xs text-muted text-left leading-relaxed">
             Estimate based on verified effective earnings of $2 to $6 an hour for general
             transcription (published rates divided by real work time of 2 to 4x the audio
             length). Faster typists land toward the top of the band.
@@ -156,7 +156,7 @@ export default function EarningsCalculator({ initialWpm = 60 }: CalculatorProps)
               href={AFFILIATE.gotranscript}
               target="_blank"
               rel="noopener noreferrer sponsored"
-              className="inline-block rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
+              className="inline-block rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-ink transition hover:bg-brand-bright"
             >
               <span>Apply to GoTranscript</span>
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -167,7 +167,7 @@ export default function EarningsCalculator({ initialWpm = 60 }: CalculatorProps)
               href={AFFILIATE.rev}
               target="_blank"
               rel="noopener noreferrer sponsored"
-              className="inline-block rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-emerald-500 hover:text-emerald-400"
+              className="inline-block rounded-xl border border-edge-bright px-4 py-2 text-sm font-semibold text-body transition hover:border-brand hover:text-brand-bright"
             >
               <span>Apply to Rev</span>
             </a>

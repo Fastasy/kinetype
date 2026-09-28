@@ -61,9 +61,9 @@ function roundRect(
 
 function drawBackground(ctx: CanvasRenderingContext2D): void {
   const sky = ctx.createLinearGradient(0, 0, 0, STAGE.height);
-  sky.addColorStop(0, "#08080b");
-  sky.addColorStop(0.55, "#0d0d12");
-  sky.addColorStop(1, "#15151b");
+  sky.addColorStop(0, "#06060e");
+  sky.addColorStop(0.55, "#0c0c1a");
+  sky.addColorStop(1, "#14142a");
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, STAGE.width, STAGE.height);
 
@@ -92,15 +92,15 @@ function drawBackground(ctx: CanvasRenderingContext2D): void {
     STAGE.platforms[0].y,
     620,
   );
-  glow.addColorStop(0, "rgba(52,211,153,0.07)");
-  glow.addColorStop(1, "rgba(52,211,153,0)");
+  glow.addColorStop(0, "rgba(139,92,246,0.11)");
+  glow.addColorStop(1, "rgba(139,92,246,0)");
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, STAGE.width, STAGE.height);
 }
 
 function drawBlastLines(ctx: CanvasRenderingContext2D): void {
   ctx.save();
-  ctx.strokeStyle = "rgba(239,68,68,0.28)";
+  ctx.strokeStyle = "rgba(251,113,133,0.30)";
   ctx.lineWidth = 2;
   ctx.setLineDash([10, 12]);
   for (const x of [STAGE.blast.left, STAGE.blast.right]) {
@@ -110,7 +110,7 @@ function drawBlastLines(ctx: CanvasRenderingContext2D): void {
     ctx.stroke();
   }
   ctx.setLineDash([]);
-  ctx.strokeStyle = "rgba(239,68,68,0.18)";
+  ctx.strokeStyle = "rgba(251,113,133,0.20)";
   ctx.beginPath();
   ctx.moveTo(STAGE.blast.left, STAGE.blast.bottom - 40);
   ctx.lineTo(STAGE.blast.right, STAGE.blast.bottom - 40);
@@ -121,10 +121,10 @@ function drawBlastLines(ctx: CanvasRenderingContext2D): void {
 function drawPlatforms(ctx: CanvasRenderingContext2D): void {
   STAGE.platforms.forEach((p, i) => {
     const main = i === 0;
-    ctx.fillStyle = main ? "#1b1b22" : "#17171d";
+    ctx.fillStyle = main ? "#191932" : "#141428";
     roundRect(ctx, p.x, p.y, p.w, main ? 20 : 14, 6);
     ctx.fill();
-    ctx.strokeStyle = main ? "rgba(52,211,153,0.55)" : "rgba(161,161,170,0.35)";
+    ctx.strokeStyle = main ? "rgba(167,139,250,0.62)" : "rgba(143,143,176,0.35)";
     ctx.lineWidth = main ? 3 : 2;
     ctx.beginPath();
     ctx.moveTo(p.x + 4, p.y + 1.5);

@@ -41,6 +41,16 @@ export default function FightClient() {
   const [result, setResult] = useState<MatchResult | null>(null);
   const [stage, setStage] = useState<Stage>("idle");
   const [playerSide, setPlayerSide] = useState<PlayerSide>("left");
+  /**
+   * True once a keystroke has actually reached the game.
+   *
+   * The keydown listener lives on `window`, so it only fires when the game's
+   * document has focus. Embedded in an iframe, or after clicking anything outside
+   * the arena, that focus is not guaranteed, and typing silently does nothing. The
+   * first version of this shipped without any focus handling at all and looked
+   * completely broken for exactly that reason.
+   */
+  const [gotInput, setGotInput] = useState(false);
   const muted = save.muted;
 
   const overlay = useMemo(() => overlayById(save.equippedOverlay), [save.equippedOverlay]);
@@ -91,6 +101,7 @@ export default function FightClient() {
     engineRef.current?.destroy();
     setResult(null);
     setSnap(null);
+    setGotInput(false);
 
     const botSkinId = playerSide === "left" ? "ember" : "spark";
     const engine = new GameEngine(
@@ -124,6 +135,9 @@ export default function FightClient() {
     // Bring the arena to the top of the viewport. The prompts sit below the canvas
     // and a typing game is unplayable if you have to scroll to read your own words.
     sectionRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+    // Take keyboard focus explicitly. Clicking the start button does not leave focus
+    // anywhere useful once that button unmounts.
+    window.requestAnimationFrame(() => canvas.focus());
   }, [playerSide, save.botWpm, save.equippedOverlay, save.equippedSkin, save.muted, save.streak, save.strictMode]);
 
   // Keyboard is the whole game. Space and arrows are swallowed so the page cannot
@@ -141,6 +155,17 @@ export default function FightClient() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  // A second listener purely to record that input is arriving.
+  useEffect(() => {
+    const mark = (e: KeyboardEvent) => {
+      if (!engineRef.current) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (/^[a-zA-Z0-9]$/.test(e.key)) setGotInput(true);
+    };
+    window.addEventListener("keydown", mark);
+    return () => window.removeEventListener("keydown", mark);
   }, []);
 
   // Keep the canvas matched to its box.
@@ -177,14 +202,14 @@ export default function FightClient() {
   return (
     <section ref={sectionRef} className="mx-auto max-w-5xl px-4 sm:px-6">
       {/* ---------------------------------------------------------- controls */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/40 px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-edge bg-panel/40 px-4 py-3">
         <div className="flex flex-wrap items-center gap-3 text-xs">
           <label className="flex items-center gap-2">
-            <span className="text-zinc-400">Bot speed</span>
+            <span className="text-muted">Bot speed</span>
             <select
               value={save.botWpm}
               onChange={(e) => setDifficulty(Number(e.target.value))}
-              className="rounded-lg border border-zinc-700 bg-zinc-950 px-2 py-1 font-mono text-zinc-100"
+              className="rounded-lg border border-edge-bright bg-ink px-2 py-1 font-mono text-strong"
               aria-label="Bot typing speed in words per minute"
             >
               {BOT_WPM_LADDER.map((w) => (
@@ -195,30 +220,30 @@ export default function FightClient() {
             </select>
           </label>
           <label className="flex items-center gap-2">
-            <span className="text-zinc-400">Your side</span>
+            <span className="text-muted">Your side</span>
             <select
               value={playerSide}
               onChange={(e) => setPlayerSide(e.target.value as PlayerSide)}
-              className="rounded-lg border border-zinc-700 bg-zinc-950 px-2 py-1 font-mono text-zinc-100"
+              className="rounded-lg border border-edge-bright bg-ink px-2 py-1 font-mono text-strong"
               aria-label="Which side you fight from"
             >
               <option value="left">Left</option>
               <option value="right">Right</option>
             </select>
           </label>
-          <label className="flex items-center gap-2 text-zinc-400">
+          <label className="flex items-center gap-2 text-muted">
             <input
               type="checkbox"
               checked={save.strictMode}
               onChange={(e) => setStrict(e.target.checked)}
-              className="h-3.5 w-3.5 accent-emerald-500"
+              className="h-3.5 w-3.5 accent-brand"
             />
             Strict mistakes
           </label>
           <button
             type="button"
             onClick={toggleMute}
-            className="rounded-lg border border-zinc-700 px-2 py-1 text-zinc-300 transition hover:border-emerald-500/50 hover:text-emerald-400"
+            className="rounded-lg border border-edge-bright px-2 py-1 text-body transition hover:border-brand/50 hover:text-brand-bright"
             aria-pressed={muted}
           >
             {muted ? "Sound off" : "Sound on"}
@@ -226,14 +251,14 @@ export default function FightClient() {
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="font-mono text-xs text-zinc-400">
-            <span className="text-amber-400">{save.coins.toLocaleString("en-US")}</span> coins
+          <span className="font-mono text-xs text-muted">
+            <span className="text-flag">{save.coins.toLocaleString("en-US")}</span> coins
           </span>
           {stage === "fighting" ? (
             <button
               type="button"
               onClick={stop}
-              className="rounded-xl border border-zinc-700 px-3 py-1.5 text-sm font-semibold text-zinc-200 transition hover:border-rose-500/60 hover:text-rose-300"
+              className="rounded-xl border border-edge-bright px-3 py-1.5 text-sm font-semibold text-body transition hover:border-heat/60 hover:text-heat"
             >
               Quit
             </button>
@@ -242,7 +267,7 @@ export default function FightClient() {
               type="button"
               data-testid="fight-button"
               onClick={start}
-              className="rounded-xl bg-emerald-500 px-5 py-2 text-sm font-bold text-zinc-950 transition hover:bg-emerald-400"
+              className="rounded-xl bg-brand px-5 py-2 text-sm font-bold text-ink transition hover:bg-brand-bright"
             >
               {stage === "over" ? "Fight again" : "Fight"}
             </button>
@@ -254,12 +279,12 @@ export default function FightClient() {
       {stage === "fighting" && them && (
         <div
           data-testid="bot-panel"
-          className="mt-3 rounded-2xl border border-zinc-800/80 px-3 py-2"
+          className="mt-3 rounded-2xl border border-edge/80 px-3 py-2"
           style={{ background: overlay.panel }}
         >
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <span className="font-mono text-xs font-bold text-zinc-300">BOT</span>
+              <span className="font-mono text-xs font-bold text-body">BOT</span>
               <span
                 data-testid="bot-damage"
                 data-value={them.damage}
@@ -271,17 +296,17 @@ export default function FightClient() {
               <span
                 data-testid="bot-wpm"
                 data-value={them.wpm}
-                className="font-mono text-[10px] text-zinc-500"
+                className="font-mono text-[10px] text-muted"
               >
                 {them.wpm} WPM
               </span>
               {snap?.telegraph[opponent] && (
-                <span className="rounded border border-rose-500/50 px-1.5 py-0.5 font-mono text-[10px] font-bold text-rose-400">
+                <span className="rounded border border-heat/50 px-1.5 py-0.5 font-mono text-[10px] font-bold text-heat">
                   HEAVY INCOMING
                 </span>
               )}
               {them.guardOffered && (
-                <span className="rounded border border-sky-500/50 px-1.5 py-0.5 font-mono text-[10px] font-bold text-sky-400">
+                <span className="rounded border border-aqua/50 px-1.5 py-0.5 font-mono text-[10px] font-bold text-aqua">
                   BOT PARRYING
                 </span>
               )}
@@ -289,13 +314,13 @@ export default function FightClient() {
                 <span
                   data-testid="bot-cooldown"
                   title="You cannot land another hit for a moment. Use it to line up a heavy word."
-                  className="rounded border border-zinc-600/60 px-1.5 py-0.5 font-mono text-[10px] text-zinc-400"
+                  className="rounded border border-muted/60 px-1.5 py-0.5 font-mono text-[10px] text-muted"
                 >
                   NOT HITTABLE YET
                 </span>
               )}
             </div>
-            <span className="font-mono text-[10px] text-zinc-500">
+            <span className="font-mono text-[10px] text-muted">
               round {snap?.round} · {snap?.wins[playerSide]}-{snap?.wins[opponent]}
             </span>
           </div>
@@ -316,7 +341,7 @@ export default function FightClient() {
       )}
 
       {/* ---------------------------------------------------------- the fight */}
-      <div className="relative mt-3 overflow-hidden rounded-2xl border border-zinc-800 bg-black">
+      <div className="relative mt-3 overflow-hidden rounded-2xl border border-edge bg-black">
         {/* The 58vh cap keeps the bot panel, the arena and the player's prompts all
             inside one screenful on a laptop. Without it the prompts fell below the
             fold and the game could not be played. */}
@@ -324,29 +349,53 @@ export default function FightClient() {
           className="relative mx-auto aspect-[16/9] w-full"
           style={{ maxWidth: "min(100%, calc(58vh * 16 / 9))" }}
         >
-          <canvas ref={canvasRef} className="block h-full w-full" aria-label="Typing fight arena" />
+          <canvas
+            ref={canvasRef}
+            tabIndex={0}
+            className="block h-full w-full outline-none"
+            aria-label="Typing fight arena. Click here, then type to attack."
+          />
+
+          {/* Focus guard. Shown until a real keystroke has landed, so a player who
+              cannot type gets told why instead of assuming the game is broken. */}
+          {stage === "fighting" && !gotInput && (
+            <button
+              type="button"
+              data-testid="focus-hint"
+              onClick={() => canvasRef.current?.focus()}
+              className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-ink/85 text-center"
+            >
+              <span className="font-mono text-lg font-bold text-strong">
+                Click here to start typing
+              </span>
+              <span className="max-w-sm text-xs text-muted">
+                The game reads your keyboard directly, so it needs you to click the arena once. Your
+                prompts are under the arena.
+              </span>
+            </button>
+          )}
 
           {stage === "idle" && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-zinc-950/92 px-6 text-center">
-              <h2 className="font-mono text-2xl font-bold text-zinc-100 sm:text-3xl">
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-ink/92 px-6 text-center">
+              <h2 className="font-mono text-2xl font-bold text-strong sm:text-3xl">
                 Type to knock them off
               </h2>
-              <p className="max-w-md text-sm text-zinc-400">
+              <p className="max-w-md text-sm text-muted">
                 Three words are live. Type one to hit. Long words hit harder, but they take
                 longer to land. Push the bot past the red line to win.
               </p>
-              <ul className="max-w-md space-y-1 text-left text-xs text-zinc-400">
+              <ul className="max-w-md space-y-1 text-left text-xs text-muted">
                 <li>
-                  <span className="font-mono text-emerald-400">1 2 3</span> pick a word, or just
+                  <span className="font-mono text-brand-bright">1 2 3</span> pick a word, or just
                   start typing one
                 </li>
                 <li>
-                  <span className="font-mono text-rose-400">HEAVY INCOMING</span> means a big hit is
-                  coming: complete the <span className="font-mono text-sky-400">GUARD</span> word to
+                  <span className="font-mono text-heat">HEAVY INCOMING</span> means a big hit is
+                  coming: complete the <span className="font-mono text-aqua">GUARD</span> word to
                   parry it
                 </li>
                 <li>
-                  pushed off the edge? You get one <span className="font-mono text-amber-400">SAVE</span>{" "}
+                  pushed off the edge? You get one <span className="font-mono text-flag">SAVE</span>{" "}
                   word to climb back
                 </li>
               </ul>
@@ -354,11 +403,11 @@ export default function FightClient() {
                 type="button"
                 data-testid="start-overlay"
                 onClick={start}
-                className="mt-1 rounded-xl bg-emerald-500 px-6 py-2.5 text-sm font-bold text-zinc-950 transition hover:bg-emerald-400"
+                className="mt-1 rounded-xl bg-brand px-6 py-2.5 text-sm font-bold text-ink transition hover:bg-brand-bright"
               >
                 Start the fight
               </button>
-              <p className="text-[11px] text-zinc-600">
+              <p className="text-[11px] text-muted">
                 Needs a physical keyboard. Best on a laptop or desktop.
               </p>
             </div>
@@ -366,7 +415,7 @@ export default function FightClient() {
 
           {stage === "fighting" && snap?.phase === "countdown" && (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <span className="font-mono text-6xl font-black text-zinc-100 drop-shadow-lg">
+              <span className="font-mono text-6xl font-black text-strong drop-shadow-lg">
                 {Math.ceil(snap.countdown)}
               </span>
             </div>
@@ -374,15 +423,15 @@ export default function FightClient() {
 
           {stage === "fighting" && snap?.phase === "finish" && (
             <div className="pointer-events-none absolute left-1/2 top-4 -translate-x-1/2">
-              <span className="animate-pulse rounded-lg border border-rose-500/60 bg-rose-950/70 px-3 py-1 font-mono text-sm font-black tracking-widest text-rose-300">
+              <span className="animate-pulse rounded-lg border border-heat/60 bg-heat-deep/70 px-3 py-1 font-mono text-sm font-black tracking-widest text-heat">
                 FINISH
               </span>
             </div>
           )}
 
           {stage === "fighting" && me?.recovering && (
-            <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-xl border border-amber-400/70 bg-amber-950/80 px-4 py-2 text-center">
-              <div className="font-mono text-sm font-bold text-amber-300">TYPE THE SAVE WORD</div>
+            <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-xl border border-flag/70 bg-flag-deep/80 px-4 py-2 text-center">
+              <div className="font-mono text-sm font-bold text-flag">TYPE THE SAVE WORD</div>
             </div>
           )}
         </div>
@@ -392,12 +441,12 @@ export default function FightClient() {
       {stage === "fighting" && me && (
         <div
           data-testid="player-panel"
-          className="mt-3 rounded-2xl border border-emerald-800/40 px-3 py-3"
+          className="mt-3 rounded-2xl border border-brand-deep/40 px-3 py-3"
           style={{ background: overlay.panel }}
         >
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <span className="font-mono text-sm font-bold text-emerald-400">YOU</span>
+              <span className="font-mono text-sm font-bold text-brand-bright">YOU</span>
               <span
                 data-testid="player-damage"
                 data-value={me.damage}
@@ -409,17 +458,17 @@ export default function FightClient() {
               >
                 {Math.round(me.damage)}%
               </span>
-              <span data-testid="player-wpm" data-value={me.wpm} className="font-mono text-xs text-zinc-400">
+              <span data-testid="player-wpm" data-value={me.wpm} className="font-mono text-xs text-muted">
                 {me.wpm} WPM
               </span>
-              <span className="font-mono text-xs text-zinc-500">{me.accuracy.toFixed(1)}% acc</span>
+              <span className="font-mono text-xs text-muted">{me.accuracy.toFixed(1)}% acc</span>
               {me.counter > 0 && (
-                <span className="rounded border border-emerald-400/60 px-1.5 py-0.5 font-mono text-[10px] font-bold text-emerald-300">
+                <span className="rounded border border-brand-bright/60 px-1.5 py-0.5 font-mono text-[10px] font-bold text-brand-soft">
                   COUNTER READY
                 </span>
               )}
               {me.invuln > 0 && (
-                <span className="rounded border border-zinc-500/60 px-1.5 py-0.5 font-mono text-[10px] text-zinc-300">
+                <span className="rounded border border-muted/60 px-1.5 py-0.5 font-mono text-[10px] text-body">
                   INVULNERABLE
                 </span>
               )}
@@ -427,13 +476,13 @@ export default function FightClient() {
                 <span
                   data-testid="player-cooldown"
                   title="You cannot be hit for a moment. Type while it lasts."
-                  className="rounded border border-zinc-600/60 px-1.5 py-0.5 font-mono text-[10px] text-zinc-400"
+                  className="rounded border border-muted/60 px-1.5 py-0.5 font-mono text-[10px] text-muted"
                 >
                   BRIEFLY SAFE
                 </span>
               )}
             </div>
-            <span className="font-mono text-xs text-zinc-500">
+            <span className="font-mono text-xs text-muted">
               {Math.ceil(snap?.roundTimer ?? 0)}s left in round
             </span>
           </div>
@@ -460,17 +509,17 @@ export default function FightClient() {
           data-won={result.humanWon ? "1" : "0"}
           data-coins={result.coins}
           data-wpm={result.wpm}
-          className="mt-3 rounded-2xl border border-zinc-800 bg-zinc-900/50 px-5 py-4"
+          className="mt-3 rounded-2xl border border-edge bg-panel/50 px-5 py-4"
         >
           <div className="flex flex-wrap items-baseline gap-3">
             <span
               className={`font-mono text-xl font-black ${
-                result.humanWon ? "text-emerald-400" : "text-rose-400"
+                result.humanWon ? "text-brand-bright" : "text-heat"
               }`}
             >
               {result.humanWon ? "WIN" : "LOSS"}
             </span>
-            <span className="font-mono text-sm text-zinc-400">
+            <span className="font-mono text-sm text-muted">
               rounds {result.roundsWon}-{result.roundsLost}
             </span>
           </div>
@@ -481,27 +530,27 @@ export default function FightClient() {
               { k: "Accuracy", v: `${result.accuracy.toFixed(1)}%` },
               { k: streakLabel(result.streak), v: `${save.bestWpm}` },
             ].map((s) => (
-              <div key={s.k} className="rounded-xl border border-zinc-800 bg-zinc-950/60 px-3 py-2">
-                <div className="text-[10px] uppercase tracking-wider text-zinc-500">{s.k}</div>
-                <div className="font-mono text-lg font-bold text-zinc-100">{s.v}</div>
+              <div key={s.k} className="rounded-xl border border-edge bg-ink/60 px-3 py-2">
+                <div className="text-[10px] uppercase tracking-wider text-muted">{s.k}</div>
+                <div className="font-mono text-lg font-bold text-strong">{s.v}</div>
               </div>
             ))}
           </div>
           <div className="mt-3 flex flex-wrap gap-2 text-xs">
             <Link
               href="/shop"
-              className="rounded-lg border border-zinc-700 px-3 py-1.5 font-semibold text-zinc-200 transition hover:border-emerald-500/60 hover:text-emerald-400"
+              className="rounded-lg border border-edge-bright px-3 py-1.5 font-semibold text-body transition hover:border-brand/60 hover:text-brand-bright"
             >
               Spend coins in the shop
             </Link>
             <Link
               href="/how-to-play"
-              className="rounded-lg border border-zinc-700 px-3 py-1.5 font-semibold text-zinc-200 transition hover:border-emerald-500/60 hover:text-emerald-400"
+              className="rounded-lg border border-edge-bright px-3 py-1.5 font-semibold text-body transition hover:border-brand/60 hover:text-brand-bright"
             >
               Strategy guide
             </Link>
             {result.humanWon && save.streak > 1 && (
-              <span className="rounded-lg bg-amber-500/10 px-3 py-1.5 font-mono text-amber-300">
+              <span className="rounded-lg bg-flag/10 px-3 py-1.5 font-mono text-flag">
                 {save.streak} win streak
               </span>
             )}
@@ -510,11 +559,11 @@ export default function FightClient() {
       )}
 
       {/* ---------------------------------------------------------- footer strip */}
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[11px] text-zinc-500">
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted">
         <span>
-          Wearing <span className="font-mono text-zinc-300">{playerSkin.name}</span> (
+          Wearing <span className="font-mono text-body">{playerSkin.name}</span> (
           {RARITY_LABEL[playerSkin.rarity]}) · bot at{" "}
-          <span className="font-mono text-zinc-300">{save.botWpm} WPM</span> (
+          <span className="font-mono text-body">{save.botWpm} WPM</span> (
           {Math.round(bot.accuracy * 100)}% accuracy)
         </span>
         {save.matches > 0 && (

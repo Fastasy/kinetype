@@ -36,46 +36,46 @@ export default function Certificate({ wpm, accuracy, onClose }: CertificateProps
       <div className="flex min-h-full items-center justify-center">
         <div
           id="cert-area"
-          className="w-full max-w-2xl rounded-2xl border-4 border-zinc-300 bg-white p-8 text-zinc-900 shadow-2xl sm:p-10"
+          className="w-full max-w-2xl rounded-2xl border-4 border-body bg-white p-8 text-panel shadow-2xl sm:p-10"
         >
           <div className="text-center">
-            <div className="font-mono text-sm uppercase tracking-[0.3em] text-zinc-500">
+            <div className="font-mono text-sm uppercase tracking-[0.3em] text-muted">
               Kinetype
             </div>
             <h2 className="mt-2 text-2xl font-bold sm:text-3xl">Certificate of Typing Speed</h2>
-            <div className="mx-auto mt-4 h-px w-24 bg-emerald-500" />
+            <div className="mx-auto mt-4 h-px w-24 bg-brand" />
           </div>
 
           <div className="mt-8 text-center">
-            <p className="text-sm text-zinc-600">This certifies that</p>
+            <p className="text-sm text-muted">This certifies that</p>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Your full name"
-              className="mt-2 w-full max-w-md border-b-2 border-zinc-300 bg-transparent text-center text-2xl font-semibold text-zinc-900 outline-none placeholder:text-zinc-500 focus:border-emerald-500"
+              className="mt-2 w-full max-w-md border-b-2 border-body bg-transparent text-center text-2xl font-semibold text-panel outline-none placeholder:text-muted focus:border-brand"
             />
-            <p className="mt-4 text-sm text-zinc-600">
+            <p className="mt-4 text-sm text-muted">
               achieved a typing speed of
             </p>
-            <div className="mt-1 font-mono text-5xl font-bold text-emerald-600">{wpm} WPM</div>
-            <p className="mt-1 text-sm text-zinc-600">with {accuracy}% accuracy</p>
-            <p className="mt-6 text-xs text-zinc-500">on {date}</p>
+            <div className="mt-1 font-mono text-5xl font-bold text-brand">{wpm} WPM</div>
+            <p className="mt-1 text-sm text-muted">with {accuracy}% accuracy</p>
+            <p className="mt-6 text-xs text-muted">on {date}</p>
           </div>
 
           <div className="mt-8 flex items-end justify-between">
-            <div className="text-xs text-zinc-500">Verified result</div>
-            <div className="text-right font-mono text-xs text-zinc-500">
+            <div className="text-xs text-muted">Verified result</div>
+            <div className="text-right font-mono text-xs text-muted">
               kinetype.app
-              <div className="mt-1 border-t border-zinc-300 pt-1">Free typing speed test</div>
+              <div className="mt-1 border-t border-body pt-1">Free typing speed test</div>
             </div>
           </div>
         </div>
       </div>
 
       <div className="mx-auto mt-6 flex max-w-2xl flex-col items-center gap-3 pb-4 print:hidden">
-        <div className="w-full rounded-xl border border-emerald-500/30 bg-zinc-900/90 px-4 py-3 text-center shadow">
-          <p className="text-xs text-zinc-300">
+        <div className="w-full rounded-xl border border-brand/30 bg-panel/90 px-4 py-3 text-center shadow">
+          <p className="text-xs text-body">
             Ready to get paid? Your {wpm} WPM score is worth taking to a platform that pays
             for accuracy. GoTranscript hires transcribers in 140 languages and pays per
             audio minute.
@@ -84,7 +84,7 @@ export default function Certificate({ wpm, accuracy, onClose }: CertificateProps
             href={AFFILIATE.gotranscript}
             target="_blank"
             rel="noopener noreferrer sponsored"
-            className="mt-2 inline-block rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
+            className="mt-2 inline-block rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-ink transition hover:bg-brand-bright"
           >
             Apply to GoTranscript
           </a>
@@ -93,19 +93,19 @@ export default function Certificate({ wpm, accuracy, onClose }: CertificateProps
           <button
             type="button"
             onClick={() => window.print()}
-            className="rounded-xl bg-emerald-500 px-6 py-3 font-semibold text-zinc-950 transition hover:bg-emerald-400"
+            className="rounded-xl bg-brand px-6 py-3 font-semibold text-ink transition hover:bg-brand-bright"
           >
             Print / Save PDF
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-zinc-600 px-6 py-3 font-medium text-zinc-200 transition hover:border-zinc-400"
+            className="rounded-xl border border-muted px-6 py-3 font-medium text-body transition hover:border-muted"
           >
             Close
           </button>
         </div>
-        <p className="text-center text-[11px] text-zinc-400">
+        <p className="text-center text-[11px] text-muted">
           Some links on this page are affiliate or referral links. If you sign up through
           them, Kinetype may earn a small commission at no extra cost to you.
         </p>

@@ -26,15 +26,15 @@ export default function ShopPage() {
       />
 
       <div className="mx-auto max-w-5xl px-4 sm:px-6">
-        <h1 className="font-mono text-3xl font-black leading-tight text-zinc-50 sm:text-4xl">
+        <h1 className="font-mono text-3xl font-black leading-tight text-strong sm:text-4xl">
           Skins and overlays
         </h1>
-        <p className="mt-4 max-w-2xl text-sm leading-relaxed text-zinc-400 sm:text-base">
+        <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted sm:text-base">
           Every fighter, trail and HUD theme in Kinetype is drawn from code at runtime. There are no
           image files to download, which is why the game loads in under a second and why a new skin
           costs the site nothing to serve. You unlock them with coins you earn by playing.
         </p>
-        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-400">
+        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted">
           If you are short on coins, the fastest route is a clean win at a bot speed slightly above
           your own typing speed. Accuracy pays: the payout counts your best words per minute and your
           accuracy separately, and a losing streak still pays a little.
@@ -48,7 +48,7 @@ export default function ShopPage() {
       <div className="mx-auto mt-10 max-w-5xl px-4 text-sm sm:px-6">
         <Link
           href="/"
-          className="rounded-xl bg-emerald-500 px-5 py-2.5 font-bold text-zinc-950 transition hover:bg-emerald-400"
+          className="rounded-xl bg-brand px-5 py-2.5 font-bold text-ink transition hover:bg-brand-bright"
         >
           Earn coins in a match
         </Link>

@@ -10,9 +10,9 @@ const TIER_LABEL: Record<string, string> = {
 };
 
 const TIER_CLASS: Record<string, string> = {
-  light: "text-emerald-400 border-emerald-500/40",
-  mid: "text-amber-400 border-amber-500/40",
-  heavy: "text-rose-400 border-rose-500/40",
+  light: "text-brand-bright border-brand/40",
+  mid: "text-flag border-flag/40",
+  heavy: "text-heat border-heat/40",
 };
 
 /**
@@ -52,7 +52,7 @@ export default function PromptCard({
       data-flawed={prompt.flawed ? "1" : "0"}
       className={`relative rounded-xl border transition ${
         compact ? "px-2 py-1.5" : "px-3 py-2.5"
-      } ${isRecovery ? "ring-2 ring-amber-400/70" : ""}`}
+      } ${isRecovery ? "ring-2 ring-flag/70" : ""}`}
       style={{
         background: overlay.promptBg,
         borderColor: active ? overlay.promptActive : overlay.border,
@@ -67,9 +67,9 @@ export default function PromptCard({
           >
             {isGuard ? "GUARD" : isRecovery ? "SAVE" : TIER_LABEL[prompt.tier]}
           </span>
-          <span className="font-mono text-[10px] text-zinc-500">
+          <span className="font-mono text-[10px] text-muted">
             {slot + 1}
-            {prompt.flawed ? <span className="ml-1 text-rose-400">flawed</span> : null}
+            {prompt.flawed ? <span className="ml-1 text-heat">flawed</span> : null}
           </span>
         </div>
       )}
@@ -87,10 +87,10 @@ export default function PromptCard({
               key={`${prompt.id}-${i}`}
               className={
                 committed
-                  ? "font-bold text-emerald-400"
+                  ? "font-bold text-brand-bright"
                   : next
-                    ? "rounded bg-white/15 px-0.5 font-bold text-zinc-50 underline decoration-emerald-400 decoration-2 underline-offset-4"
-                    : "text-zinc-500"
+                    ? "rounded bg-white/15 px-0.5 font-bold text-strong underline decoration-brand-bright decoration-2 underline-offset-4"
+                    : "text-muted"
               }
             >
               {ch}

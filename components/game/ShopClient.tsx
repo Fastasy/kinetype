@@ -92,14 +92,14 @@ export default function ShopClient() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/40 px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-edge bg-panel/40 px-4 py-3">
         <div className="font-mono text-sm">
-          <span className="text-amber-400 text-lg font-bold">
+          <span className="text-flag text-lg font-bold">
             {coinLabel(save.coins)}
           </span>{" "}
-          <span className="text-zinc-400">coins</span>
+          <span className="text-muted">coins</span>
         </div>
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-muted">
           Coins are earned by playing. Win rounds, type fast, and keep a streak going.
         </p>
       </div>
@@ -108,7 +108,7 @@ export default function ShopClient() {
         <div
           role="status"
           className={`rounded-xl border px-4 py-2 text-sm ${
-            err ? "border-rose-500/40 bg-rose-950/30 text-rose-300" : "border-emerald-500/40 bg-emerald-950/30 text-emerald-300"
+            err ? "border-heat/40 bg-heat-deep/30 text-heat" : "border-brand/40 bg-brand-deep/30 text-brand-soft"
           }`}
         >
           {err ?? msg}
@@ -116,10 +116,10 @@ export default function ShopClient() {
       )}
 
       <section aria-labelledby="fighters">
-        <h2 id="fighters" className="font-mono text-lg font-bold text-zinc-100">
+        <h2 id="fighters" className="font-mono text-lg font-bold text-strong">
           Fighters
         </h2>
-        <p className="mt-1 text-sm text-zinc-400">
+        <p className="mt-1 text-sm text-muted">
           Every fighter is drawn from data, not artwork, so each one loads instantly and costs the
           site nothing to serve.
         </p>
@@ -131,32 +131,32 @@ export default function ShopClient() {
               <li
                 key={skin.id}
                 className={`rounded-2xl border p-4 transition ${
-                  equipped ? "border-emerald-500/60 bg-emerald-950/10" : "border-zinc-800 bg-zinc-900/40"
+                  equipped ? "border-brand/60 bg-brand-deep/10" : "border-edge bg-panel/40"
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <div className="font-semibold text-zinc-100">{skin.name}</div>
-                    <div className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">
+                    <div className="font-semibold text-strong">{skin.name}</div>
+                    <div className="font-mono text-[10px] uppercase tracking-wider text-muted">
                       {RARITY_LABEL[skin.rarity]}
                     </div>
                   </div>
                   <SkinPreview skin={skin} size={72} />
                 </div>
-                <p className="mt-3 min-h-[40px] text-xs leading-relaxed text-zinc-400">{skin.blurb}</p>
+                <p className="mt-3 min-h-[40px] text-xs leading-relaxed text-muted">{skin.blurb}</p>
                 <div className="mt-3 flex items-center justify-between gap-2">
-                  <span className="font-mono text-xs text-amber-400">
+                  <span className="font-mono text-xs text-flag">
                     {skin.price === 0 ? "Free" : `${skin.price} coins`}
                   </span>
                   {equipped ? (
-                    <span className="rounded-lg bg-emerald-500/15 px-3 py-1.5 text-xs font-semibold text-emerald-300">
+                    <span className="rounded-lg bg-brand/15 px-3 py-1.5 text-xs font-semibold text-brand-soft">
                       Equipped
                     </span>
                   ) : owned ? (
                     <button
                       type="button"
                       onClick={() => equip("skin", skin.id, skin.name)}
-                      className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs font-semibold text-zinc-200 transition hover:border-emerald-500/60 hover:text-emerald-400"
+                      className="rounded-lg border border-edge-bright px-3 py-1.5 text-xs font-semibold text-body transition hover:border-brand/60 hover:text-brand-bright"
                     >
                       Equip
                     </button>
@@ -165,7 +165,7 @@ export default function ShopClient() {
                       type="button"
                       onClick={() => buy("skin", skin.id, skin.price, skin.name)}
                       disabled={save.coins < skin.price}
-                      className="rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-bold text-zinc-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-zinc-700 disabled:text-zinc-400"
+                      className="rounded-lg bg-brand px-3 py-1.5 text-xs font-bold text-ink transition hover:bg-brand-bright disabled:cursor-not-allowed disabled:bg-edge-bright disabled:text-muted"
                     >
                       {save.coins < skin.price ? `${skin.price - save.coins} short` : "Unlock"}
                     </button>
@@ -178,10 +178,10 @@ export default function ShopClient() {
       </section>
 
       <section aria-labelledby="overlays">
-        <h2 id="overlays" className="font-mono text-lg font-bold text-zinc-100">
+        <h2 id="overlays" className="font-mono text-lg font-bold text-strong">
           HUD overlays
         </h2>
-        <p className="mt-1 text-sm text-zinc-400">
+        <p className="mt-1 text-sm text-muted">
           Restyle the prompt panels and damage readout without changing how the fight plays.
         </p>
         <ul className="mt-4 grid gap-4 sm:grid-cols-3">
@@ -192,34 +192,34 @@ export default function ShopClient() {
               <li
                 key={o.id}
                 className={`rounded-2xl border p-4 ${
-                  equipped ? "border-emerald-500/60 bg-emerald-950/10" : "border-zinc-800 bg-zinc-900/40"
+                  equipped ? "border-brand/60 bg-brand-deep/10" : "border-edge bg-panel/40"
                 }`}
               >
-                <div className="font-semibold text-zinc-100">{o.name}</div>
-                <p className="mt-1 min-h-[32px] text-xs text-zinc-400">{o.blurb}</p>
+                <div className="font-semibold text-strong">{o.name}</div>
+                <p className="mt-1 min-h-[32px] text-xs text-muted">{o.blurb}</p>
                 <div className="mt-3 flex gap-1.5">
                   {[o.panel, o.border, o.promptActive].map((c, i) => (
                     <span
                       key={i}
-                      className="h-6 flex-1 rounded border border-zinc-700"
+                      className="h-6 flex-1 rounded border border-edge-bright"
                       style={{ background: c }}
                       aria-hidden="true"
                     />
                   ))}
                 </div>
                 <div className="mt-3 flex items-center justify-between gap-2">
-                  <span className="font-mono text-xs text-amber-400">
+                  <span className="font-mono text-xs text-flag">
                     {o.price === 0 ? "Free" : `${o.price} coins`}
                   </span>
                   {equipped ? (
-                    <span className="rounded-lg bg-emerald-500/15 px-3 py-1.5 text-xs font-semibold text-emerald-300">
+                    <span className="rounded-lg bg-brand/15 px-3 py-1.5 text-xs font-semibold text-brand-soft">
                       Equipped
                     </span>
                   ) : owned ? (
                     <button
                       type="button"
                       onClick={() => equip("overlay", o.id, o.name)}
-                      className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs font-semibold text-zinc-200 transition hover:border-emerald-500/60 hover:text-emerald-400"
+                      className="rounded-lg border border-edge-bright px-3 py-1.5 text-xs font-semibold text-body transition hover:border-brand/60 hover:text-brand-bright"
                     >
                       Equip
                     </button>
@@ -228,7 +228,7 @@ export default function ShopClient() {
                       type="button"
                       onClick={() => buy("overlay", o.id, o.price, o.name)}
                       disabled={save.coins < o.price}
-                      className="rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-bold text-zinc-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-zinc-700 disabled:text-zinc-400"
+                      className="rounded-lg bg-brand px-3 py-1.5 text-xs font-bold text-ink transition hover:bg-brand-bright disabled:cursor-not-allowed disabled:bg-edge-bright disabled:text-muted"
                     >
                       {save.coins < o.price ? `${o.price - save.coins} short` : "Unlock"}
                     </button>
@@ -242,13 +242,13 @@ export default function ShopClient() {
 
       <section
         aria-labelledby="money"
-        className="rounded-2xl border border-zinc-800 bg-zinc-900/30 px-4 py-4"
+        className="rounded-2xl border border-edge bg-panel/30 px-4 py-4"
       >
-        <h2 id="money" className="font-mono text-sm font-bold text-zinc-200">
+        <h2 id="money" className="font-mono text-sm font-bold text-body">
           About paying
         </h2>
-        <p className="mt-2 text-xs leading-relaxed text-zinc-400">{REAL_MONEY_DISABLED_REASON}</p>
-        <p className="mt-2 text-xs leading-relaxed text-zinc-500">
+        <p className="mt-2 text-xs leading-relaxed text-muted">{REAL_MONEY_DISABLED_REASON}</p>
+        <p className="mt-2 text-xs leading-relaxed text-muted">
           That is deliberate, not an oversight. A cosmetic is worth buying when there is somebody to
           show it to, and right now you are fighting a bot. Card checkout goes live with
           multiplayer.

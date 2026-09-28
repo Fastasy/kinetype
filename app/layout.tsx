@@ -70,10 +70,10 @@ const FOOTER_LINKS = [
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col bg-zinc-950 text-zinc-200">
+      <body className="min-h-full flex flex-col bg-ink text-body">
         <a
           href="#main"
-          className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-[60] focus:rounded-lg focus:bg-emerald-500 focus:px-4 focus:py-2 focus:font-semibold focus:text-zinc-950"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-[60] focus:rounded-lg focus:bg-brand focus:px-4 focus:py-2 focus:font-semibold focus:text-ink"
         >
           Skip to content
         </a>
@@ -84,14 +84,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {children}
         </main>
 
-        <footer className="mt-16 border-t border-zinc-800/80 bg-zinc-950">
-          <div className="mx-auto max-w-5xl px-4 py-10 text-sm text-zinc-400 sm:px-6">
-            <div className="flex flex-wrap items-center gap-2 font-mono text-lg font-bold text-zinc-100">
-              <span className="flex h-6 w-6 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-xs text-emerald-400">
+        <footer className="mt-16 border-t border-edge/80 bg-ink">
+          <div className="mx-auto max-w-5xl px-4 py-10 text-sm text-muted sm:px-6">
+            <div className="flex flex-wrap items-center gap-2 font-mono text-lg font-bold text-strong">
+              <span className="flex h-6 w-6 items-center justify-center rounded-lg border border-brand/30 bg-brand/10 text-xs text-brand-bright">
                 ⌨
               </span>
               <span>
-                kine<span className="text-emerald-400">type</span>
+                kine<span className="text-brand-bright">type</span>
               </span>
             </div>
             <p className="mt-3 max-w-lg text-xs leading-relaxed">
@@ -102,14 +102,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <ul className="mt-6 grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-3">
               {FOOTER_LINKS.map((l) => (
                 <li key={l.href}>
-                  <Link href={l.href} className="transition hover:text-emerald-400">
+                  <Link href={l.href} className="transition hover:text-brand-bright">
                     {l.label}
                   </Link>
                 </li>
               ))}
             </ul>
 
-            <div className="mt-8 border-t border-zinc-800/80 pt-6 text-xs text-zinc-600">
+            <div className="mt-8 border-t border-edge/80 pt-6 text-xs text-muted">
               © {new Date().getFullYear()} {SITE_NAME}. Free, no account needed.
             </div>
           </div>

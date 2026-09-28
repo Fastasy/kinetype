@@ -23,10 +23,10 @@ export default function ArticlesDirectory() {
   return (
     <main className="mx-auto max-w-5xl px-4">
       <article className="pt-10 sm:pt-14">
-        <h1 className="text-3xl font-bold tracking-tight text-zinc-50 sm:text-4xl">
+        <h1 className="text-3xl font-bold tracking-tight text-strong sm:text-4xl">
           Articles
         </h1>
-        <p className="mt-3 max-w-2xl text-zinc-400">
+        <p className="mt-3 max-w-2xl text-muted">
           Work-from-home job guides, platform test breakdowns, and honest pay
           research for transcription, captioning, data entry and virtual
           assistant work.
@@ -36,7 +36,7 @@ export default function ArticlesDirectory() {
         <div className="mt-8">
           <div className="relative">
             <svg
-              className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-500"
+              className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -55,7 +55,7 @@ export default function ArticlesDirectory() {
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search articles, e.g. Philippines, captioning, salary..."
               aria-label="Search articles"
-              className="w-full rounded-2xl border border-zinc-800 bg-zinc-900/70 py-3.5 pl-12 pr-4 text-sm text-zinc-100 placeholder-zinc-500 outline-none transition focus:border-emerald-500/60 focus:ring-2 focus:ring-emerald-500/20"
+              className="w-full rounded-2xl border border-edge bg-panel/70 py-3.5 pl-12 pr-4 text-sm text-strong placeholder-muted outline-none transition focus:border-brand/60 focus:ring-2 focus:ring-brand/20"
             />
           </div>
 
@@ -69,8 +69,8 @@ export default function ArticlesDirectory() {
                 aria-pressed={category === c}
                 className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition ${
                   category === c
-                    ? "bg-emerald-500 text-zinc-950"
-                    : "border border-zinc-700 text-zinc-300 hover:border-emerald-500/60 hover:text-emerald-400"
+                    ? "bg-brand text-ink"
+                    : "border border-edge-bright text-body hover:border-brand/60 hover:text-brand-bright"
                 }`}
               >
                 {c}
@@ -80,7 +80,7 @@ export default function ArticlesDirectory() {
         </div>
 
         {/* Results count */}
-        <p className="mt-6 text-xs text-zinc-500" aria-live="polite">
+        <p className="mt-6 text-xs text-muted" aria-live="polite">
           {filtered.length} {filtered.length === 1 ? "article" : "articles"}
           {query.trim() ? ` matching "${query.trim()}"` : ""}
           {category !== "All" ? ` in ${category}` : ""}
@@ -92,29 +92,29 @@ export default function ArticlesDirectory() {
             <Link
               key={a.slug}
               href={`/${a.slug}`}
-              className="group flex flex-col rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5 transition hover:border-emerald-500/50 hover:bg-zinc-900/80"
+              className="group flex flex-col rounded-2xl border border-edge bg-panel/40 p-5 transition hover:border-brand/50 hover:bg-panel/80"
             >
               <div className="flex items-center justify-between gap-3">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-400">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-brand-bright">
                   {a.category}
                 </span>
-                <span className="text-zinc-600 transition group-hover:text-emerald-400">
+                <span className="text-muted transition group-hover:text-brand-bright">
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </span>
               </div>
-              <h2 className="mt-2 text-base font-semibold text-zinc-100 transition group-hover:text-emerald-400">
+              <h2 className="mt-2 text-base font-semibold text-strong transition group-hover:text-brand-bright">
                 {a.title}
               </h2>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-400">{a.blurb}</p>
+              <p className="mt-2 text-sm leading-relaxed text-muted">{a.blurb}</p>
             </Link>
           ))}
         </div>
 
         {filtered.length === 0 && (
-          <div className="mt-8 rounded-2xl border border-zinc-800 p-8 text-center">
-            <p className="text-sm text-zinc-400">
+          <div className="mt-8 rounded-2xl border border-edge p-8 text-center">
+            <p className="text-sm text-muted">
               No articles match that search. Try a broader term or browse all categories.
             </p>
           </div>

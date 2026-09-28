@@ -32,7 +32,7 @@ const FAQ = [
     a: "Best of three rounds, and each round caps at 90 seconds, so a full match is a few minutes. That is short by design, because sustained fast typing is tiring and long sessions stop being useful practice.",
   },
   {
-    q: "Is it actually good typing practice?",
+    q: "Is this good typing practice?",
     a: "It trains the same thing a typing test does, with two additions. You have to choose between accuracy and speed under pressure, and you have to keep going after a mistake instead of stopping. Most typing tests let you reset. This one does not.",
   },
 ];
@@ -68,31 +68,31 @@ export default function UnblockedPage() {
       />
 
       <article className="mx-auto max-w-3xl px-4 sm:px-6">
-        <h1 className="font-mono text-3xl font-black leading-tight text-zinc-50 sm:text-4xl">
-          Typing games unblocked: what actually matters
+        <h1 className="font-mono text-3xl font-black leading-tight text-strong sm:text-4xl">
+          Typing games unblocked: what matters
         </h1>
-        <p className="mt-4 text-sm leading-relaxed text-zinc-400 sm:text-base">
+        <p className="mt-4 text-sm leading-relaxed text-muted sm:text-base">
           Most pages that promise unblocked games are vague about what they mean. Here is the
           specific version. Kinetype is a single web page with no installer, no account and no
           background downloads, and it needs nothing installed on the machine you are using.
         </p>
 
         <section className="mt-8" aria-labelledby="needs">
-          <h2 id="needs" className="font-mono text-xl font-bold text-zinc-50">
+          <h2 id="needs" className="font-mono text-xl font-bold text-strong">
             What it needs and what it does not
           </h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <div className="rounded-2xl border border-emerald-900/50 bg-emerald-950/10 p-5">
-              <h3 className="text-sm font-semibold text-emerald-300">Needs</h3>
-              <ul className="mt-2 space-y-1.5 text-sm text-zinc-400">
+            <div className="rounded-2xl border border-brand-deep/50 bg-brand-deep/10 p-5">
+              <h3 className="text-sm font-semibold text-brand-soft">Needs</h3>
+              <ul className="mt-2 space-y-1.5 text-sm text-muted">
                 <li>A modern browser with JavaScript and canvas</li>
                 <li>A physical keyboard, so a laptop is ideal</li>
                 <li>About a second to load, on any connection</li>
               </ul>
             </div>
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
-              <h3 className="text-sm font-semibold text-zinc-300">Does not need</h3>
-              <ul className="mt-2 space-y-1.5 text-sm text-zinc-400">
+            <div className="rounded-2xl border border-edge bg-panel/40 p-5">
+              <h3 className="text-sm font-semibold text-body">Does not need</h3>
+              <ul className="mt-2 space-y-1.5 text-sm text-muted">
                 <li>An install, extension or plugin</li>
                 <li>An account, email or login</li>
                 <li>A download of any kind</li>
@@ -103,10 +103,10 @@ export default function UnblockedPage() {
         </section>
 
         <section className="mt-10" aria-labelledby="quiet">
-          <h2 id="quiet" className="font-mono text-xl font-bold text-zinc-50">
+          <h2 id="quiet" className="font-mono text-xl font-bold text-strong">
             Playing quietly
           </h2>
-          <p className="mt-3 text-sm leading-relaxed text-zinc-400">
+          <p className="mt-3 text-sm leading-relaxed text-muted">
             A typing game makes noise by design, because hearing your own keystrokes is how you catch
             mistakes when you are not looking at the screen. If you are somewhere quiet, hit the
             Sound on button next to the difficulty selector and it toggles to Sound off. Your
@@ -117,10 +117,10 @@ export default function UnblockedPage() {
         </section>
 
         <section className="mt-10" aria-labelledby="short">
-          <h2 id="short" className="font-mono text-xl font-bold text-zinc-50">
+          <h2 id="short" className="font-mono text-xl font-bold text-strong">
             Short sessions, which is the point
           </h2>
-          <p className="mt-3 text-sm leading-relaxed text-zinc-400">
+          <p className="mt-3 text-sm leading-relaxed text-muted">
             A match is best of three rounds with a 90 second cap per round. That is roughly three to
             five minutes. Sustained typing at speed gets sloppy after a few minutes, and practising
             sloppily trains mistakes, so the structure deliberately stops you. If you want a longer
@@ -130,41 +130,38 @@ export default function UnblockedPage() {
         </section>
 
         <section className="mt-10" aria-labelledby="practice">
-          <h2 id="practice" className="font-mono text-xl font-bold text-zinc-50">
+          <h2 id="practice" className="font-mono text-xl font-bold text-strong">
             If you are using this to get faster
           </h2>
-          <ol className="mt-3 space-y-3 text-sm leading-relaxed text-zinc-400">
-            <li>
-              <span className="font-semibold text-zinc-200">Start one step below your limit.</span> Set
-              the bot a little slower than you type and win on accuracy first. Speed follows accuracy.
-            </li>
-            <li>
-              <span className="font-semibold text-zinc-200">Leave Strict mistakes off until clean.</span>{" "}
-              The default forgiving mode is better for learning. Add the penalty once you are
-              regularly finishing words without errors.
-            </li>
-            <li>
-              <span className="font-semibold text-zinc-200">Practise parrying on purpose.</span> Winning
-              by parry teaches you to read the screen before you type, which is the skill that
-              transfers to real typing.
-            </li>
-            <li>
-              <span className="font-semibold text-zinc-200">Check your numbers afterwards.</span> Your
-              best words per minute and accuracy are saved on the device. If accuracy is dropping
-              while speed climbs, you have gone too fast.
-            </li>
-          </ol>
+          <div className="mt-3 space-y-3 text-sm leading-relaxed text-muted">
+            <p>
+              Set the bot a little slower than you type and win on accuracy first. Speed follows
+              accuracy, and a sloppy habit learned at speed is harder to unlearn than a slow one.
+            </p>
+            <p>
+              Leave Strict mistakes off until you are finishing words cleanly. The forgiving default is
+              better for learning, and the penalty is there for when the game stops challenging you.
+            </p>
+            <p>
+              Practise parrying on purpose. Winning by parry teaches you to read the screen before you
+              type, which is the part that carries over to real typing.
+            </p>
+            <p>
+              Check your numbers after each match. If accuracy is dropping while speed climbs, you have
+              gone too fast.
+            </p>
+          </div>
         </section>
 
         <section className="mt-10" aria-labelledby="faq">
-          <h2 id="faq" className="font-mono text-xl font-bold text-zinc-50">
+          <h2 id="faq" className="font-mono text-xl font-bold text-strong">
             Questions
           </h2>
-          <dl className="mt-4 divide-y divide-zinc-800 border-y border-zinc-800">
+          <dl className="mt-4 divide-y divide-edge border-y border-edge">
             {FAQ.map((f) => (
               <div key={f.q} className="py-4">
-                <dt className="font-semibold text-zinc-100">{f.q}</dt>
-                <dd className="mt-1.5 text-sm leading-relaxed text-zinc-400">{f.a}</dd>
+                <dt className="font-semibold text-strong">{f.q}</dt>
+                <dd className="mt-1.5 text-sm leading-relaxed text-muted">{f.a}</dd>
               </div>
             ))}
           </dl>
@@ -173,13 +170,13 @@ export default function UnblockedPage() {
         <div className="mt-10 flex flex-wrap gap-3 text-sm">
           <Link
             href="/"
-            className="rounded-xl bg-emerald-500 px-5 py-2.5 font-bold text-zinc-950 transition hover:bg-emerald-400"
+            className="rounded-xl bg-brand px-5 py-2.5 font-bold text-ink transition hover:bg-brand-bright"
           >
             Play Kinetype
           </Link>
           <Link
             href="/typing-speed-test"
-            className="rounded-xl border border-zinc-700 px-5 py-2.5 font-semibold text-zinc-200 transition hover:border-emerald-500/60 hover:text-emerald-400"
+            className="rounded-xl border border-edge-bright px-5 py-2.5 font-semibold text-body transition hover:border-brand/60 hover:text-brand-bright"
           >
             Check your WPM first
           </Link>

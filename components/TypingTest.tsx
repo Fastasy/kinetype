@@ -389,7 +389,7 @@ export default function TypingTest() {
     if (isCurrent) {
       const activeCharIndex = typed.length;
       return (
-        <span key={index} ref={activeWordRef} className={`${baseClass} text-zinc-600`}>
+        <span key={index} ref={activeWordRef} className={`${baseClass} text-muted`}>
           {targetWord.split("").map((ch, j) => {
             const isCaretHere = j === activeCharIndex;
             if (j >= typed.length) {
@@ -397,7 +397,7 @@ export default function TypingTest() {
                 <span
                   key={j}
                   ref={isCaretHere ? activeCharRef : undefined}
-                  className="text-zinc-600"
+                  className="text-muted"
                 >
                   {ch}
                 </span>
@@ -410,7 +410,7 @@ export default function TypingTest() {
                 ref={isCaretHere ? activeCharRef : undefined}
                 className={
                   isCorrect
-                    ? "text-emerald-400 font-medium"
+                    ? "text-brand-bright font-medium"
                     : "text-red-400 bg-red-950/40 rounded-xs"
                 }
               >
@@ -452,7 +452,7 @@ export default function TypingTest() {
         <span
           key={index}
           className={`${baseClass} ${
-            isWordCorrect ? "text-zinc-500" : "text-red-400/80 border-b border-red-500/50"
+            isWordCorrect ? "text-muted" : "text-red-400/80 border-b border-red-500/50"
           }`}
         >
           {targetWord.split("").map((ch, j) => {
@@ -464,7 +464,7 @@ export default function TypingTest() {
               );
             }
             return (
-              <span key={j} className={typed[j] === ch ? "text-zinc-500" : "text-red-400"}>
+              <span key={j} className={typed[j] === ch ? "text-muted" : "text-red-400"}>
                 {ch}
               </span>
             );
@@ -478,7 +478,7 @@ export default function TypingTest() {
 
     // Future words
     return (
-      <span key={index} className={`${baseClass} text-zinc-600`}>
+      <span key={index} className={`${baseClass} text-muted`}>
         {targetWord}
       </span>
     );
@@ -490,7 +490,7 @@ export default function TypingTest() {
     <div className="w-full max-w-4xl mx-auto">
       {/* Settings / Top Bar */}
       <div className="mb-8 flex flex-wrap items-center justify-center gap-3 text-sm">
-        <div className="flex items-center gap-1 rounded-xl bg-zinc-900/90 p-1.5 border border-zinc-800/60">
+        <div className="flex items-center gap-1 rounded-xl bg-panel/90 p-1.5 border border-edge/60">
           {LANGUAGE_OPTIONS.map((opt) => (
             <button
               key={opt.id}
@@ -500,7 +500,7 @@ export default function TypingTest() {
                 resetTest(opt.id, mode, wordCount, punctuation);
               }}
               className={`rounded-lg px-3 py-1.5 font-medium transition ${
-                language === opt.id ? "bg-emerald-500 text-zinc-950" : "text-zinc-400 hover:text-zinc-200"
+                language === opt.id ? "bg-brand text-ink" : "text-muted hover:text-body"
               }`}
             >
               {opt.label}
@@ -509,7 +509,7 @@ export default function TypingTest() {
         </div>
 
         {/* Punctuation Mode Toggle */}
-        <div className="flex items-center gap-1 rounded-xl bg-zinc-900/90 p-1.5 border border-zinc-800/60">
+        <div className="flex items-center gap-1 rounded-xl bg-panel/90 p-1.5 border border-edge/60">
           <button
             type="button"
             onClick={() => {
@@ -518,14 +518,14 @@ export default function TypingTest() {
               resetTest(language, mode, wordCount, nextPunc);
             }}
             className={`rounded-lg px-3 py-1.5 font-medium transition ${
-              punctuation ? "bg-emerald-500 text-zinc-950" : "text-zinc-400 hover:text-zinc-200"
+              punctuation ? "bg-brand text-ink" : "text-muted hover:text-body"
             }`}
           >
             ! punctuation
           </button>
         </div>
 
-        <div className="flex items-center gap-1 rounded-xl bg-zinc-900/90 p-1.5 border border-zinc-800/60">
+        <div className="flex items-center gap-1 rounded-xl bg-panel/90 p-1.5 border border-edge/60">
           <button
             type="button"
             onClick={() => {
@@ -533,7 +533,7 @@ export default function TypingTest() {
               resetTest(language, "time", wordCount, punctuation);
             }}
             className={`rounded-lg px-3 py-1.5 font-medium transition ${
-              mode === "time" ? "bg-emerald-500 text-zinc-950" : "text-zinc-400 hover:text-zinc-200"
+              mode === "time" ? "bg-brand text-ink" : "text-muted hover:text-body"
             }`}
           >
             time
@@ -545,14 +545,14 @@ export default function TypingTest() {
               resetTest(language, "words", wordCount, punctuation);
             }}
             className={`rounded-lg px-3 py-1.5 font-medium transition ${
-              mode === "words" ? "bg-emerald-500 text-zinc-950" : "text-zinc-400 hover:text-zinc-200"
+              mode === "words" ? "bg-brand text-ink" : "text-muted hover:text-body"
             }`}
           >
             words
           </button>
         </div>
 
-        <div className="flex items-center gap-1 rounded-xl bg-zinc-900/90 p-1.5 border border-zinc-800/60">
+        <div className="flex items-center gap-1 rounded-xl bg-panel/90 p-1.5 border border-edge/60">
           {(mode === "time" ? TIME_OPTIONS : WORD_OPTIONS).map((opt) => (
             <button
               key={opt}
@@ -568,8 +568,8 @@ export default function TypingTest() {
               }}
               className={`rounded-lg px-3 py-1.5 font-medium transition ${
                 (mode === "time" ? timeLimit : wordCount) === opt
-                  ? "bg-emerald-500 text-zinc-950"
-                  : "text-zinc-400 hover:text-zinc-200"
+                  ? "bg-brand text-ink"
+                  : "text-muted hover:text-body"
               }`}
             >
               {opt}
@@ -579,34 +579,34 @@ export default function TypingTest() {
       </div>
 
       {/* Live Timer / Counter display */}
-      <div className="mb-4 flex h-10 items-center justify-between px-2 font-mono text-3xl text-zinc-300">
+      <div className="mb-4 flex h-10 items-center justify-between px-2 font-mono text-3xl text-body">
         <div>
           {status === "running" && mode === "time" && (
-            <span className={timeLeft && timeLeft <= 5 ? "text-red-400 animate-pulse" : "text-emerald-400"}>
+            <span className={timeLeft && timeLeft <= 5 ? "text-red-400 animate-pulse" : "text-brand-bright"}>
               {timeLeft}s
             </span>
           )}
           {status === "running" && mode === "words" && (
-            <span className="text-emerald-400">
+            <span className="text-brand-bright">
               {wordIndex}/{wordCount}
             </span>
           )}
           {status === "idle" && (
-            <span className="text-zinc-400">
+            <span className="text-muted">
               {mode === "time" ? `${timeLimit}s` : `${wordCount} words`}
             </span>
           )}
         </div>
         {status === "running" && (
-          <div className="text-sm font-sans tracking-wide text-zinc-500">
-            Press <kbd className="rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-400">Tab</kbd> to restart
+          <div className="text-sm font-sans tracking-wide text-muted">
+            Press <kbd className="rounded bg-edge px-1.5 py-0.5 text-muted">Tab</kbd> to restart
           </div>
         )}
       </div>
 
       {/* Typing Frame */}
       <div
-        className="relative cursor-text overflow-hidden rounded-2xl border border-zinc-800/90 bg-zinc-950/95 p-6 sm:p-10 shadow-2xl"
+        className="relative cursor-text overflow-hidden rounded-2xl border border-edge/90 bg-ink/95 p-6 sm:p-10 shadow-2xl"
         onClick={() => inputRef.current?.focus()}
       >
         <input
@@ -638,7 +638,7 @@ export default function TypingTest() {
             {/* Monkeytype Smooth Gliding Caret */}
             {caretPos && status !== "finished" && (
               <div
-                className={`absolute z-20 w-[2.5px] rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.7)] transition-all duration-75 ease-out ${
+                className={`absolute z-20 w-[2.5px] rounded-full bg-brand-bright shadow-[0_0_10px_rgba(52,211,153,0.7)] transition-all duration-75 ease-out ${
                   status === "idle" ? "animate-caret-blink" : ""
                 }`}
                 style={{
@@ -656,7 +656,7 @@ export default function TypingTest() {
         </div>
 
         {status === "idle" && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-3 text-center text-xs tracking-wider uppercase text-zinc-500 font-medium">
+          <div className="pointer-events-none absolute inset-x-0 bottom-3 text-center text-xs tracking-wider uppercase text-muted font-medium">
             Start typing to begin
           </div>
         )}
@@ -664,51 +664,51 @@ export default function TypingTest() {
 
       {/* Monkeytype Authentic Results Screen */}
       {status === "finished" && result && (
-        <div className="mt-8 rounded-2xl border border-zinc-800/90 bg-zinc-900/90 p-8 shadow-xl">
+        <div className="mt-8 rounded-2xl border border-edge/90 bg-panel/90 p-8 shadow-xl">
           <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
             <div>
-              <div className="text-zinc-500 text-xs font-semibold uppercase tracking-wider">wpm</div>
-              <div className="text-5xl font-extrabold text-emerald-400 mt-1">{result.wpm}</div>
+              <div className="text-muted text-xs font-semibold uppercase tracking-wider">wpm</div>
+              <div className="text-5xl font-extrabold text-brand-bright mt-1">{result.wpm}</div>
             </div>
             <div>
-              <div className="text-zinc-500 text-xs font-semibold uppercase tracking-wider">acc</div>
-              <div className="text-5xl font-extrabold text-zinc-100 mt-1">{result.accuracy}%</div>
+              <div className="text-muted text-xs font-semibold uppercase tracking-wider">acc</div>
+              <div className="text-5xl font-extrabold text-strong mt-1">{result.accuracy}%</div>
             </div>
             <div>
-              <div className="text-zinc-500 text-xs font-semibold uppercase tracking-wider">raw wpm</div>
-              <div className="text-3xl font-bold text-zinc-300 mt-2">{result.rawWpm}</div>
+              <div className="text-muted text-xs font-semibold uppercase tracking-wider">raw wpm</div>
+              <div className="text-3xl font-bold text-body mt-2">{result.rawWpm}</div>
             </div>
             <div>
-              <div className="text-zinc-500 text-xs font-semibold uppercase tracking-wider">characters</div>
-              <div className="text-xl font-mono text-zinc-300 mt-2">
-                <span className="text-emerald-400">{result.correctChars}</span>/
+              <div className="text-muted text-xs font-semibold uppercase tracking-wider">characters</div>
+              <div className="text-xl font-mono text-body mt-2">
+                <span className="text-brand-bright">{result.correctChars}</span>/
                 <span className="text-red-400">{result.incorrectChars}</span>/
-                <span className="text-amber-400">{result.extraChars}</span>/
-                <span className="text-zinc-500">{result.missedChars}</span>
+                <span className="text-flag">{result.extraChars}</span>/
+                <span className="text-muted">{result.missedChars}</span>
               </div>
             </div>
           </div>
 
           {/* Earnings & Qualification Funnel */}
-          <div className="mt-6 rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-5 text-left">
+          <div className="mt-6 rounded-xl border border-brand/30 bg-brand-deep/20 p-5 text-left">
             {result.wpm >= 35 ? (
               <div>
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2">
-                    <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-400 animate-ping" />
-                    <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
+                    <span className="flex h-2.5 w-2.5 rounded-full bg-brand-bright animate-ping" />
+                    <span className="text-xs font-bold uppercase tracking-wider text-brand-bright">
                       Earning Potential
                     </span>
                   </div>
-                  <div className="font-mono text-sm text-emerald-400 font-bold bg-emerald-950/60 border border-emerald-500/30 px-3 py-1 rounded-lg">
+                  <div className="font-mono text-sm text-brand-bright font-bold bg-brand-deep/60 border border-brand/30 px-3 py-1 rounded-lg">
                     Est. ${calculateEarnings(result.wpm, 15, result.accuracy).hourlyRate}/hr ($
                     {calculateEarnings(result.wpm, 15, result.accuracy).monthlyEarnings.toLocaleString()}/mo)
                   </div>
                 </div>
-                <h3 className="mt-2 text-lg font-bold text-zinc-100">
+                <h3 className="mt-2 text-lg font-bold text-strong">
                   Your speed of {result.wpm} WPM qualifies you for paid transcription jobs!
                 </h3>
-                <p className="mt-1 text-sm text-zinc-400">
+                <p className="mt-1 text-sm text-muted">
                   With {result.accuracy}% accuracy, you can finish audio tasks quickly and earn steady payouts from home. Apply directly to start claiming paid audio:
                 </p>
                 <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -716,7 +716,7 @@ export default function TypingTest() {
                     href={AFFILIATE.gotranscript}
                     target="_blank"
                     rel="noopener noreferrer sponsored"
-                    className="inline-block rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
+                    className="inline-block rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-ink transition hover:bg-brand-bright"
                   >
                     <span>Apply to GoTranscript</span>
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -727,7 +727,7 @@ export default function TypingTest() {
                     href={AFFILIATE.rev}
                     target="_blank"
                     rel="noopener noreferrer sponsored"
-                    className="inline-block rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-emerald-500 hover:text-emerald-400"
+                    className="inline-block rounded-xl border border-edge-bright px-4 py-2 text-sm font-semibold text-body transition hover:border-brand hover:text-brand-bright"
                   >
                     <span>Apply to Rev</span>
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -738,13 +738,13 @@ export default function TypingTest() {
               </div>
             ) : (
               <div>
-                <div className="text-xs font-bold uppercase tracking-wider text-amber-400">
+                <div className="text-xs font-bold uppercase tracking-wider text-flag">
                   Target: 45+ WPM for the top of the $2-$6/hr band
                 </div>
-                <h3 className="mt-1 text-base font-bold text-zinc-100">
+                <h3 className="mt-1 text-base font-bold text-strong">
                   Practice daily to qualify for GoTranscript &amp; Rev
                 </h3>
-                <p className="mt-1 text-sm text-zinc-400">
+                <p className="mt-1 text-sm text-muted">
                   General transcription pays about $2 to $6 an hour effective. Faster,
                   more accurate typists land toward the top of that range. Just 5 minutes
                   of practice a day on Kinetype will get you there.
@@ -754,7 +754,7 @@ export default function TypingTest() {
                     href={AFFILIATE.gotranscript}
                     target="_blank"
                     rel="noopener noreferrer sponsored"
-                    className="inline-block rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
+                    className="inline-block rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-ink transition hover:bg-brand-bright"
                   >
                     Apply to GoTranscript &rarr;
                   </a>
@@ -763,25 +763,25 @@ export default function TypingTest() {
             )}
           </div>
 
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-4 border-t border-zinc-800/80 pt-6">
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-4 border-t border-edge/80 pt-6">
             <button
               type="button"
               onClick={() => resetTest(language, mode, wordCount, punctuation)}
-              className="rounded-xl bg-emerald-500 px-6 py-3 font-semibold text-zinc-950 transition hover:bg-emerald-400"
+              className="rounded-xl bg-brand px-6 py-3 font-semibold text-ink transition hover:bg-brand-bright"
             >
               Next test
             </button>
             <button
               type="button"
               onClick={share}
-              className="rounded-xl border border-zinc-700 px-6 py-3 font-medium text-zinc-200 transition hover:border-emerald-500 hover:text-emerald-400"
+              className="rounded-xl border border-edge-bright px-6 py-3 font-medium text-body transition hover:border-brand hover:text-brand-bright"
             >
               {copied ? "Copied!" : "Share result"}
             </button>
             <button
               type="button"
               onClick={() => setShowCert(true)}
-              className="rounded-xl border border-zinc-700 px-6 py-3 font-medium text-zinc-200 transition hover:border-emerald-500 hover:text-emerald-400"
+              className="rounded-xl border border-edge-bright px-6 py-3 font-medium text-body transition hover:border-brand hover:text-brand-bright"
             >
               Free certificate
             </button>
