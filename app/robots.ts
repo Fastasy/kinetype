@@ -7,5 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: "/",
     },
     sitemap: "https://kinetype.app/sitemap.xml",
+    host: "https://kinetype.app",
   };
 }

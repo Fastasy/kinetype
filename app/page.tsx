@@ -1,253 +1,185 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import TypingTest from "@/components/TypingTest";
-import EarningsCalculator from "@/components/EarningsCalculator";
-import { AFFILIATE } from "@/lib/affiliate";
+
+import FightClient from "@/components/game/FightClient";
+import JsonLd from "@/components/JsonLd";
 
 export const metadata: Metadata = {
-  title: "Kinetype | Free Typing Test, WPM Speed and Accuracy",
+  title: "Typing Fighting Game: Type to Knock Them Off the Stage",
   description:
-    "Take a free typing test and get your WPM and accuracy in under a minute. English, punctuation and code modes. Share your result or print a free certificate.",
-  alternates: {
-    canonical: "/",
-  },
-  openGraph: {
-    title: "Kinetype | Free Typing Test, WPM Speed and Accuracy",
-    description:
-      "Take a free typing test and get your WPM and accuracy in under a minute. English, punctuation and code modes.",
-    url: "https://kinetype.app/",
-    images: [
-      {
-        url: "/og.png",
-        width: 1200,
-        height: 630,
-        alt: "Kinetype free typing speed test",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Kinetype | Free Typing Test, WPM Speed and Accuracy",
-    description:
-      "Take a free typing test and get your WPM and accuracy in under a minute. English, punctuation and code modes.",
-    images: ["/og.png"],
-  },
+    "Kinetype is a free typing fighting game. Three words are live at once: long words hit harder, short words land faster, and a well timed parry turns a heavy shot back on your opponent. Play in your browser.",
+  alternates: { canonical: "/" },
 };
 
-const FAQS = [
+const FAQ = [
   {
-    q: "What is a typing test?",
-    a: "A typing test measures how fast and how accurately you can type. You get a score in words per minute (WPM) and an accuracy percentage. Kinetype runs entirely in your browser, so there is nothing to install and no account to create.",
+    q: "What is a typing fighting game?",
+    a: "It is a fighting game where typing is the only input. Each player has words on screen. Completing a word lands a hit, and the hit pushes your opponent toward the edge of the stage. Land enough hits and they go off the edge. There is no health bar and no blocking button.",
   },
   {
-    q: "What is a good WPM score?",
-    a: "Most people type between 35 and 45 WPM. Office and admin jobs usually ask for at least 35 to 45 WPM, data entry roles often want 40 to 60, and professional transcriptionists regularly type 60 WPM or more.",
+    q: "Can I play it free without downloading anything?",
+    a: "Yes. Kinetype runs in your browser on desktop or laptop. There is no download, no account, and no email required. A physical keyboard is needed, because the whole game is typing.",
   },
   {
-    q: "Is Kinetype free?",
-    a: "Yes. The typing test, punctuation and code modes, and the printable certificate are all free. There is no account, no signup and no paywall.",
+    q: "Do I have to be a fast typist to win?",
+    a: "No. Three words are live at once, and they differ in length. Long words hit much harder but take longer to land, so a slower typist who picks the right word can beat a faster one who spams short words.",
   },
   {
-    q: "How is WPM calculated?",
-    a: "WPM is calculated as correct characters typed, divided by 5 (the standard length of a word), divided by the minutes elapsed. Accuracy is correct characters divided by total characters typed. Backspaces do not count against your accuracy.",
+    q: "How does the parry work?",
+    a: "When your opponent starts committing to a heavy word, the game shows a HEAVY INCOMING warning and gives you a GUARD word. Finish that word before their hit lands and you take a third of the knockback, plus you get a counter window where your next word hits twice as hard.",
   },
   {
-    q: "Can I get a typing certificate?",
-    a: "Yes. After you finish a test you can open the free certificate, add your name, and print or save it as a PDF. It shows your WPM, accuracy and the date. Some employers run their own typing test as well, so treat the certificate as extra proof, not a replacement.",
+    q: "What happens if I get knocked off the stage?",
+    a: "You are not dead yet. You get one SAVE word with a short timer. Type it and you climb back onto the stage with a moment of invulnerability. Miss it and the round is over.",
   },
   {
-    q: "How can I improve my typing speed?",
-    a: "Practice for a few minutes every day and focus on accuracy before speed. Use all your fingers and keep your eyes on the screen instead of the keyboard. Most people gain 5 to 10 WPM within a few weeks of daily practice.",
+    q: "Is there multiplayer?",
+    a: "Not yet. Today you fight bots, and you choose the bot's typing speed from 20 to 120 words per minute. The fight logic is built so a second human opponent can be added later without redesigning it.",
   },
 ];
 
-const jsonLd = {
-  "@context": "https://schema.org",
-  "@graph": [
+export default function HomePage() {
+  const schema = [
     {
-      "@type": "WebSite",
-      "@id": "https://kinetype.app/#website",
+      "@context": "https://schema.org",
+      "@type": ["VideoGame", "WebApplication"],
       name: "Kinetype",
       url: "https://kinetype.app/",
       description:
-        "Free typing speed test with WPM and accuracy scores, plus work-from-home transcription and typing job guides.",
-      publisher: { "@id": "https://kinetype.app/#organization" },
+        "A free browser typing fighting game. Type words to land hits and knock your opponent off the stage, and parry heavy attacks with a guard word.",
+      applicationCategory: "GameApplication",
+      genre: ["Fighting", "Typing", "Platform fighter"],
+      gamePlatform: "Web browser",
+      operatingSystem: "Any",
+      playMode: "SinglePlayer",
+      browserRequirements: "Requires a physical keyboard and HTML5 canvas support",
+      offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
       inLanguage: "en",
     },
     {
-      "@type": "Organization",
-      "@id": "https://kinetype.app/#organization",
-      name: "Kinetype",
-      url: "https://kinetype.app/",
-      logo: {
-        "@type": "ImageObject",
-        url: "https://kinetype.app/og.png",
-        width: 1200,
-        height: 630,
-      },
-    },
-    {
-      "@type": "WebApplication",
-      name: "Kinetype",
-      url: "https://kinetype.app/",
-      applicationCategory: "UtilitiesApplication",
-      operatingSystem: "Any",
-      description:
-        "Free typing speed test with WPM and accuracy scores in English, punctuation and code modes.",
-      offers: {
-        "@type": "Offer",
-        price: "0",
-        priceCurrency: "USD",
-      },
-    },
-    {
+      "@context": "https://schema.org",
       "@type": "FAQPage",
-      mainEntity: FAQS.map((f) => ({
+      mainEntity: FAQ.map((f) => ({
         "@type": "Question",
         name: f.q,
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: f.a,
-        },
+        acceptedAnswer: { "@type": "Answer", text: f.a },
       })),
     },
-  ],
-};
+  ];
 
-export default function HomePage() {
   return (
-    <main className="mx-auto max-w-4xl px-4">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+    <>
+      <JsonLd data={schema} />
 
-      {/* First Section / Viewport: Clean & Focused Test */}
-      <div className="flex min-h-[calc(100vh-6rem)] flex-col justify-between pt-4 pb-8 sm:pt-8">
-        <div>
-          {/* Hero */}
-          <section className="text-center">
-            <h1 className="mx-auto max-w-2xl text-3xl font-bold tracking-tight text-zinc-50 sm:text-5xl">
-              The free typing test that gives you a real <span className="text-emerald-400">WPM score</span>
-            </h1>
-            <p className="mx-auto mt-4 max-w-xl text-zinc-400 sm:text-lg">
-              Measure your typing speed and accuracy in under a minute. No signup, no install,
-              no paywall. English, punctuation and code modes.
-            </p>
-          </section>
-
-          {/* Test */}
-          <section className="mt-8">
-            <TypingTest />
-          </section>
-        </div>
-
-        {/* Scroll down indicator at the bottom of the viewport */}
-        <div className="pt-8">
-          <a
-            href="#score-means"
-            className="flex flex-col items-center justify-center text-zinc-500 hover:text-zinc-300 transition cursor-pointer"
-          >
-            <span className="text-xs uppercase tracking-widest font-medium">Scroll down for WPM ranges</span>
-            <svg className="w-4 h-4 mt-1 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-            </svg>
-          </a>
-        </div>
-      </div>
-
-      {/* What your score means */}
-      <section id="score-means" className="pt-20 border-t border-zinc-800/60">
-        <h2 className="text-2xl font-bold text-zinc-50">What your score means</h2>
-        <div className="mt-4 overflow-x-auto rounded-2xl border border-zinc-800">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-zinc-900 text-zinc-400">
-              <tr>
-                <th className="px-4 py-3 font-medium">WPM</th>
-                <th className="px-4 py-3 font-medium">Level</th>
-                <th className="px-4 py-3 font-medium">Typical roles</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-800 text-zinc-300">
-              <tr>
-                <td className="px-4 py-3 font-mono">20 - 35</td>
-                <td className="px-4 py-3">Getting started</td>
-                <td className="px-4 py-3">Most people land here before daily practice</td>
-              </tr>
-              <tr>
-                <td className="px-4 py-3 font-mono">35 - 55</td>
-                <td className="px-4 py-3">Solid</td>
-                <td className="px-4 py-3">Admin, call centre and general office work</td>
-              </tr>
-              <tr>
-                <td className="px-4 py-3 font-mono">55 - 75</td>
-                <td className="px-4 py-3">Fast</td>
-                <td className="px-4 py-3">Data entry, court reporting prep, transcription</td>
-              </tr>
-              <tr>
-                <td className="px-4 py-3 font-mono">75+</td>
-                <td className="px-4 py-3">Professional</td>
-                <td className="px-4 py-3">Transcriptionists, programmers, executive assistants</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <p className="mt-4 text-sm text-zinc-500">
-          These ranges are typical, not a rule. Employers set their own thresholds, and most
-          interview processes include their own typing assessment.
+      <section className="mx-auto max-w-5xl px-4 sm:px-6">
+        <h1 className="font-mono text-3xl font-black leading-tight text-zinc-50 sm:text-5xl">
+          Typing fighting game: type to knock them off the stage
+        </h1>
+        <p className="mt-4 max-w-2xl text-sm leading-relaxed text-zinc-400 sm:text-base">
+          Kinetype is a browser fighting game where the only weapon is your keyboard. Words appear
+          on screen, finishing one lands a hit, and every hit shoves your opponent closer to the
+          edge. Long words hurt more but take longer to land, so a slower typist who reads the fight
+          can beat a faster one who does not.
         </p>
       </section>
 
-      {/* Interactive Earnings Calculator */}
-      <section className="mt-16">
-        <EarningsCalculator initialWpm={60} />
-      </section>
+      <div className="mt-6">
+        <FightClient />
+      </div>
 
-      {/* Why it matters + funnel */}
-      <section className="mt-16 grid gap-6 sm:grid-cols-2">
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-6">
-          <h2 className="text-xl font-bold text-zinc-50">Fast typing opens doors</h2>
-          <p className="mt-3 text-zinc-400">
-            Transcription jobs, data entry, call centre work and remote admin roles all ask
-            for a typing speed test. Knowing your WPM tells you which roles you can apply
-            for today and what to practice to reach the next level.
-          </p>
-          <Link
-            href="/transcription-jobs"
-            className="mt-4 inline-block font-semibold text-emerald-400 transition hover:text-emerald-300"
-          >
-            See transcription jobs that pay &rarr;
-          </Link>
-        </div>
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-6">
-          <h2 className="text-xl font-bold text-zinc-50">Practice daily, gain fast</h2>
-          <p className="mt-3 text-zinc-400">
-            A few minutes of focused typing practice each day beats an hour once a week.
-            Use the code mode to practice programming syntax or punctuation mode to master sentences.
-          </p>
-          <Link
-            href="/how-to-become-a-transcriptionist"
-            className="mt-4 inline-block font-semibold text-emerald-400 transition hover:text-emerald-300"
-          >
-            How to become a transcriptionist &rarr;
-          </Link>
+      <section className="mx-auto mt-14 max-w-5xl px-4 sm:px-6" aria-labelledby="how">
+        <h2 id="how" className="font-mono text-xl font-bold text-zinc-50 sm:text-2xl">
+          Three decisions every exchange
+        </h2>
+        <div className="mt-5 grid gap-4 sm:grid-cols-3">
+          <article className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
+            <h3 className="font-semibold text-zinc-100">Which word you take</h3>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+              Three words are live. A four letter word lands quickly and nudges them. An eight letter
+              word lands slowly and sends them flying. The choice is the strategy.
+            </p>
+          </article>
+          <article className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
+            <h3 className="font-semibold text-zinc-100">How much damage is on you</h3>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+              Damage is not a health bar, it is a clock. The more you have taken, the further the same
+              hit throws you. Watch your colour change from white through amber to red.
+            </p>
+          </article>
+          <article className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
+            <h3 className="font-semibold text-zinc-100">Whether to parry or race</h3>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+              When a heavy word is coming you get a GUARD word. Finish it and you take a third of the
+              knockback and answer twice as hard. Guess wrong and you gave up an exchange.
+            </p>
+          </article>
         </div>
       </section>
 
-      {/* FAQ */}
-      <section className="mt-16">
-        <h2 className="text-2xl font-bold text-zinc-50">Frequently asked questions</h2>
-        <div className="mt-4 divide-y divide-zinc-800 rounded-2xl border border-zinc-800">
-          {FAQS.map((f) => (
-            <details key={f.q} className="group p-5">
-              <summary className="cursor-pointer list-none font-medium text-zinc-200 transition group-open:text-emerald-400">
-                {f.q}
-              </summary>
-              <p className="mt-3 text-sm leading-relaxed text-zinc-400">{f.a}</p>
-            </details>
+      <section className="mx-auto mt-14 max-w-5xl px-4 sm:px-6" aria-labelledby="rounds">
+        <h2 id="rounds" className="font-mono text-xl font-bold text-zinc-50 sm:text-2xl">
+          Built for one more round
+        </h2>
+        <ul className="mt-4 grid gap-3 text-sm text-zinc-400 sm:grid-cols-2">
+          <li className="rounded-xl border border-zinc-800 bg-zinc-900/30 px-4 py-3">
+            Matches are best of three rounds, which keeps a session short enough that your hands do
+            not quit before your head does.
+          </li>
+          <li className="rounded-xl border border-zinc-800 bg-zinc-900/30 px-4 py-3">
+            Your best words per minute and accuracy are saved on your own device. No account, no
+            server, no email.
+          </li>
+          <li className="rounded-xl border border-zinc-800 bg-zinc-900/30 px-4 py-3">
+            Every match pays coins. Win rounds, type clean, and hold a streak to earn more.
+          </li>
+          <li className="rounded-xl border border-zinc-800 bg-zinc-900/30 px-4 py-3">
+            <Link href="/shop" className="text-emerald-400 underline underline-offset-2">
+              Skins and HUD overlays
+            </Link>{" "}
+            are unlocked with those coins. Every one is drawn in code, so nothing to download.
+          </li>
+        </ul>
+      </section>
+
+      <section className="mx-auto mt-14 max-w-5xl px-4 sm:px-6" aria-labelledby="faq">
+        <h2 id="faq" className="font-mono text-xl font-bold text-zinc-50 sm:text-2xl">
+          Questions
+        </h2>
+        <dl className="mt-5 divide-y divide-zinc-800 border-y border-zinc-800">
+          {FAQ.map((f) => (
+            <div key={f.q} className="py-4">
+              <dt className="font-semibold text-zinc-100">{f.q}</dt>
+              <dd className="mt-1.5 text-sm leading-relaxed text-zinc-400">{f.a}</dd>
+            </div>
           ))}
+        </dl>
+      </section>
+
+      <section className="mx-auto mt-14 max-w-5xl px-4 sm:px-6" aria-labelledby="more">
+        <h2 id="more" className="font-mono text-xl font-bold text-zinc-50 sm:text-2xl">
+          Keep going
+        </h2>
+        <div className="mt-4 flex flex-wrap gap-3 text-sm">
+          <Link
+            href="/how-to-play"
+            className="rounded-xl border border-zinc-700 px-4 py-2 font-semibold text-zinc-200 transition hover:border-emerald-500/60 hover:text-emerald-400"
+          >
+            Strategy guide
+          </Link>
+          <Link
+            href="/typing-games-unblocked"
+            className="rounded-xl border border-zinc-700 px-4 py-2 font-semibold text-zinc-200 transition hover:border-emerald-500/60 hover:text-emerald-400"
+          >
+            Playing from school
+          </Link>
+          <Link
+            href="/typing-speed-test"
+            className="rounded-xl border border-zinc-700 px-4 py-2 font-semibold text-zinc-200 transition hover:border-emerald-500/60 hover:text-emerald-400"
+          >
+            Plain typing speed test
+          </Link>
         </div>
       </section>
-    </main>
+    </>
   );
 }

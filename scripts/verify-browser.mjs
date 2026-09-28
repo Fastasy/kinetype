@@ -1,0 +1,346 @@
+// End-to-end verification in a real browser.
+//
+// This does not check that the page renders. It checks that the GAME WORKS: it
+// starts a match, reads the live prompts out of the DOM, types words into the game
+// at a human pace, and asserts that damage lands both ways.
+//
+// Three of the bugs this caught were invisible to a build check:
+//   1. Bots typed words at full speed and never dealt damage.
+//   2. At high typing speed the opponent was stunned permanently (no counterplay).
+//   3. A finished match showed no result panel, so it looked like a frozen game.
+//
+// Run: node scripts/verify-browser.mjs   (needs a server on BASE_URL)
+
+import { chromium } from "playwright";
+import { mkdirSync } from "node:fs";
+
+const BASE = process.env.BASE_URL ?? "http://localhost:3000";
+const SHOTS = "verification";
+mkdirSync(SHOTS, { recursive: true });
+
+/** Per-character delay. Deliberately human-paced: typing flat out starves the
+ *  opponent of turns, which makes the "bot fights back" check meaningless. */
+const CHAR_MS = 120;
+
+const results = [];
+function check(name, ok, detail = "") {
+  results.push({ name, ok, detail });
+  console.log(`${ok ? "  ok  " : " FAIL "} ${name}${detail ? ` — ${detail}` : ""}`);
+}
+
+const consoleErrors = [];
+const pageErrors = [];
+const failedRequests = [];
+
+const browser = await chromium.launch();
+const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+const page = await context.newPage();
+
+page.on("console", (m) => {
+  if (m.type() === "error") consoleErrors.push(m.text());
+});
+page.on("pageerror", (e) => pageErrors.push(String(e)));
+page.on("requestfailed", (r) => failedRequests.push(`${r.url()} ${r.failure()?.errorText ?? ""}`));
+
+// ---------------------------------------------------------------- helpers
+
+async function canvasColours() {
+  return page.evaluate(() => {
+    const c = document.querySelector("canvas");
+    if (!c) return { ok: false, reason: "no canvas" };
+    const ctx = c.getContext("2d");
+    if (!ctx) return { ok: false, reason: "no 2d context" };
+    const d = ctx.getImageData(0, 0, c.width, c.height).data;
+    const seen = new Set();
+    for (let i = 0; i < d.length; i += 4 * 97) {
+      seen.add(`${d[i]},${d[i + 1]},${d[i + 2]}`);
+      if (seen.size > 8) break;
+    }
+    return { ok: seen.size > 3, reason: `${seen.size} distinct sampled colours` };
+  });
+}
+
+/** Read a data-value, or null if that element is not on screen any more. */
+async function valueOf(testid) {
+  const el = page.locator(`[data-testid="${testid}"]`);
+  if ((await el.count()) === 0) return null;
+  const v = await el.first().getAttribute("data-value");
+  return v === null ? null : Number(v);
+}
+
+async function readPrompts(panelTestId) {
+  return page.$$eval(`[data-testid="${panelTestId}"] [data-testid="prompt"]`, (nodes) =>
+    nodes.map((n) => ({
+      text: n.getAttribute("data-text") ?? "",
+      typed: Number(n.getAttribute("data-typed") ?? "0"),
+      kind: n.getAttribute("data-kind") ?? "attack",
+      tier: n.getAttribute("data-tier") ?? "light",
+    })),
+  );
+}
+
+async function matchOver() {
+  return (await page.locator('[data-testid="result"]').count()) > 0;
+}
+
+/** One exchange: pick the longest word available (the heavy tier, most damage)
+ *  and type it out. Returns false when there is nothing left to type. */
+async function playOneWord() {
+  const prompts = await readPrompts("player-panel");
+  if (prompts.length === 0) return false;
+  let slot = 0;
+  for (let i = 1; i < prompts.length; i++) {
+    if (prompts[i].text.length > prompts[slot].text.length) slot = i;
+  }
+  const target = prompts[slot];
+  // Explicit slot selection also exercises the 1/2/3 input path.
+  await page.keyboard.press(String(slot + 1));
+  for (const ch of target.text) {
+    await page.keyboard.press(ch);
+    await page.waitForTimeout(CHAR_MS);
+  }
+  return true;
+}
+
+// ---------------------------------------------------------------- home page
+console.log("\n--- Home page ---");
+const t0 = Date.now();
+const homeRes = await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
+const loadMs = Date.now() - t0;
+check("home returns 200", homeRes?.status() === 200, `status ${homeRes?.status()}`);
+check("loads in under 10s", loadMs < 10000, `${loadMs}ms`);
+
+const h1 = (await page.locator("h1").first().innerText()).trim();
+check("H1 targets the primary keyword", /typing fighting game/i.test(h1), h1.slice(0, 72));
+
+const ldJoined = (
+  await page.$$eval('script[type="application/ld+json"]', (nodes) =>
+    nodes.map((n) => n.textContent ?? ""),
+  )
+).join(" ");
+check("VideoGame structured data present", ldJoined.includes('"VideoGame"'));
+check("FAQPage structured data present", ldJoined.includes('"FAQPage"'));
+check("FAQ answers are real text", ldJoined.includes("parry") && ldJoined.includes("SAVE word"));
+
+const preview = await canvasColours();
+check("arena is drawn behind the intro", preview.ok, preview.reason);
+await page.screenshot({ path: `${SHOTS}/01-ready.png` });
+
+// ---------------------------------------------------------------- play a match
+console.log("\n--- Playing a match ---");
+
+// Case the difficulty at 85 WPM. At the default 40 the scripted player (about
+// 96 WPM) never lets the bot finish a word, so the bot-to-player damage path
+// would go unexercised. Verification should test the two-way exchange.
+await page
+  .getByLabel("Bot typing speed in words per minute")
+  .selectOption("85");
+await page.waitForTimeout(150);
+
+await page.getByTestId("start-overlay").click();
+await page.waitForSelector('[data-testid="player-panel"]', { timeout: 5000 });
+check("player panel appears after starting", true);
+
+await page.waitForTimeout(2600); // countdown is 2.2s
+
+const mid = await canvasColours();
+check("arena is drawn during the match", mid.ok, mid.reason);
+
+// A typing game is unplayable if your own prompts are below the fold. This was a
+// real defect: the canvas was 16:9 at full width, so the prompt panel sat off the
+// bottom of a laptop screen.
+await page.waitForTimeout(900); // let the smooth scroll settle
+const viewportH = page.viewportSize()?.height ?? 0;
+const panelBox = await page.locator('[data-testid="player-panel"]').boundingBox();
+const canvasBox = await page.locator("canvas").boundingBox();
+check(
+  "the player's prompts are on screen while fighting",
+  !!panelBox && panelBox.y + panelBox.height <= viewportH + 2,
+  `panel ends at ${Math.round((panelBox?.y ?? 0) + (panelBox?.height ?? 0))}px, viewport ${viewportH}px`,
+);
+check(
+  "the arena is on screen while fighting",
+  !!canvasBox && canvasBox.y >= 0 && canvasBox.y < viewportH,
+  `canvas starts at ${Math.round(canvasBox?.y ?? -1)}px`,
+);
+
+const initial = await readPrompts("player-panel");
+check("three prompts are live for the player", initial.length === 3, initial.map((p) => p.text).join(", "));
+check("prompts span more than one length", new Set(initial.map((p) => p.text.length)).size > 1);
+
+let wordsTyped = 0;
+let maxBotDamage = 0;
+let maxPlayerDamage = 0;
+let maxBotWpm = 0;
+let maxPlayerWpm = 0;
+let shotMid = false;
+
+const started = Date.now();
+const FIRST_WINDOW_MS = 60000;
+
+while (Date.now() - started < FIRST_WINDOW_MS) {
+  if (await matchOver()) break;
+  const typed = await playOneWord();
+  if (!typed) {
+    await page.waitForTimeout(150);
+    continue;
+  }
+  wordsTyped++;
+
+  // Sample live state every exchange. The panels disappear the moment the match
+  // resolves, so a single read after the loop can miss everything.
+  const bd = await valueOf("bot-damage");
+  if (bd !== null) maxBotDamage = Math.max(maxBotDamage, bd);
+  const pd = await valueOf("player-damage");
+  if (pd !== null) maxPlayerDamage = Math.max(maxPlayerDamage, pd);
+  const bw = await valueOf("bot-wpm");
+  if (bw !== null) maxBotWpm = Math.max(maxBotWpm, bw);
+  const pw = await valueOf("player-wpm");
+  if (pw !== null) maxPlayerWpm = Math.max(maxPlayerWpm, pw);
+
+  if (!shotMid && wordsTyped === 5) {
+    await page.screenshot({ path: `${SHOTS}/02-midfight.png` });
+    shotMid = true;
+  }
+}
+
+check("words were typed into the game", wordsTyped > 3, `${wordsTyped} words`);
+check(
+  "typing words deals damage to the opponent",
+  maxBotDamage > 0,
+  `bot peaked at ${Math.round(maxBotDamage)}%`,
+);
+check("the player's WPM is measured", maxPlayerWpm > 0, `${maxPlayerWpm} WPM`);
+check("the bot is actually typing, not idle", maxBotWpm > 0, `bot reached ${maxBotWpm} WPM`);
+check(
+  "the bot fights back",
+  maxPlayerDamage > 0,
+  `player peaked at ${Math.round(maxPlayerDamage)}%`,
+);
+
+// ---------------------------------------------------------------- result screen
+console.log("\n--- Result ---");
+let sawResult = await matchOver();
+if (!sawResult) {
+  // Play it out. Rounds cap at 90s and a match is best of three.
+  const deadline = Date.now() + 280000;
+  while (Date.now() < deadline) {
+    if (await matchOver()) break;
+    const typed = await playOneWord();
+    if (!typed) await page.waitForTimeout(200);
+  }
+  sawResult = await matchOver();
+}
+
+check("match reaches a result screen", sawResult);
+if (sawResult) {
+  const coins = Number(await page.getAttribute('[data-testid="result"]', "data-coins"));
+  const wpm = Number(await page.getAttribute('[data-testid="result"]', "data-wpm"));
+  const won = (await page.getAttribute('[data-testid="result"]', "data-won")) === "1";
+  check("coins are awarded", coins > 0, `${coins} coins`);
+  check("WPM is recorded from real typing", wpm > 0, `${wpm} WPM`);
+  check(
+    "the payout matches the result",
+    won ? coins > 12 : coins >= 12,
+    `${won ? "win" : "loss"}, ${coins} coins`,
+  );
+  await page.screenshot({ path: `${SHOTS}/03-result.png` });
+
+  const stored = await page.evaluate(() => window.localStorage.getItem("kinetype.save.v1"));
+  check("the save persisted to localStorage", !!stored && stored.includes("coins"));
+}
+
+// ---------------------------------------------------------------- shop
+console.log("\n--- Shop ---");
+await page.goto(`${BASE}/shop`, { waitUntil: "networkidle" });
+const skinCards = await page.locator("li").count();
+check("shop lists items", skinCards >= 8, `${skinCards} cards`);
+await page.screenshot({ path: `${SHOTS}/04-shop.png`, fullPage: true });
+
+await page.evaluate(() => {
+  const key = "kinetype.save.v1";
+  const raw = window.localStorage.getItem(key);
+  const save = raw ? JSON.parse(raw) : {};
+  save.coins = 2000;
+  save.ownedSkins = ["spark"];
+  save.equippedSkin = "spark";
+  save.ownedOverlays = ["hud-default"];
+  save.equippedOverlay = "hud-default";
+  window.localStorage.setItem(key, JSON.stringify(save));
+});
+await page.reload({ waitUntil: "networkidle" });
+
+const unlockButtons = page.getByRole("button", { name: "Unlock" });
+const unlockCount = await unlockButtons.count();
+check("paid items show an Unlock button", unlockCount > 0, `${unlockCount} unlockable`);
+if (unlockCount > 0) {
+  await unlockButtons.first().click();
+  await page.waitForTimeout(400);
+  const parsed = JSON.parse(
+    (await page.evaluate(() => window.localStorage.getItem("kinetype.save.v1"))) ?? "{}",
+  );
+  check(
+    "buying deducts coins and grants the item",
+    parsed.coins < 2000 && parsed.ownedSkins.length > 1,
+    `coins ${parsed.coins}, owned ${parsed.ownedSkins.join(",")}`,
+  );
+  check("the bought skin is auto-equipped", parsed.equippedSkin !== "spark", parsed.equippedSkin);
+  await page.screenshot({ path: `${SHOTS}/05-shop-bought.png`, fullPage: true });
+}
+
+// ---------------------------------------------------------------- SEO routes
+console.log("\n--- Routes and SEO ---");
+for (const path of ["/how-to-play", "/typing-games-unblocked", "/typing-speed-test"]) {
+  const r = await page.goto(`${BASE}${path}`, { waitUntil: "domcontentloaded" });
+  const h1text = await page.locator("h1").first().innerText();
+  check(`${path} renders`, r?.status() === 200 && h1text.length > 3, `"${h1text.slice(0, 40)}"`);
+}
+
+const sitemapRes = await page.goto(`${BASE}/sitemap.xml`);
+const sitemapBody = (await page.content()) || "";
+check(
+  "sitemap lists the new routes",
+  sitemapRes?.status() === 200 && sitemapBody.includes("/how-to-play"),
+);
+
+const robotsRes = await page.goto(`${BASE}/robots.txt`);
+check("robots.txt is served", robotsRes?.status() === 200);
+
+// ---------------------------------------------------------------- redirects
+console.log("\n--- Legacy redirects ---");
+for (const [from, expectPath] of [
+  ["/transcription-jobs", "/"],
+  ["/rev-typing-test", "/typing-speed-test"],
+  ["/articles", "/"],
+]) {
+  const resp = await page.request.get(`${BASE}${from}`, { maxRedirects: 0 });
+  const status = resp.status();
+  const loc = resp.headers()["location"] ?? "";
+  check(
+    `${from} redirects (${status})`,
+    status >= 300 && status < 400 && loc.includes(expectPath),
+    `→ ${loc}`,
+  );
+}
+const resolved = await page.request.get(`${BASE}/transcription-jobs`, { maxRedirects: 5 });
+check("redirect chain resolves to a live page", resolved.status() === 200, `${resolved.status()}`);
+
+// ---------------------------------------------------------------- diagnostics
+console.log("\n--- Diagnostics ---");
+check("no uncaught page errors", pageErrors.length === 0, pageErrors.slice(0, 3).join(" | "));
+check("no console errors", consoleErrors.length === 0, consoleErrors.slice(0, 3).join(" | "));
+const realFailures = failedRequests.filter((f) => !f.includes("favicon"));
+check("no failed network requests", realFailures.length === 0, realFailures.slice(0, 3).join(" | "));
+
+await browser.close();
+
+const failed = results.filter((r) => !r.ok);
+console.log(`\n${"-".repeat(60)}`);
+console.log(`passed ${results.length - failed.length}   failed ${failed.length}`);
+if (failed.length) {
+  console.log("\nFailures:");
+  for (const f of failed) console.log(`  - ${f.name}${f.detail ? ` (${f.detail})` : ""}`);
+}
+console.log(`screenshots in ./${SHOTS}/`);
+console.log(`${"-".repeat(60)}`);
+process.exit(failed.length ? 1 : 0);

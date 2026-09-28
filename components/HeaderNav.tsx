@@ -1,118 +1,99 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { AFFILIATE } from "@/lib/affiliate";
+
+import { saveStore } from "@/game/store";
+
+const LINKS = [
+  { href: "/", label: "Play" },
+  { href: "/how-to-play", label: "How to play" },
+  { href: "/shop", label: "Skins" },
+  { href: "/typing-games-unblocked", label: "Unblocked" },
+  { href: "/typing-speed-test", label: "Typing test" },
+];
 
 export default function HeaderNav() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const save = useSyncExternalStore(
+    saveStore.subscribe,
+    saveStore.getSnapshot,
+    saveStore.getServerSnapshot,
+  );
 
-  const navLinkClass = (active: boolean) =>
-    `rounded-lg px-3 py-2 font-medium transition hover:bg-zinc-900 hover:text-emerald-400 ${
+  const linkClass = (active: boolean) =>
+    `rounded-lg px-3 py-2 text-sm font-medium transition hover:bg-zinc-900 hover:text-emerald-400 ${
       active ? "bg-zinc-900 text-emerald-400" : "text-zinc-300"
     }`;
 
   return (
     <header className="sticky top-0 z-50 border-b border-zinc-800/80 bg-zinc-950/90 backdrop-blur-md">
-      <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
-        {/* Brand Logo */}
+      <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
         <Link
           href="/"
           className="flex items-center gap-2 font-mono text-xl font-bold tracking-tight text-zinc-100 transition hover:opacity-90"
         >
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-sm text-emerald-400">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-sm text-emerald-400">
             ⌨
-          </div>
+          </span>
           <span>
             kine<span className="text-emerald-400">type</span>
           </span>
         </Link>
 
-        {/* Desktop Navigation */}
-        <nav className="hidden items-center gap-1 text-sm md:flex" aria-label="Main navigation">
-          <Link
-            href="/"
-            aria-current={pathname === "/" ? "page" : undefined}
-            className={navLinkClass(pathname === "/")}
-          >
-            Typing Test
-          </Link>
-          <Link
-            href="/articles"
-            aria-current={pathname === "/articles" ? "page" : undefined}
-            className={navLinkClass(pathname === "/articles")}
-          >
-            Articles
-          </Link>
+        <nav className="hidden items-center gap-1 md:flex" aria-label="Main navigation">
+          {LINKS.map((l) => (
+            <Link
+              key={l.href}
+              href={l.href}
+              aria-current={pathname === l.href ? "page" : undefined}
+              className={linkClass(pathname === l.href)}
+            >
+              {l.label}
+            </Link>
+          ))}
         </nav>
 
-        {/* Right CTA Button */}
-        <div className="hidden items-center gap-3 md:flex">
-          <a
-            href={AFFILIATE.gotranscript}
-            target="_blank"
-            rel="noopener noreferrer sponsored"
-            className="inline-block rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
+        <div className="flex items-center gap-2">
+          <Link
+            href="/shop"
+            className="hidden rounded-lg border border-zinc-800 px-2.5 py-1.5 font-mono text-xs text-zinc-300 transition hover:border-amber-500/50 hover:text-amber-300 sm:block"
+            aria-label="Your coin balance"
           >
-            <span>Get Paid to Type</span>
-            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-            </svg>
-          </a>
-        </div>
-
-        {/* Mobile Hamburger Toggle */}
-        <div className="flex md:hidden">
+            <span className="text-amber-400">{save.coins.toLocaleString("en-US")}</span> coins
+          </Link>
           <button
             type="button"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200"
+            onClick={() => setOpen((v) => !v)}
+            className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200 md:hidden"
             aria-label="Toggle navigation menu"
-            aria-expanded={mobileMenuOpen}
+            aria-expanded={open}
           >
-            {mobileMenuOpen ? (
-              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {open ? (
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            ) : (
-              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              ) : (
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            )}
+              )}
+            </svg>
           </button>
         </div>
       </div>
 
-      {/* Mobile Menu Dropdown */}
-      {mobileMenuOpen && (
-        <div className="space-y-2 border-b border-zinc-800 bg-zinc-950 px-4 py-4 md:hidden">
-          <Link
-            href="/"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block rounded-xl px-3 py-2 text-sm font-medium text-zinc-200 hover:bg-zinc-900"
-          >
-            Typing Test
-          </Link>
-          <Link
-            href="/articles"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block rounded-xl px-3 py-2 text-sm font-medium text-zinc-200 hover:bg-zinc-900"
-          >
-            Articles
-          </Link>
-
-          <div className="pt-3">
-            <a
-              href={AFFILIATE.gotranscript}
-              target="_blank"
-              rel="noopener noreferrer sponsored"
-              className="inline-block rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
+      {open && (
+        <div className="space-y-1 border-b border-zinc-800 bg-zinc-950 px-4 py-3 md:hidden">
+          {LINKS.map((l) => (
+            <Link
+              key={l.href}
+              href={l.href}
+              onClick={() => setOpen(false)}
+              className="block rounded-xl px-3 py-2 text-sm font-medium text-zinc-200 hover:bg-zinc-900"
             >
-              <span>Get Paid to Type</span>
-            </a>
-          </div>
+              {l.label}
+            </Link>
+          ))}
         </div>
       )}
     </header>
