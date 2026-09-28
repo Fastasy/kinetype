@@ -48,8 +48,8 @@ export default function TypingSpeedTestPage() {
 
  <div className="mx-auto mt-10 max-w-5xl px-4 text-sm sm:px-6">
  <Link
- href="/"
- className="rounded-xl bg-brand px-5 py-2.5 font-bold text-page transition hover:bg-brand-bright"
+ href="/play"
+ className="rounded-xl bg-brand px-5 py-2.5 font-bold text-brand-deep transition hover:bg-brand-bright"
  >
  Take that speed into a fight
  </Link>

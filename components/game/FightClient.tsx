@@ -35,11 +35,33 @@ function opponentSkinFor(playerSkin: string): string {
  return playerSkin === OPPONENT_SKIN_ID ? SKIN_CLASH_FALLBACK : OPPONENT_SKIN_ID;
 }
 
-export default function FightClient() {
+/**
+ * `wide` is used on the dedicated /play page, where the arena IS the page and can
+ * claim more vertical space. The landing page no longer embeds this at all.
+ */
+export default function FightClient({ wide = false }: { wide?: boolean }) {
  const canvasRef = useRef<HTMLCanvasElement | null>(null);
  const engineRef = useRef<GameEngine | null>(null);
  const previewRef = useRef<GameEngine | null>(null);
  const sectionRef = useRef<HTMLElement | null>(null);
+ const [isFullscreen, setIsFullscreen] = useState(false);
+
+ /** Fullscreens the whole fight section, panels included, so the prompts stay visible. */
+ const toggleFullscreen = useCallback(() => {
+   if (typeof document === "undefined") return;
+   if (document.fullscreenElement) {
+     void document.exitFullscreen();
+     return;
+   }
+   const el = sectionRef.current;
+   if (el?.requestFullscreen) void el.requestFullscreen().catch(() => {});
+ }, []);
+
+ useEffect(() => {
+   const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+   document.addEventListener("fullscreenchange", onChange);
+   return () => document.removeEventListener("fullscreenchange", onChange);
+ }, []);
  // External store rather than an effect: it is hydration safe and does not trip
  // React 19's set-state-in-effect rule. See game/store.ts.
  const save = useSyncExternalStore(
@@ -210,7 +232,16 @@ export default function FightClient() {
  const them = snap ? snap[opponent] : null;
 
  return (
- <section ref={sectionRef} className="mx-auto max-w-5xl px-4 sm:px-6">
+ <section
+   ref={sectionRef}
+   className={
+     isFullscreen
+       ? "mx-auto w-full max-w-6xl bg-page px-4 py-4"
+       : wide
+         ? "mx-auto max-w-6xl px-3 sm:px-4"
+         : "mx-auto max-w-5xl px-4 sm:px-6"
+   }
+ >
  {/* ---------------------------------------------------------- controls */}
  <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-card/40 px-4 py-3">
  <div className="flex flex-wrap items-center gap-3 text-xs">
@@ -262,8 +293,17 @@ export default function FightClient() {
 
  <div className="flex items-center gap-3">
  <span className="font-mono text-xs text-ink-faint">
- <span className="text-coin">{save.coins.toLocaleString("en-US")}</span> coins
+   <span className="text-coin">{save.coins.toLocaleString("en-US")}</span> coins
  </span>
+ <button
+   type="button"
+   data-testid="fullscreen-button"
+   onClick={toggleFullscreen}
+   className="border-2 border-line-strong px-2 py-1 text-ink-soft transition hover:border-brand hover:text-brand"
+   aria-label={isFullscreen ? "Leave fullscreen" : "Play in fullscreen"}
+ >
+   {isFullscreen ? "Exit" : "Fullscreen"}
+ </button>
  {stage === "fighting" ? (
  <button
  type="button"
@@ -352,12 +392,16 @@ export default function FightClient() {
 
  {/* ---------------------------------------------------------- the fight */}
  <div className="relative mt-3 overflow-hidden rounded-2xl border border-line bg-black">
- {/* The 58vh cap keeps the bot panel, the arena and the player's prompts all
- inside one screenful on a laptop. Without it the prompts fell below the
- fold and the game could not be played. */}
+ {/* The vh cap keeps the bot panel, the arena and the player's prompts all inside
+     one screenful. Without it the prompts fell below the fold and the game could
+     not be played. Wide and fullscreen layouts get more room, because on those the
+     arena is the whole point of the page. */}
  <div
- className="relative mx-auto aspect-[16/9] w-full"
- style={{ maxWidth: "min(100%, calc(58vh * 16 / 9))" }}
+   data-testid="arena"
+   className="relative mx-auto aspect-[16/9] w-full"
+   style={{
+     maxWidth: `min(100%, calc(${isFullscreen ? 76 : wide ? 66 : 58}vh * 16 / 9))`,
+   }}
  >
  <canvas
  ref={canvasRef}

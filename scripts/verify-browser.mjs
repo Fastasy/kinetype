@@ -102,25 +102,57 @@ async function playOneWord() {
   return true;
 }
 
-// ---------------------------------------------------------------- home page
-console.log("\n--- Home page ---");
+// ------------------------------------------------------------- landing page
+console.log("\n--- Landing page (/) ---");
 const t0 = Date.now();
 const homeRes = await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
 const loadMs = Date.now() - t0;
-check("home returns 200", homeRes?.status() === 200, `status ${homeRes?.status()}`);
+check("landing returns 200", homeRes?.status() === 200, `status ${homeRes?.status()}`);
 check("loads in under 10s", loadMs < 10000, `${loadMs}ms`);
 
 const h1 = (await page.locator("h1").first().innerText()).trim();
 check("H1 targets the primary keyword", /typing fighting game/i.test(h1), h1.slice(0, 72));
 
-const ldJoined = (
+// The whole point of the split: the landing page sells, the game page plays. If the
+// engine boots here, a visitor who never presses Play still pays for a physics loop,
+// an audio context and a requestAnimationFrame.
+const landCanvases = await page.locator("canvas").count();
+check("the landing page does NOT boot the game engine", landCanvases === 0, `${landCanvases} canvas`);
+check(
+  "the landing page shows a static arena frame instead",
+  (await page.locator('svg[aria-label*="match in progress"]').count()) > 0,
+);
+
+let ldJoined = (
   await page.$$eval('script[type="application/ld+json"]', (nodes) =>
     nodes.map((n) => n.textContent ?? ""),
   )
 ).join(" ");
-check("VideoGame structured data present", ldJoined.includes('"VideoGame"'));
 check("FAQPage structured data present", ldJoined.includes('"FAQPage"'));
 check("FAQ answers are real text", ldJoined.includes("parry") && ldJoined.includes("SAVE word"));
+await page.screenshot({ path: `${SHOTS}/00-landing.png` });
+
+// --------------------------------------------------------------- game page
+console.log("\n--- Game page (/play) ---");
+
+// Reach it by CLICKING the CTA a real visitor uses, not by typing the URL.
+const cta = page.getByTestId("play-cta");
+check("the primary CTA is present", (await cta.count()) > 0);
+await cta.first().click();
+await page.waitForURL("**/play", { timeout: 10000 });
+check("the CTA navigates to the game page", page.url().endsWith("/play"), page.url());
+
+const playH1 = (await page.locator("h1").first().innerText()).trim();
+check("game page H1 is about playing", /play kinetype/i.test(playH1), playH1.slice(0, 48));
+
+ldJoined = (
+  await page.$$eval('script[type="application/ld+json"]', (nodes) =>
+    nodes.map((n) => n.textContent ?? ""),
+  )
+).join(" ");
+check("VideoGame structured data is on the game page", ldJoined.includes('"VideoGame"'));
+check("BreadcrumbList structured data present", ldJoined.includes('"BreadcrumbList"'));
+check("a fullscreen control exists", (await page.getByTestId("fullscreen-button").count()) > 0);
 
 const preview = await canvasColours();
 check("arena is drawn behind the intro", preview.ok, preview.reason);

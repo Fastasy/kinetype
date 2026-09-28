@@ -71,11 +71,12 @@ export const metadata: Metadata = {
 };
 
 const FOOTER_LINKS = [
- { href: "/", label: "Play" },
- { href: "/how-to-play", label: "How to play" },
- { href: "/shop", label: "Skins and overlays" },
- { href: "/typing-games-unblocked", label: "Play at school" },
- { href: "/typing-speed-test", label: "Typing speed test" },
+  { href: "/play", label: "Play the game" },
+  { href: "/", label: "What is Kinetype" },
+  { href: "/how-to-play", label: "How to play" },
+  { href: "/shop", label: "Skins and overlays" },
+  { href: "/typing-games-unblocked", label: "Play at school" },
+  { href: "/typing-speed-test", label: "Typing speed test" },
 ];
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

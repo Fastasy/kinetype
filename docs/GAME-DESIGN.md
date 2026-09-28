@@ -208,6 +208,34 @@ The damage gradient in `game/knockback.ts` is deliberately independent of the th
 yellow, orange and red to near-black reads as "how close to death" in any palette, and it is the one
 thing a player must never have to relearn.
 
+## 11.5 Site structure
+
+The game is NOT the homepage. The fighting box has its own page so the arena can be the point
+of the page instead of a widget on a marketing page.
+
+| Route | Job | Primary keyword intent |
+|---|---|---|
+| `/` | Sell it. Hero, a static arena frame, the three decisions, the roster, FAQ. **Never boots the engine.** | "typing fighting game" (informational) |
+| `/play` | Play it. One line of orientation, then the arena. | "play typing fighting game online" (transactional) |
+| `/how-to-play` | Teach the mechanics | "how to play typing fighting game" |
+| `/shop` | Skins and overlays | "typing game skins" |
+| `/typing-games-unblocked` | The school audience | "typing games unblocked" |
+| `/typing-speed-test` | Plain test, funnels into the game | "typing speed test" |
+
+Two rules hold this together:
+
+1. **The landing page must not boot the engine.** It renders `ArenaTeaser`, a single SVG built
+   from the same pixel data as the canvas. A visitor who never presses Play pays nothing for a
+   physics loop, an audio context or a requestAnimationFrame. `scripts/verify-browser.mjs`
+   asserts there is no `canvas` element on `/`, so this cannot regress quietly.
+2. **`/play` gets more room.** `FightClient` takes a `wide` prop that raises the arena cap from
+   58vh to 66vh (76vh in fullscreen), because on that page the arena is the whole point.
+
+Structured data is split so the two pages do not compete: `/` carries `WebSite` + `FAQPage`,
+`/play` carries `VideoGame` + `WebApplication` + `BreadcrumbList` + its own play-specific
+`FAQPage`. The fullscreen control wraps the entire fight section, panels included, because a
+fullscreen arena with the player's prompts outside it would be unplayable.
+
 ## 12. Out of scope for MVP
 
 Explicitly not built, and not to be smuggled in:

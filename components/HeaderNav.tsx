@@ -7,11 +7,11 @@ import { usePathname } from "next/navigation";
 import { saveStore } from "@/game/store";
 
 const LINKS = [
- { href: "/", label: "Play" },
- { href: "/how-to-play", label: "How to play" },
- { href: "/shop", label: "Skins" },
- { href: "/typing-games-unblocked", label: "Unblocked" },
- { href: "/typing-speed-test", label: "Typing test" },
+  { href: "/play", label: "Play" },
+  { href: "/how-to-play", label: "How to play" },
+  { href: "/shop", label: "Skins" },
+  { href: "/typing-games-unblocked", label: "Unblocked" },
+  { href: "/typing-speed-test", label: "Typing test" },
 ];
 
 export default function HeaderNav() {
@@ -33,10 +33,10 @@ export default function HeaderNav() {
  <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
  <Link
  href="/"
- className="flex items-center gap-2 font-mono text-xl font-bold tracking-tight text-ink transition hover:opacity-90"
+ className="flex items-center gap-2 font-pixel text-[13px] text-ink transition hover:opacity-90"
  >
- <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-brand/30 bg-brand/10 text-sm text-brand-bright">
- ⌨
+ <span className="flex h-7 w-7 items-center justify-center border-2 border-brand/40 bg-brand/10 text-sm text-brand-bright">
+   ⌨
  </span>
  <span>
  kine<span className="text-brand-bright">type</span>

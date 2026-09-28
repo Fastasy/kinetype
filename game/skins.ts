@@ -20,7 +20,13 @@
 
 export const SPRITE_W = 12;
 export const SPRITE_H = 16;
-export const SPRITE_SCALE = 5;
+/**
+ * Sprite scale in stage pixels. Raised from 5 to 7 when the game got its own page and a
+ * 66vh arena: at scale 5 the fighters rendered ~50px tall against a large empty sky and
+ * did not carry the frame. The hurtbox in game/constants.ts moves with this, because a
+ * hurtbox smaller than the sprite means attacks that look like they connect will miss.
+ */
+export const SPRITE_SCALE = 7;
 
 /** Every legal pixel character. Used by the test to catch typos. */
 export const PIXEL_KEYS = ["o", "h", "s", "e", "b", "a", "l", "f", "t"] as const;

@@ -169,8 +169,8 @@ export default function UnblockedPage() {
 
  <div className="mt-10 flex flex-wrap gap-3 text-sm">
  <Link
- href="/"
- className="rounded-xl bg-brand px-5 py-2.5 font-bold text-page transition hover:bg-brand-bright"
+ href="/play"
+ className="rounded-xl bg-brand px-5 py-2.5 font-bold text-brand-deep transition hover:bg-brand-bright"
  >
  Play Kinetype
  </Link>
