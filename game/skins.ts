@@ -1,191 +1,388 @@
-// Cosmetics.
+// Cosmetics, as pixel art.
 //
-// Skins are DATA, not assets. A skin is a palette plus silhouette parameters plus
-// a trail style. The renderer draws fighters procedurally from this definition, so
-// the build carries no sprite sheets and a new skin costs a few hundred bytes.
+// A skin is a PIXEL MATRIX plus a palette. Nothing else. There are no image files:
+// the canvas blits each cell as a filled rect, and the shop renders the same matrix
+// as SVG. That keeps the build tiny (the ad-network budget wants under 20MB) and it
+// means a new skin costs nothing to serve.
 //
-// Prices are in coins, earned by playing. See game/commerce.ts for the purchase
-// boundary: no real-money provider ships until multiplayer exists.
+// GRID RULES, enforced by game/tests/engine.test.ts:
+//   - every row is exactly SPRITE_W characters
+//   - every character is either "." or a key present in that skin's palette
+//   - fonts are irrelevant here; a typo in a row is a visible hole in the sprite,
+//     so the row widths are asserted rather than eyeballed.
+//
+// Legend
+//   .  transparent          o  outline (darkest)
+//   h  hair / helmet / hood s  skin
+//   e  eye                  b  body
+//   a  arm                  l  legs
+//   f  feet                 t  trim
 
-import type { TrailPoint } from "./types";
+export const SPRITE_W = 12;
+export const SPRITE_H = 16;
+export const SPRITE_SCALE = 5;
 
-export type SkinRarity = "starter" | "common" | "rare" | "legendary";
+/** Every legal pixel character. Used by the test to catch typos. */
+export const PIXEL_KEYS = ["o", "h", "s", "e", "b", "a", "l", "f", "t"] as const;
 
-export interface Silhouette {
-  /** Body width / height in px at rest. */
-  w: number;
-  h: number;
-  /** 0 = round, 1 = sharp. Drives head and shoulder geometry. */
-  edge: number;
-  /** Extra crest/shoulder mass, 0..1. */
-  mass: number;
-  /** Number of spine fins drawn on the back. */
-  fins: number;
+export type Rarity = "starter" | "common" | "rare" | "legendary";
+
+export interface PixelPalette {
+  o: string; // outline
+  h: string; // hair
+  s: string; // skin
+  e: string; // eye
+  b: string; // body
+  a: string; // arm
+  l: string; // legs
+  f: string; // feet
+  t: string; // trim
 }
 
-export interface Skin {
+export interface PixelSkin {
   id: string;
   name: string;
-  /** One-line shop blurb. */
   blurb: string;
-  rarity: SkinRarity;
-  /** Price in coins. 0 = owned by default. */
+  rarity: Rarity;
   price: number;
-  /** Surface, accent and glow. */
-  palette: {
-    body: string;
-    accent: string;
-    trim: string;
-    glow: string;
-  };
-  silhouette: Silhouette;
-  trail: {
-    /** Particle colour. */
-    colour: string;
-    /** Size multiplier. */
-    scale: number;
-    /** Emit extra motes at high damage. */
-    spark: boolean;
-  };
+  palette: PixelPalette;
+  /** SPRITE_H rows of SPRITE_W characters. */
+  pixels: string[];
+  trail: { colour: string; scale: number; spark: boolean };
 }
 
-export const SKINS: Skin[] = [
+/** The shop renders this from the same matrix the canvas draws. */
+export function spriteRows(skin: PixelSkin): string[] {
+  return skin.pixels;
+}
+
+// ---------------------------------------------------------------------------
+// Body archetypes. Three silhouettes keep the roster visually distinct without
+// authoring six unrelated sprites that then drift out of alignment.
+// ---------------------------------------------------------------------------
+
+/** Standard build. */
+const STANDARD = [
+  "....oooo....",
+  "...ohhhho...",
+  "..ohhhhhho..",
+  "..ohssssho..",
+  "..osesseso..",
+  "..osssssso..",
+  "..osssssso..",
+  "..obbbbbbo..",
+  ".oabbbbbbao.",
+  ".oabbtbbbao.",
+  ".oabbbbbbao.",
+  "..ollllllo..",
+  "..ollllllo..",
+  "..olll.llo..",
+  "..olll.llo..",
+  "..offf.ffo..",
+];
+
+/** Broad and heavy: wider shoulders, longer torso, shorter legs. */
+const BROAD = [
+  "....oooo....",
+  "...ohhhho...",
+  "..ohhhhhho..",
+  "..ohhhhhho..",
+  "..ohssssho..",
+  "..osesseso..",
+  "..osssssso..",
+  ".obbbbbbbbo.",
+  "oabbbbbbbbao",
+  "oabbbttbbbao",
+  "oabbbbbbbbao",
+  ".obbbbbbbbo.",
+  "..ollllllo..",
+  "..olll.llo..",
+  "..olll.llo..",
+  "..offf.ffo..",
+];
+
+/** Slim and tall: a four-wide torso. */
+const SLIM = [
+  "....oooo....",
+  "...ohhhho...",
+  "...ohhhho...",
+  "...ohssho...",
+  "...osesso...",
+  "...osssso...",
+  "...obbbbo...",
+  "..oabbbbao..",
+  "..oabbbbao..",
+  "..oabttbao..",
+  "..oabbbbao..",
+  "...ollllo...",
+  "...ollllo...",
+  "...oll.llo..",
+  "...oll.llo..",
+  "...off.ffo..",
+];
+
+/** Hooded: hair wraps the shoulders, face sits in shadow. */
+const HOODED = [
+  "....oooo....",
+  "...ohhhho...",
+  "..ohhhhhho..",
+  "..ohhhhhho..",
+  "..ohssssho..",
+  "..osesseso..",
+  "..osssssso..",
+  "..ohhhhhho..",
+  ".ohbbbbbbho.",
+  ".ohbbttbbho.",
+  ".ohbbbbbbho.",
+  "..ollllllo..",
+  "..ollllllo..",
+  "..olll.llo..",
+  "..olll.llo..",
+  "..offf.ffo..",
+];
+
+/** Helmeted: a full visor slit, no skin on the head. */
+const HELMETED = [
+  "....oooo....",
+  "...ohhhho...",
+  "..ohhhhhho..",
+  "..ohhhhhho..",
+  "..oeeeeeeo..",
+  "..ohhhhhho..",
+  "..osssssso..",
+  ".obbbbbbbbo.",
+  "oabbbbbbbbao",
+  "oabbbttbbbao",
+  "oabbbbbbbbao",
+  ".obbbbbbbbo.",
+  "..ollllllo..",
+  "..olll.llo..",
+  "..olll.llo..",
+  "..offf.ffo..",
+];
+
+/** Spiky hair, marked by the split crown row. */
+const SPIKY = [
+  "..o.oooo.o..",
+  "..ohhhhhho..",
+  ".ohhhhhhhho.",
+  ".ohssssssho.",
+  "..osesseso..",
+  "..osssssso..",
+  "..obbbbbbo..",
+  ".oabbbbbbao.",
+  ".oabbbbbbao.",
+  ".oabttttbao.",
+  ".oabbbbbbao.",
+  "..ollllllo..",
+  "..ollllllo..",
+  "..olll.llo..",
+  "..olll.llo..",
+  "..offf.ffo..",
+];
+
+export const SKINS: PixelSkin[] = [
   {
     id: "spark",
     name: "Spark",
-    blurb: "The default frame. Balanced, bright, no nonsense.",
+    blurb: "The default build. Balanced, bright, no nonsense.",
     rarity: "starter",
     price: 0,
-    palette: { body: "#e6e6f2", accent: "#a78bfa", trim: "#4c1d95", glow: "#ddd6fe" },
-    silhouette: { w: 46, h: 84, edge: 0.35, mass: 0.3, fins: 0 },
-    trail: { colour: "#ddd6fe", scale: 1, spark: false },
+    palette: {
+      o: "#1b1b22",
+      h: "#6b4423",
+      s: "#e8b48a",
+      e: "#22303f",
+      b: "#3b7dd8",
+      a: "#3b7dd8",
+      l: "#3a3f4b",
+      f: "#242832",
+      t: "#dfe7f2",
+    },
+    pixels: STANDARD,
+    trail: { colour: "#7fb0f0", scale: 1, spark: false },
   },
   {
     id: "ember",
     name: "Ember",
-    blurb: "Runs hot. Trails burn orange when you get launched.",
+    blurb: "Burns hot. Reads huge knockback.",
     rarity: "common",
     price: 120,
-    palette: { body: "#fb923c", accent: "#fbbf24", trim: "#7c2d12", glow: "#fed7aa" },
-    silhouette: { w: 46, h: 84, edge: 0.55, mass: 0.35, fins: 2 },
-    trail: { colour: "#fb923c", scale: 1.1, spark: true },
+    palette: {
+      o: "#2a1410",
+      h: "#f97316",
+      s: "#e8b48a",
+      e: "#3a1a12",
+      b: "#c2410c",
+      a: "#c2410c",
+      l: "#3f2119",
+      f: "#241512",
+      t: "#fbbf24",
+    },
+    pixels: BROAD,
+    trail: { colour: "#fb923c", scale: 1.15, spark: true },
   },
   {
     id: "tide",
     name: "Tide",
-    blurb: "Cool and wide. Built for players who hold the middle.",
+    blurb: "Cool and swift. A slim profile for clean dodges.",
     rarity: "common",
     price: 120,
-    palette: { body: "#38bdf8", accent: "#22d3ee", trim: "#0c4a6e", glow: "#bae6fd" },
-    silhouette: { w: 51, h: 81, edge: 0.25, mass: 0.5, fins: 0 },
-    trail: { colour: "#38bdf8", scale: 1.15, spark: false },
+    palette: {
+      o: "#0d2430",
+      h: "#155e75",
+      s: "#d9a97e",
+      e: "#0b2a36",
+      b: "#0891b2",
+      a: "#0891b2",
+      l: "#164e63",
+      f: "#0e3a49",
+      t: "#a5f3fc",
+    },
+    pixels: SLIM,
+    trail: { colour: "#67e8f9", scale: 0.95, spark: false },
   },
   {
     id: "monolith",
     name: "Monolith",
-    blurb: "Heavy silhouette, flat launch arcs. Reads as weight.",
+    blurb: "A wall with legs. The heaviest frame in the roster.",
     rarity: "rare",
     price: 320,
-    palette: { body: "#a1a1aa", accent: "#e4e4e7", trim: "#27272a", glow: "#d4d4d8" },
-    silhouette: { w: 59, h: 89, edge: 0.85, mass: 0.75, fins: 0 },
-    trail: { colour: "#a1a1aa", scale: 1.35, spark: false },
+    palette: {
+      o: "#1c1c22",
+      h: "#6b7280",
+      s: "#9ca3af",
+      e: "#111827",
+      b: "#4b5563",
+      a: "#4b5563",
+      l: "#374151",
+      f: "#1f2937",
+      t: "#d1d5db",
+    },
+    pixels: HELMETED,
+    trail: { colour: "#9ca3af", scale: 1.25, spark: false },
   },
   {
-    id: "violet",
+    id: "violet-static",
     name: "Violet Static",
-    blurb: "Slim frame, crackling trail. For speed players.",
+    blurb: "Spiked frame. Leaves a crackling trail.",
     rarity: "rare",
     price: 320,
-    palette: { body: "#f0abfc", accent: "#e879f9", trim: "#701a75", glow: "#fae8ff" },
-    silhouette: { w: 41, h: 86, edge: 0.7, mass: 0.2, fins: 3 },
-    trail: { colour: "#f0abfc", scale: 0.95, spark: true },
+    palette: {
+      o: "#2b0f3a",
+      h: "#a21caf",
+      s: "#e8b48a",
+      e: "#2b0f3a",
+      b: "#9333ea",
+      a: "#9333ea",
+      l: "#581c87",
+      f: "#3b0764",
+      t: "#f0abfc",
+    },
+    pixels: SPIKY,
+    trail: { colour: "#e879f9", scale: 0.95, spark: true },
   },
   {
     id: "voidwing",
     name: "Voidwing",
-    blurb: "The legendary frame. Near-black body, green rim light.",
+    blurb: "The legendary frame. Hooded, dark, quiet.",
     rarity: "legendary",
     price: 900,
-    palette: { body: "#18181b", accent: "#4ade80", trim: "#052e16", glow: "#bbf7d0" },
-    silhouette: { w: 49, h: 92, edge: 0.95, mass: 0.55, fins: 4 },
-    trail: { colour: "#4ade80", scale: 1.4, spark: true },
+    palette: {
+      o: "#05130d",
+      h: "#14532d",
+      s: "#8f7a5a",
+      e: "#d9f99d",
+      b: "#1f2937",
+      a: "#1f2937",
+      l: "#111827",
+      f: "#052e16",
+      t: "#4ade80",
+    },
+    pixels: HOODED,
+    trail: { colour: "#4ade80", scale: 1.1, spark: true },
   },
 ];
 
-export const DEFAULT_SKIN_ID = "spark";
-
-export function skinById(id: string): Skin {
+export function skinById(id: string): PixelSkin {
   return SKINS.find((s) => s.id === id) ?? SKINS[0];
 }
 
-export const RARITY_LABEL: Record<SkinRarity, string> = {
-  starter: "Starter",
-  common: "Common",
-  rare: "Rare",
-  legendary: "Legendary",
-};
+/**
+ * The enemy always wears Ember. It makes the two sides readable at a glance
+ * without the player having to check a label, and it means an equipped skin can
+ * never be confused with the opponent.
+ */
+export const OPPONENT_SKIN_ID = "ember";
 
-// ------------------------------------------------------------------ overlays
+/** What a brand new save starts with. */
+export const DEFAULT_SKIN_ID = "spark";
+export const DEFAULT_OVERLAY_ID = "terminal";
+
+// ---------------------------------------------------------------------------
+// HUD overlays. These restyle the prompt panel only. They never change how the
+// fight plays, which is what keeps them honest as a purchase.
+// ---------------------------------------------------------------------------
 
 export interface Overlay {
   id: string;
   name: string;
   blurb: string;
+  rarity: Rarity;
   price: number;
+  /** Wrapper background behind the whole prompt area. */
   panel: string;
+  /** Border on a resting prompt. */
   border: string;
+  /** Background of a resting prompt. */
   promptBg: string;
+  /** Highlight for the character being typed. */
   promptActive: string;
 }
 
 export const OVERLAYS: Overlay[] = [
   {
-    id: "hud-default",
+    id: "terminal",
     name: "Terminal",
     blurb: "The standard HUD. High contrast, no decoration.",
+    rarity: "starter",
     price: 0,
-    panel: "rgba(8,8,20,0.86)",
-    border: "#2a2a45",
-    promptBg: "#12121f",
-    promptActive: "#a78bfa",
+    panel: "rgba(255,255,255,0.92)",
+    border: "#c9c3b4",
+    promptBg: "#f8f5ee",
+    promptActive: "#6d28d9",
   },
   {
-    id: "hud-amber",
+    id: "amber",
     name: "Amber CRT",
-    blurb: "Warm phosphor. Softer on the eyes at night.",
-    price: 150,
-    panel: "rgba(24,16,4,0.84)",
-    border: "#78350f",
-    promptBg: "#1c1206",
-    promptActive: "#fbbf24",
+    blurb: "Warm phosphor glow on a paper screen.",
+    rarity: "common",
+    price: 180,
+    panel: "rgba(255,252,244,0.94)",
+    border: "#e0c9a6",
+    promptBg: "#fdf6ea",
+    promptActive: "#b45309",
   },
   {
-    id: "hud-ice",
+    id: "cryo",
     name: "Cryo",
-    blurb: "Cold blue panels with cyan highlight.",
-    price: 150,
-    panel: "rgba(6,18,30,0.84)",
-    border: "#0c4a6e",
-    promptBg: "#071a2b",
-    promptActive: "#22d3ee",
+    blurb: "Cold blue with a bright rim.",
+    rarity: "common",
+    price: 180,
+    panel: "rgba(248,252,254,0.94)",
+    border: "#bcd8e2",
+    promptBg: "#eff8fb",
+    promptActive: "#0e7490",
   },
 ];
-
-export const DEFAULT_OVERLAY_ID = "hud-default";
 
 export function overlayById(id: string): Overlay {
   return OVERLAYS.find((o) => o.id === id) ?? OVERLAYS[0];
 }
 
-/** Engine-level trail style, resolved from the equipped skin. */
-export interface TrailStyle {
-  colour: string;
-  scale: number;
-  spark: boolean;
-}
-
-export function trailFor(skin: Skin): TrailStyle {
-  return { ...skin.trail };
-}
-
-export type { TrailPoint };
+export const RARITY_LABEL: Record<Rarity, string> = {
+  starter: "STARTER",
+  common: "COMMON",
+  rare: "RARE",
+  legendary: "LEGENDARY",
+};

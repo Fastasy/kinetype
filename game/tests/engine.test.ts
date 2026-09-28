@@ -10,6 +10,7 @@
 
 import assert from "node:assert/strict";
 
+
 import {
   GUARD_WORDS,
   HEAVY_WORDS,
@@ -38,7 +39,7 @@ import { TypingRun } from "../typing";
 import { createRng } from "../rng";
 import { applyOutcome, DEFAULT_SAVE, type SaveData } from "../storage";
 import { purchaseWithCoins } from "../commerce";
-import { SKINS } from "../skins";
+import { OPPONENT_SKIN_ID, OVERLAYS, PIXEL_KEYS, SKINS, SPRITE_H, SPRITE_W } from "../skins";
 import type { MatchOptions, Side, WordTier } from "../types";
 
 let passed = 0;
@@ -738,7 +739,10 @@ test("every skin has a unique id and a sane price", () => {
     assert.ok(!ids.has(s.id), `duplicate skin id: ${s.id}`);
     ids.add(s.id);
     assert.ok(s.price >= 0);
-    assert.ok(s.silhouette.w > 0 && s.silhouette.h > 0);
+    // Every skin must actually draw something. Sprite geometry is asserted in the
+    // sprite section further down.
+    assert.ok(s.pixels.length > 0, `${s.id} has no pixels`);
+    assert.match(s.trail.colour, /^#[0-9a-f]{6}$/i, `${s.id} trail colour must be hex`);
   }
 });
 
@@ -782,6 +786,81 @@ test("spawns sit on the main platform, equally far from their own blast line", (
     Math.abs(leftDist - rightDist) < 1,
     `spawns must be symmetric: ${leftDist} vs ${rightDist}`,
   );
+});
+
+// ================================================================ sprites
+
+// The roster is pixel art, so a typo is a visible hole in a fighter. Row widths and
+// palette coverage are asserted rather than eyeballed, because a 12-character row
+// that is actually 11 characters still compiles.
+
+test("every sprite row is the right width", () => {
+  for (const skin of SKINS) {
+    assert.equal(skin.pixels.length, SPRITE_H, `${skin.id}: expected ${SPRITE_H} rows`);
+    skin.pixels.forEach((row, i) => {
+      assert.equal(
+        row.length,
+        SPRITE_W,
+        `${skin.id} row ${i} is ${row.length} chars, expected ${SPRITE_W}: "${row}"`,
+      );
+    });
+  }
+});
+
+test("sprites use only legal pixel characters", () => {
+  const legal = new Set<string>([".", ...PIXEL_KEYS]);
+  for (const skin of SKINS) {
+    skin.pixels.forEach((row, i) => {
+      for (const ch of row) {
+        assert.ok(legal.has(ch), `${skin.id} row ${i} has an illegal pixel "${ch}"`);
+      }
+    });
+  }
+});
+
+test("every pixel a sprite uses is defined in its palette", () => {
+  for (const skin of SKINS) {
+    const used = new Set(skin.pixels.join("").split("").filter((c) => c !== "."));
+    for (const key of used) {
+      assert.ok(
+        skin.palette[key as keyof typeof skin.palette],
+        `${skin.id} uses "${key}" but its palette does not define it`,
+      );
+    }
+    assert.ok(used.size >= 6, `${skin.id} is barely drawn (${used.size} colours)`);
+  }
+});
+
+test("no two skins are identical", () => {
+  const fingerprints = SKINS.map((s) => `${s.pixels.join("|")}::${JSON.stringify(s.palette)}`);
+  assert.equal(new Set(fingerprints).size, SKINS.length, "two skins are indistinguishable");
+  assert.equal(new Set(SKINS.map((s) => s.id)).size, SKINS.length, "skin ids must be unique");
+});
+
+test("exactly one skin is free and the rest cost coins", () => {
+  const starters = SKINS.filter((s) => s.rarity === "starter");
+  assert.equal(starters.length, 1, "there must be exactly one starter skin");
+  assert.equal(starters[0].price, 0, "the starter skin must be free");
+  for (const s of SKINS) {
+    if (s.rarity === "starter") continue;
+    assert.ok(s.price > 0, `${s.id} must cost coins`);
+  }
+});
+
+test("the opponent skin is real and differs from the starter", () => {
+  assert.ok(SKINS.some((s) => s.id === OPPONENT_SKIN_ID), "opponent skin must exist");
+  assert.notEqual(OPPONENT_SKIN_ID, SKINS.find((s) => s.rarity === "starter")?.id);
+});
+
+test("there is a free overlay and paid ones cost coins", () => {
+  const free = OVERLAYS.filter((o) => o.rarity === "starter");
+  assert.equal(free.length, 1, "exactly one overlay should be free");
+  assert.equal(free[0].price, 0);
+  for (const o of OVERLAYS) {
+    if (o.rarity === "starter") continue;
+    assert.ok(o.price > 0, `${o.id} must cost coins`);
+  }
+  assert.equal(new Set(OVERLAYS.map((o) => o.id)).size, OVERLAYS.length);
 });
 
 // ================================================================ report

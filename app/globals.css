@@ -1,62 +1,86 @@
 @import "tailwindcss";
 
 /*
- * Kinetype palette.
+ * Kinetype palette. Light theme, pixel art.
  *
  * One place to change the whole look. Every component references these tokens
- * (`bg-brand`, `text-muted`, `border-edge`) rather than raw Tailwind colours, so a
- * reskin is this file and nothing else.
+ * (`bg-brand`, `text-ink-faint`, `border-line`) rather than raw Tailwind colours, so
+ * a reskin is this file plus the canvas palette in game/render.ts.
  *
- * Contrast checked against --color-ink at the sizes actually used:
- *   muted   #8f8fb0 on #07070e  ~6.0:1   body copy, labels
- *   body    #c9c9e0 on #07070e  ~12.5:1  primary text
- *   brand-bright #a78bfa on #07070e ~7.3:1 links and accents
- *   ink on brand #8b5cf6        ~5.2:1   solid buttons (dark text on violet)
+ * Tokens were renamed from the dark-theme set (ink/panel/edge/strong/muted/flag) to
+ * semantic names that survive a theme flip: `page` and `card` for surfaces, `line`
+ * for borders, and `ink*` for text weight, so "ink" means dark text rather than
+ * "the background colour".
+ *
+ * Contrast is checked against --color-page (#f2ede3, luminance 0.83):
+ *   ink       #1e1a14  ~14.0:1   body copy and headings
+ *   ink-soft  #4a4238   ~8.1:1   secondary copy
+ *   ink-faint #6f6656   ~4.6:1   labels (AA floor for normal text)
+ *   brand     #6d28d9   ~5.9:1   links and accents
+ *   coin      #92400e   ~5.7:1   prices
+ *   heat      #be123c   ~5.9:1   heavy hits and losses
+ *   aqua      #0e7490   ~4.6:1   parry states
+ * Solid brand buttons use near-white text (--color-brand-deep): 5.9:1.
+ * Never put `text-ink` on `bg-brand`; that combination is 2.4:1 and fails.
  */
-:root {
-  --background: #07070e;
-  --foreground: #c9c9e0;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+  --color-page: #f2ede3;
+  --color-card: #fffdf7;
+  --color-line: #d5ccb8;
+  --color-line-strong: #b3a68b;
 
-  /* surfaces */
-  --color-ink: #07070e;
-  --color-panel: #101021;
-  --color-edge: #23233c;
-  --color-edge-bright: #34345a;
+  --color-ink: #1e1a14;
+  --color-ink-soft: #4a4238;
+  --color-ink-faint: #6f6656;
 
-  /* text */
-  --color-strong: #f1f1fa;
-  --color-body: #c9c9e0;
-  --color-muted: #8f8fb0;
+  --color-brand: #6d28d9;
+  --color-brand-bright: #7c3aed;
+  --color-brand-soft: #a78bfa;
+  --color-brand-deep: #ede9fe;
 
-  /* primary: violet */
-  --color-brand: #8b5cf6;
-  --color-brand-bright: #a78bfa;
-  --color-brand-soft: #ddd6fe;
-  --color-brand-deep: #2e1065;
+  --color-coin: #92400e;
+  --color-coin-deep: #fef3c7;
+  --color-heat: #be123c;
+  --color-heat-deep: #ffe4e6;
+  --color-aqua: #0e7490;
 
-  /* secondary: cyan, used for the opponent and parry states */
-  --color-aqua: #22d3ee;
-
-  /* warm: coins and saves */
-  --color-flag: #fbbf24;
-  --color-flag-deep: #451a03;
-
-  /* danger: heavy hits, blast lines, losses */
-  --color-heat: #fb7185;
-  --color-heat-deep: #4c0519;
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains);
+  --font-pixel: var(--font-pixel-face);
 }
 
-html {
-  scroll-behavior: smooth;
+/* Pixel corners. Nothing in a pixel-art UI is round. */
+* {
+  border-radius: 0;
 }
 
 body {
-  background: var(--background);
+  background: var(--color-page);
+  color: var(--color-ink);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  /* Hard pixel grid instead of a soft photo glow. */
+  background-image:
+    linear-gradient(rgba(30, 26, 20, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(30, 26, 20, 0.035) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+::selection {
+  background: var(--color-brand-soft);
+  color: var(--color-ink);
+}
+
+/* Canvas and pixel sprites must never be smoothed. */
+canvas,
+svg[shape-rendering="crispEdges"] {
+  image-rendering: pixelated;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
 }

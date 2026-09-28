@@ -1,18 +1,27 @@
-// Canvas renderer. Draws the world: background, platforms, fighters, trails,
-// particles, damage readouts, flash.
+// Canvas renderer. Pixel art, light theme.
 //
-// The prompt panels and HUD deliberately live in the DOM, not here: crisp text,
-// real accessibility, and themable overlays. The canvas owns the fight.
+// Two rules shape this file:
 //
-// One rule from the research is enforced visually here: vibration and squash are
-// applied to the DRAWING only. Hurtboxes stay static (game/constants.ts HURTBOX),
-// because a moving hurtbox makes attacks that should connect start missing.
+//   1. SPRITES ARE PRE-RENDERED. Blitting ~150 fillRects per fighter per frame is
+//      wasteful, so each skin is drawn once into an offscreen canvas and then
+//      drawImage'd. Two draw calls per frame instead of three hundred.
+//   2. NO SMOOTHING. imageSmoothingEnabled is off everywhere, so the pixel grid
+//      stays hard. A blurred pixel sprite looks like a mistake.
+//
+// The prompt panels and HUD are DOM, not canvas: crisp text, selectable, and they
+// inherit the overlay theme. This file draws the world only.
 
+import {
+  SPRITE_H,
+  SPRITE_SCALE,
+  SPRITE_W,
+  type PixelPalette,
+  type PixelSkin,
+} from "./skins";
 import { HURTBOX, STAGE } from "./constants";
 import { damageColour } from "./knockback";
-import type { Match } from "./match";
-import type { Skin } from "./skins";
 import type { Fighter, Side } from "./types";
+import type { Match } from "./match";
 
 export interface Viewport {
   scale: number;
@@ -20,7 +29,7 @@ export interface Viewport {
   offsetY: number;
 }
 
-/** Letterbox the 1280x720 stage into whatever CSS box the canvas was given. */
+/** Letterbox the fixed 1280x720 stage into whatever CSS box we are given. */
 export function computeViewport(cssW: number, cssH: number): Viewport {
   const scale = Math.min(cssW / STAGE.width, cssH / STAGE.height);
   return {
@@ -30,292 +39,248 @@ export function computeViewport(cssW: number, cssH: number): Viewport {
   };
 }
 
-export interface RenderOptions {
-  elapsed: number;
-  /** The fighter who is one hit from the blast line, if any. */
-  sparkSide: Side | null;
-  humanSide: Side;
+
+// ---------------------------------------------------------------------------
+// Light pixel palette. Independent of the DOM theme on purpose: the canvas is the
+// art, and it should read the same whatever the page chrome does.
+// ---------------------------------------------------------------------------
+
+const SKY_BANDS = ["#cfe9f7", "#bfe0f2", "#add4ea"];
+const FAR_HILL = "#9fc6a8";
+const GRASS_TOP = "#6fbf5f";
+const GRASS_LIP = "#4e9a44";
+const DIRT = "#b07a4e";
+const DIRT_DARK = "#8e5f3a";
+const BLAST = "rgba(190,60,80,0.55)";
+const INK = "#2a2118";
+
+const TILE = 20;
+
+/** Deterministic per-tile shade so blocks vary without Math.random in the loop. */
+function tileShade(x: number, y: number): number {
+  const n = (x * 73856093) ^ (y * 19349663);
+  return 0.92 + ((n >>> 3) % 17) / 100;
 }
 
-function roundRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number,
-): void {
-  const rad = Math.max(0, Math.min(r, Math.min(w, h) / 2));
-  ctx.beginPath();
-  ctx.moveTo(x + rad, y);
-  ctx.lineTo(x + w - rad, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + rad);
-  ctx.lineTo(x + w, y + h - rad);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - rad, y + h);
-  ctx.lineTo(x + rad, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - rad);
-  ctx.lineTo(x, y + rad);
-  ctx.quadraticCurveTo(x, y, x + rad, y);
-  ctx.closePath();
+function shade(hex: string, mul: number): string {
+  const r = Math.round(Math.min(255, parseInt(hex.slice(1, 3), 16) * mul));
+  const g = Math.round(Math.min(255, parseInt(hex.slice(3, 5), 16) * mul));
+  const b = Math.round(Math.min(255, parseInt(hex.slice(5, 7), 16) * mul));
+  return `rgb(${r},${g},${b})`;
 }
 
-function drawBackground(ctx: CanvasRenderingContext2D): void {
-  const sky = ctx.createLinearGradient(0, 0, 0, STAGE.height);
-  sky.addColorStop(0, "#06060e");
-  sky.addColorStop(0.55, "#0c0c1a");
-  sky.addColorStop(1, "#14142a");
-  ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, STAGE.width, STAGE.height);
+// ---------------------------------------------------------------------------
+// Sprite cache
+// ---------------------------------------------------------------------------
 
-  // Grid: gives the launch arcs a reference so speed reads as speed.
-  ctx.strokeStyle = "rgba(255,255,255,0.032)";
-  ctx.lineWidth = 1;
-  for (let x = 0; x <= STAGE.width; x += 64) {
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, STAGE.height);
-    ctx.stroke();
-  }
-  for (let y = 0; y <= STAGE.height; y += 64) {
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(STAGE.width, y);
-    ctx.stroke();
-  }
+const cache = new Map<string, HTMLCanvasElement>();
 
-  // Horizon glow between the blast lines.
-  const glow = ctx.createRadialGradient(
-    STAGE.width / 2,
-    STAGE.platforms[0].y,
-    40,
-    STAGE.width / 2,
-    STAGE.platforms[0].y,
-    620,
-  );
-  glow.addColorStop(0, "rgba(139,92,246,0.11)");
-  glow.addColorStop(1, "rgba(139,92,246,0)");
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, STAGE.width, STAGE.height);
+function spriteCanvas(skin: PixelSkin): HTMLCanvasElement | null {
+  const hit = cache.get(skin.id);
+  if (hit) return hit;
+  if (typeof document === "undefined") return null;
+
+  const c = document.createElement("canvas");
+  c.width = SPRITE_W * SPRITE_SCALE;
+  c.height = SPRITE_H * SPRITE_SCALE;
+  const g = c.getContext("2d");
+  if (!g) return null;
+  g.imageSmoothingEnabled = false;
+
+  const rows = skin.pixels;
+  for (let y = 0; y < rows.length; y++) {
+    const row = rows[y];
+    for (let x = 0; x < row.length; x++) {
+      const ch = row[x];
+      if (ch === ".") continue;
+      const col = skin.palette[ch as keyof PixelPalette];
+      if (!col) continue;
+      g.fillStyle = col;
+      g.fillRect(x * SPRITE_SCALE, y * SPRITE_SCALE, SPRITE_SCALE, SPRITE_SCALE);
+    }
+  }
+  cache.set(skin.id, c);
+  return c;
+}
+
+// ---------------------------------------------------------------------------
+// World
+// ---------------------------------------------------------------------------
+
+function drawSky(ctx: CanvasRenderingContext2D): void {
+  const bandH = STAGE.height / SKY_BANDS.length;
+  SKY_BANDS.forEach((c, i) => {
+    ctx.fillStyle = c;
+    ctx.fillRect(0, Math.floor(i * bandH), STAGE.width, Math.ceil(bandH) + 1);
+  });
+
+  // Blocky distant hills, one tile tall, stepping down to the horizon.
+  ctx.fillStyle = FAR_HILL;
+  for (let x = 0; x < STAGE.width; x += TILE) {
+    const h = TILE * (2 + ((x / TILE) % 3));
+    ctx.fillRect(x, STAGE.height - 220 - h, TILE, h + 220);
+  }
+}
+
+function drawPlatforms(ctx: CanvasRenderingContext2D): void {
+  for (const p of STAGE.platforms) {
+    const cols = Math.ceil(p.w / TILE);
+
+    // Dirt body, three tiles deep.
+    for (let c = 0; c < cols; c++) {
+      for (let r = 1; r <= 3; r++) {
+        const x = p.x + c * TILE;
+        const y = p.y + r * TILE;
+        const m = tileShade(c, r);
+        ctx.fillStyle = shade(r === 1 ? DIRT : DIRT_DARK, m);
+        ctx.fillRect(x, y, TILE, TILE);
+      }
+    }
+
+    // Grass cap with a darker lip, so the surface reads as solid.
+    for (let c = 0; c < cols; c++) {
+      const x = p.x + c * TILE;
+      ctx.fillStyle = shade(GRASS_TOP, tileShade(c, 0));
+      ctx.fillRect(x, p.y, TILE, TILE - 6);
+      ctx.fillStyle = GRASS_LIP;
+      ctx.fillRect(x, p.y + TILE - 6, TILE, 6);
+    }
+
+    // Hard block edges.
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(p.x + 1, p.y + 1, p.w - 2, TILE * 4 - 2);
+  }
 }
 
 function drawBlastLines(ctx: CanvasRenderingContext2D): void {
   ctx.save();
-  ctx.strokeStyle = "rgba(251,113,133,0.30)";
-  ctx.lineWidth = 2;
-  ctx.setLineDash([10, 12]);
+  ctx.strokeStyle = BLAST;
+  ctx.lineWidth = 3;
+  ctx.setLineDash([TILE, TILE]);
   for (const x of [STAGE.blast.left, STAGE.blast.right]) {
     ctx.beginPath();
-    ctx.moveTo(x, 80);
-    ctx.lineTo(x, STAGE.blast.bottom - 40);
+    ctx.moveTo(x, 12);
+    ctx.lineTo(x, STAGE.height - 12);
     ctx.stroke();
   }
-  ctx.setLineDash([]);
-  ctx.strokeStyle = "rgba(251,113,133,0.20)";
-  ctx.beginPath();
-  ctx.moveTo(STAGE.blast.left, STAGE.blast.bottom - 40);
-  ctx.lineTo(STAGE.blast.right, STAGE.blast.bottom - 40);
-  ctx.stroke();
   ctx.restore();
 }
 
-function drawPlatforms(ctx: CanvasRenderingContext2D): void {
-  STAGE.platforms.forEach((p, i) => {
-    const main = i === 0;
-    ctx.fillStyle = main ? "#191932" : "#141428";
-    roundRect(ctx, p.x, p.y, p.w, main ? 20 : 14, 6);
-    ctx.fill();
-    ctx.strokeStyle = main ? "rgba(167,139,250,0.62)" : "rgba(143,143,176,0.35)";
-    ctx.lineWidth = main ? 3 : 2;
-    ctx.beginPath();
-    ctx.moveTo(p.x + 4, p.y + 1.5);
-    ctx.lineTo(p.x + p.w - 4, p.y + 1.5);
-    ctx.stroke();
-    ctx.strokeStyle = "rgba(255,255,255,0.06)";
-    ctx.lineWidth = 1;
-    roundRect(ctx, p.x, p.y, p.w, main ? 20 : 14, 6);
-    ctx.stroke();
-  });
-}
-
-function drawTrail(ctx: CanvasRenderingContext2D, f: Fighter, skin: Skin): void {
-  if (f.trail.length < 2) return;
-  ctx.save();
-  for (let i = 0; i < f.trail.length; i++) {
-    const p = f.trail[i];
-    const t = i / f.trail.length;
-    ctx.globalAlpha = Math.max(0, p.life / 0.28) * 0.4 * t;
-    ctx.fillStyle = skin.trail.colour;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, 3 + 7 * t * skin.trail.scale, 0, Math.PI * 2);
-    ctx.fill();
+function drawDamageBar(
+  ctx: CanvasRenderingContext2D,
+  f: Fighter,
+  blocksX: number,
+  y: number,
+): void {
+  const filled = Math.max(0, Math.min(blocksX, Math.round((f.damage / 180) * blocksX)));
+  const cellW = 6;
+  const cellH = 8;
+  for (let i = 0; i < blocksX; i++) {
+    const x = f.x - (blocksX * cellW) / 2 + i * cellW;
+    ctx.fillStyle = i < filled ? damageColour(f.damage) : "rgba(42,33,24,0.18)";
+    ctx.fillRect(Math.round(x), Math.round(y), cellW - 1, cellH);
   }
-  ctx.restore();
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(
+    Math.round(f.x - (blocksX * cellW) / 2) - 2,
+    Math.round(y) - 2,
+    blocksX * cellW + 2,
+    cellH + 2,
+  );
 }
 
 function drawFighter(
   ctx: CanvasRenderingContext2D,
   f: Fighter,
-  skin: Skin,
-  elapsed: number,
+  skin: PixelSkin,
+  time: number,
 ): void {
-  const s = skin.silhouette;
-  const headR = s.w * 0.46;
-  const headY = -s.h / 2 - headR * 0.75;
+  const sc = spriteCanvas(skin);
+  if (!sc) return;
+
+  const w = SPRITE_W * SPRITE_SCALE;
+  const h = SPRITE_H * SPRITE_SCALE;
+  // Bottom-align the sprite to the hurtbox, so the feet stand on the platform and
+  // the hair (which is never a hurtbox) rides above it.
+  const bottom = f.y + HURTBOX.h / 2;
 
   ctx.save();
-  ctx.translate(f.x, f.y);
+  ctx.translate(f.x, bottom);
 
-  // Visual vibration. Hurtbox never moves.
+  // Vibration is VISUAL ONLY. The hurtbox is fixed and never moves: if the body
+  // vibrated physically, attacks that should connect would start missing.
   if (f.vibrate > 0.01) {
     const amp = 3.4 * f.vibrate;
-    const phase = Math.sin(elapsed * 140);
+    const phase = Math.sin(time * 90);
     if (f.onGround) ctx.translate(phase * amp, 0);
     else ctx.translate(0, phase * amp);
   }
 
-  // Squash and stretch on launch.
-  ctx.scale(1 + f.squash * 0.26, 1 - f.squash * 0.26);
+  const squash = f.squash;
+  ctx.scale(1 + squash * 0.26, 1 - squash * 0.26);
+  ctx.scale(f.facing, 1);
+  ctx.imageSmoothingEnabled = false;
 
-  // Ground shadow.
-  if (f.onGround) {
+  // Invulnerable frames read as a flicker, the genre shorthand for "cannot be hit".
+  const flicker = f.invuln > 0 && Math.floor(time * 14) % 2 === 0;
+  ctx.globalAlpha = flicker ? 0.45 : 1;
+  ctx.drawImage(sc, -w / 2, -h, w, h);
+  ctx.globalAlpha = 1;
+  ctx.restore();
+
+  // Parry window: a chunky bracket, not a smooth ring.
+  if (f.counter > 0) {
     ctx.save();
-    ctx.globalAlpha = 0.32;
-    ctx.fillStyle = "#000";
-    ctx.beginPath();
-    ctx.ellipse(0, s.h / 2 + 3, s.w * 0.62, 5, 0, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.strokeStyle = "#0e7490";
+    ctx.lineWidth = 4;
+    const bw = HURTBOX.w + 20;
+    const bh = HURTBOX.h + 16;
+    const x = f.x - bw / 2;
+    const y = bottom - h * 0.72 - bh / 2;
+    const seg = 12;
+    const corners: [number, number, number, number][] = [
+      [x, y, seg, 0],
+      [x, y, 0, seg],
+      [x + bw, y, -seg, 0],
+      [x + bw, y, 0, seg],
+      [x, y + bh, seg, 0],
+      [x, y + bh, 0, -seg],
+      [x + bw, y + bh, -seg, 0],
+      [x + bw, y + bh, 0, -seg],
+    ];
+    for (const [cx, cy, dx, dy] of corners) {
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + dx, cy + dy);
+      ctx.stroke();
+    }
     ctx.restore();
   }
 
-  // Back fins.
-  if (s.fins > 0) {
-    ctx.fillStyle = skin.palette.trim;
-    for (let i = 0; i < s.fins; i++) {
-      const y = -s.h / 2 + 8 + i * ((s.h - 16) / Math.max(1, s.fins));
-      const dir = -f.facing;
-      ctx.beginPath();
-      ctx.moveTo(dir * (s.w / 2 - 2), y);
-      ctx.lineTo(dir * (s.w / 2 + 10), y + 6);
-      ctx.lineTo(dir * (s.w / 2 - 2), y + 12);
-      ctx.closePath();
-      ctx.fill();
-    }
-  }
-
-  // Body.
-  const radius = (1 - s.edge) * (Math.min(s.w, s.h) / 2);
-  const body = ctx.createLinearGradient(-s.w / 2, -s.h / 2, s.w / 2, s.h / 2);
-  body.addColorStop(0, skin.palette.body);
-  body.addColorStop(1, skin.palette.trim);
-  ctx.fillStyle = body;
-  roundRect(ctx, -s.w / 2, -s.h / 2, s.w, s.h, radius);
-  ctx.fill();
-
-  // Mass: extra shoulder bulk for heavy silhouettes.
-  if (s.mass > 0.4) {
-    ctx.fillStyle = skin.palette.body;
-    ctx.beginPath();
-    ctx.ellipse(0, -s.h / 2 + 10, s.w * (0.42 + s.mass * 0.28), 7, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // Head.
-  ctx.fillStyle = skin.palette.body;
-  ctx.beginPath();
-  ctx.arc(0, headY, headR, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = skin.palette.accent;
-  ctx.beginPath();
-  ctx.arc(0, headY, headR * 0.62, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Eyes, looking at the opponent.
-  ctx.fillStyle = "#09090b";
-  const eyeX = f.facing * headR * 0.34;
-  ctx.beginPath();
-  ctx.arc(eyeX - 3.4, headY - 1, 1.9, 0, Math.PI * 2);
-  ctx.arc(eyeX + 3.4, headY - 1, 1.9, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Damage rim: the legible damage meter, no numbers required.
-  ctx.strokeStyle = damageColour(f.damage);
-  ctx.lineWidth = f.damage >= 100 ? 3.4 : 2.2;
-  roundRect(ctx, -s.w / 2, -s.h / 2, s.w, s.h, radius);
-  ctx.stroke();
-
-  // Parry counter window.
-  if (f.counter > 0) {
-    ctx.strokeStyle = skin.palette.glow;
-    ctx.lineWidth = 2.6;
-    ctx.globalAlpha = 0.55 + 0.45 * Math.sin(elapsed * 18);
-    ctx.beginPath();
-    ctx.arc(0, 0, s.h * 0.75, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.globalAlpha = 1;
-  }
-
-  // Post-recovery invulnerability.
-  if (f.invuln > 0) {
-    ctx.strokeStyle = "rgba(255,255,255,0.65)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(0, 0, s.h * 0.68, 0, Math.PI * 2);
-    ctx.stroke();
-  }
-
-  ctx.restore();
-
-  // Damage percentage above the head.
+  // Damage readout, outlined so every ramp colour reads on a light sky.
   ctx.save();
   ctx.font = "700 26px ui-monospace, SFMono-Regular, Menlo, monospace";
   ctx.textAlign = "center";
+  const ly = bottom - h - 16;
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = "rgba(255,255,255,0.92)";
+  ctx.strokeText(`${Math.round(f.damage)}%`, f.x, ly);
   ctx.fillStyle = damageColour(f.damage);
-  ctx.globalAlpha = 0.95;
-  ctx.fillText(`${Math.round(f.damage)}%`, f.x, f.y - s.h / 2 - headR * 2.5);
+  ctx.fillText(`${Math.round(f.damage)}%`, f.x, ly);
   ctx.restore();
+
+  drawDamageBar(ctx, f, 12, bottom + 10);
 }
 
-function drawParticles(ctx: CanvasRenderingContext2D, match: Match): void {
-  ctx.save();
-  for (const p of match.fx.particles) {
-    ctx.globalAlpha = Math.max(0, Math.min(1, p.life / p.maxLife));
-    ctx.fillStyle = p.colour;
-    if (p.kind === "confetti") {
-      ctx.save();
-      ctx.translate(p.x, p.y);
-      ctx.rotate(p.spin * p.life * 4);
-      ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
-      ctx.restore();
-    } else {
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-  ctx.restore();
-}
+// ---------------------------------------------------------------------------
+// Frame
+// ---------------------------------------------------------------------------
 
-/** Red-and-black lightning ring: Smash's Deadly Blow, distance-derived. */
-function drawSpark(ctx: CanvasRenderingContext2D, f: Fighter, elapsed: number): void {
-  ctx.save();
-  ctx.translate(f.x, f.y);
-  const pulse = 0.6 + 0.4 * Math.sin(elapsed * 26);
-  ctx.globalAlpha = 0.75 * pulse;
-  ctx.strokeStyle = "#ef4444";
-  ctx.lineWidth = 4;
-  ctx.beginPath();
-  ctx.arc(0, 0, 54 + pulse * 6, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.strokeStyle = "#18181b";
-  ctx.lineWidth = 2;
-  for (let i = 0; i < 8; i++) {
-    const a = (i / 8) * Math.PI * 2 + elapsed * 2;
-    ctx.beginPath();
-    ctx.moveTo(Math.cos(a) * 44, Math.sin(a) * 44);
-    ctx.lineTo(Math.cos(a) * (62 + pulse * 8), Math.sin(a) * (62 + pulse * 8));
-    ctx.stroke();
-  }
-  ctx.restore();
+export interface RenderOptions {
+  humanSide: Side;
+  overlayId: string;
 }
 
 export function drawScene(
@@ -323,64 +288,101 @@ export function drawScene(
   match: Match,
   vp: Viewport,
   opts: RenderOptions,
+  time: number,
 ): void {
-  const { elapsed } = opts;
+  const fx = match.fx;
 
+  ctx.save();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  ctx.restore();
+
   ctx.save();
-  ctx.setTransform(vp.scale, 0, 0, vp.scale, vp.offsetX, vp.offsetY);
+  ctx.translate(vp.offsetX, vp.offsetY);
+  ctx.scale(vp.scale, vp.scale);
 
-  // Screen shake.
-  ctx.translate(match.fx.shakeX, match.fx.shakeY);
+  // Screen shake, applied to the whole world.
+  if (fx.shakeX !== 0 || fx.shakeY !== 0) ctx.translate(fx.shakeX, fx.shakeY);
 
-  drawBackground(ctx);
-
-  // Finish zoom: one slow push-in per match, centred on the fighter about to die.
-  if (match.fx.zoom < 1 && opts.sparkSide) {
-    const f = match.fighter(opts.sparkSide);
-    const z = match.fx.zoom;
-    ctx.translate(f.x, f.y);
-    ctx.scale(z, z);
-    ctx.translate(-f.x, -f.y);
+  // Finish zoom: push in on the fighter who is about to die.
+  if (fx.zoom > 1.001) {
+    const victim = match.finishSide === "left" ? match.left : match.right;
+    ctx.translate(victim.x, victim.y);
+    ctx.scale(fx.zoom, fx.zoom);
+    ctx.translate(-victim.x, -victim.y);
   }
+
+  drawSky(ctx);
+
+  // Trails behind the fighters.
+  ctx.save();
+  for (const f of [match.left, match.right]) {
+    const skin = match.skinFor(f.side);
+    for (const t of f.trail) {
+      const s = 6 * skin.trail.scale * t.life;
+      ctx.globalAlpha = t.life * 0.6;
+      ctx.fillStyle = skin.trail.colour;
+      ctx.fillRect(Math.round(t.x - s / 2), Math.round(t.y - s / 2), s, s);
+    }
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
 
   drawBlastLines(ctx);
   drawPlatforms(ctx);
 
-  // Trails sit under the fighters.
-  for (const side of ["left", "right"] as Side[]) {
-    drawTrail(ctx, match.fighter(side), match.skins[side]);
+  for (const f of [match.left, match.right]) {
+    drawFighter(ctx, f, match.skinFor(f.side), time);
   }
 
-  for (const side of ["left", "right"] as Side[]) {
-    const f = match.fighter(side);
-    if (f.state === "recovering" || f.state === "ko") {
-      ctx.save();
-      ctx.globalAlpha = f.state === "ko" ? 0.35 : 1;
-      drawFighter(ctx, f, match.skins[side], elapsed);
-      ctx.restore();
-    } else {
-      drawFighter(ctx, f, match.skins[side], elapsed);
-    }
-    if (opts.sparkSide === side && match.phase !== "matchOver") {
-      drawSpark(ctx, f, elapsed);
-    }
+  // Impact particles, square by design.
+  ctx.save();
+  for (const p of fx.particles) {
+    ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+    ctx.fillStyle = p.colour;
+    const s = Math.max(2, Math.round(p.size * (p.life / p.maxLife)));
+    ctx.fillRect(Math.round(p.x), Math.round(p.y), s, s);
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+
+  // The lethal-hit telegraph. Distance to the blast line, never move power.
+  if (match.finishSide) {
+    const f = match.finishSide === "left" ? match.left : match.right;
+    ctx.save();
+    ctx.strokeStyle = "#be123c";
+    ctx.lineWidth = 4;
+    ctx.setLineDash([8, 8]);
+    ctx.beginPath();
+    ctx.arc(f.x, f.y, 62, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font = "700 22px ui-monospace, monospace";
+    ctx.textAlign = "center";
+    const label = f.side === opts.humanSide ? "FINISH THEM" : "ONE HIT FROM OUT";
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = "rgba(255,255,255,0.92)";
+    ctx.strokeText(label, f.x, f.y - 84);
+    ctx.fillStyle = "#be123c";
+    ctx.fillText(label, f.x, f.y - 84);
+    ctx.restore();
   }
 
-  drawParticles(ctx, match);
+  // Impact flash. Warm, not white: a white flash is invisible on a light sky.
+  if (fx.flash > 0.01) {
+    ctx.fillStyle = `rgba(255,120,90,${fx.flash * 0.4})`;
+    ctx.fillRect(-200, -200, STAGE.width + 400, STAGE.height + 400);
+  }
 
   ctx.restore();
 
-  // White flash on heavy impacts and KOs.
-  if (match.fx.flash > 0) {
-    ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.globalAlpha = Math.min(0.62, match.fx.flash);
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    ctx.restore();
+  // Letterbox bars outside the stage.
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = "rgba(42,33,24,0.06)";
+  if (vp.offsetX > 0.5) {
+    ctx.fillRect(0, 0, vp.offsetX, ctx.canvas.height);
+    ctx.fillRect(vp.offsetX + STAGE.width * vp.scale, 0, vp.offsetX + 2, ctx.canvas.height);
   }
+  ctx.restore();
 }
-
-export { HURTBOX };

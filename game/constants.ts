@@ -24,11 +24,11 @@ export const LAUNCH_DECAY = 2.2;
  * Sakurai's hitstop notes: hurtboxes must stay static while visuals vibrate, or
  * attacks that should connect start missing. Skins change the drawing, never this.
  *
- * Sized so a fighter reads clearly at the scale a 1280x720 stage is actually
- * displayed at. The first pass used 34x62, which rendered ~26px tall on a laptop and
- * was too small to track during a fight.
+ * Sized to sit inside the pixel sprite (12x16 cells at scale 5 = 60x80), so the
+ * sprite's hair rides above the hurtbox while its feet take the hits. Re-derived when
+ * the roster moved from vector silhouettes to pixel art.
  */
-export const HURTBOX = { w: 46, h: 84 };
+export const HURTBOX = { w: 44, h: 64 };
 
 // ---------------------------------------------------------------- hitstun
 /** Hitstun is derived from knockback, never an independent timer.

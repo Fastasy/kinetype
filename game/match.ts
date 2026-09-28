@@ -42,7 +42,7 @@ import { Fx } from "./fx";
 import { TIER, launchFrom } from "./knockback";
 import { BotController, botConfigForTier } from "./bot";
 import { createRng, type Rng } from "./rng";
-import { skinById, trailFor, type Skin } from "./skins";
+import { skinById, type PixelSkin } from "./skins";
 import { TypingRun } from "./typing";
 import type {
   Fighter,
@@ -101,7 +101,7 @@ export class Match {
 
   left: Fighter;
   right: Fighter;
-  skins: Record<Side, Skin>;
+  skins: Record<Side, PixelSkin>;
   typing: Record<Side, TypingRun>;
   bots: Record<Side, BotController | null>;
   fx = new Fx();
@@ -164,6 +164,11 @@ export class Match {
 
   private publish(e: GameEvent): void {
     this.hooks.onEvent?.(e);
+  }
+
+  /** The skin a side is wearing. The renderer reads this rather than being handed it. */
+  skinFor(side: Side): PixelSkin {
+    return this.skins[side];
   }
 
   fighter(side: Side): Fighter {
@@ -299,7 +304,7 @@ export class Match {
       if (this.trailWorthy(f)) {
         f.trail.push({ x: f.x, y: f.y, life: 0.28 });
         if (f.trail.length > 14) f.trail.shift();
-        const style = trailFor(this.skins[side]);
+        const style = this.skins[side].trail;
         if (Math.abs(f.vx) > 420) this.fx.emitTrail(f.x, f.y, style.colour, style.scale, style.spark);
       }
       for (const p of f.trail) p.life -= dt;
@@ -434,7 +439,7 @@ export class Match {
 
   private commitWord(side: Side, prompt: Prompt, precision: boolean): void {
     const f = this.fighter(side);
-    const style = trailFor(this.skins[side]);
+    const style = this.skins[side].trail;
     f.sinceCommit = 0;
 
     if (prompt.kind === "recovery") {
@@ -450,7 +455,7 @@ export class Match {
       f.vibrate = Math.max(f.vibrate, 0.6);
       this.typing[side].clearGuard();
       f.prompts = this.typing[side].prompts;
-      this.fx.emitGuard(f.x, f.y, this.skins[side].palette.glow);
+      this.fx.emitGuard(f.x, f.y, this.skins[side].palette.t);
       this.fx.addShake(6);
       this.publish({ type: "parry", side, x: f.x, y: f.y });
       return;
@@ -587,7 +592,7 @@ export class Match {
     this.recoveryVictim = null;
     this.phase = "live";
     this.fx.addFlash(0.2);
-    this.fx.emitGuard(f.x, f.y, this.skins[side].palette.glow);
+    this.fx.emitGuard(f.x, f.y, this.skins[side].palette.t);
     this.publish({ type: "recover", side, ok: true });
   }
 
@@ -695,7 +700,7 @@ export class Match {
       streak,
     };
     if (humanWon) {
-      this.fx.emitConfetti(STAGE.width, this.skins[this.humanSide].palette.accent);
+      this.fx.emitConfetti(STAGE.width, this.skins[this.humanSide].palette.t);
     }
     this.publish({ type: "matchEnd", winner });
   }

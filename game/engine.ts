@@ -217,11 +217,13 @@ export class GameEngine {
     vp.scale *= dpr;
     vp.offsetX *= dpr;
     vp.offsetY *= dpr;
-    drawScene(this.ctx, this.match, vp, {
-      elapsed: this.elapsed,
-      sparkSide: this.match.finishSide,
-      humanSide: this.cfg.humanSide,
-    });
+    drawScene(
+      this.ctx,
+      this.match,
+      vp,
+      { humanSide: this.cfg.humanSide, overlayId: this.cfg.overlayId },
+      this.elapsed,
+    );
   }
 
   // ------------------------------------------------------------- events

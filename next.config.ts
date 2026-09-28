@@ -2,9 +2,10 @@ import type { NextConfig } from "next";
 
 /**
  * The site was repurposed from a transcription-jobs content hub into a typing
- * fighting game on 2026-09-28. The 29 old routes were archived out of `app/`
- * (see `_archive/legacy-app-routes/`) and their URLs are redirected below so no
- * visitor and no crawler hits a dead end.
+ * fighting game on 2026-09-28. The 29 old routes were DELETED from the repo. Their
+ * content is preserved in the Obsidian vault at Kinetype/Articles/Published and in
+ * git history, and their URLs redirect below so no visitor and no crawler hits a
+ * dead end.
  *
  * Two of them genuinely concerned typing tests, so those keep a relevant target.
  * Everything else points at the game, which keeps the domain's accumulated link
