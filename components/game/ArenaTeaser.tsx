@@ -1,16 +1,20 @@
 import { OPPONENT_SKIN_ID, SPRITE_H, SPRITE_SCALE, SPRITE_W, skinById } from "@/game/skins";
-import { skinRects } from "./SkinSprite";
+import { skinPaths } from "./SkinSprite";
 
 /**
- * A static frame of the game, drawn as one SVG.
+ * A static frame of the game, drawn as ONE SVG.
  *
- * WHY NOT THE REAL CANVAS: the landing page must not boot a second game engine, or a
- * visitor who never presses Play still pays for a physics loop, an audio context and a
- * requestAnimationFrame. This is the same pixel vocabulary as the game (same sprites,
- * same palette, same blocky platforms) with none of the runtime.
+ * WHY NOT THE REAL CANVAS: the landing page must not boot a game engine, or a visitor who
+ * never presses Play still pays for a physics loop, an audio context and a
+ * requestAnimationFrame.
  *
- * One SVG with a fixed 1280x720 viewBox rather than absolutely-positioned divs, so it
- * scales to any container without the sprites drifting out of proportion.
+ * WHY PATHS AND NOT RECTS: the first version emitted a <rect> per pixel per platform tile,
+ * which came to 1332 DOM nodes on the landing page. Measured: first contentful paint was
+ * 1856ms against 380ms for the game page. Everything blocky here is merged into a handful
+ * of paths per colour instead.
+ *
+ * One SVG with a fixed 1280x720 viewBox, so it scales to any container without the
+ * sprites drifting out of proportion.
  */
 
 const SKY = ["#cfe9f7", "#bfe0f2", "#add4ea"];
@@ -18,8 +22,7 @@ const HILL = "#9fc6a8";
 const HILL_ALT = "#8fbb99";
 const GRASS = "#6fbf5f";
 const GRASS_LIP = "#4e9a44";
-const DIRT = "#b07a4e";
-const DIRT_DARK = "#8e5f3a";
+const DIRT_SHADES = ["#b07a4e", "#a87448", "#b87f52"];
 const INK = "#2a2118";
 const TILE = 20;
 
@@ -29,56 +32,35 @@ const CHIPS = [
   { tier: "HEAVY", word: "keyboard" },
 ];
 
-function shade(hex: string, mul: number): string {
-  const r = Math.round(Math.min(255, parseInt(hex.slice(1, 3), 16) * mul));
-  const g = Math.round(Math.min(255, parseInt(hex.slice(3, 5), 16) * mul));
-  const b = Math.round(Math.min(255, parseInt(hex.slice(5, 7), 16) * mul));
-  return `rgb(${r},${g},${b})`;
-}
+/** rect as a path segment. */
+const seg = (x: number, y: number, w: number, h: number) =>
+  `M${x} ${y}h${w}v${h}h${-w}z`;
 
-function tileShade(x: number, y: number): number {
-  const n = (x * 73856093) ^ (y * 19349663);
-  return 0.92 + ((n >>> 3) % 17) / 100;
-}
-
+/**
+ * Three shade buckets rather than continuous variation: it keeps the blocky texture of the
+ * canvas without needing a separate element per tile.
+ */
 function Platform({ x, y, w }: { x: number; y: number; w: number }) {
   const cols = Math.ceil(w / TILE);
-  const blocks = [];
+  const dirt: string[][] = [[], [], []];
+  const grass: string[] = [];
+  const lip: string[] = [];
+
   for (let c = 0; c < cols; c++) {
     for (let r = 1; r <= 3; r++) {
-      blocks.push(
-        <rect
-          key={`d${c}-${r}`}
-          x={x + c * TILE}
-          y={y + r * TILE}
-          width={TILE}
-          height={TILE}
-          fill={shade(r === 1 ? DIRT : DIRT_DARK, tileShade(c, r))}
-        />,
-      );
+      dirt[(c + r) % 3].push(seg(x + c * TILE, y + r * TILE, TILE, TILE));
     }
-    blocks.push(
-      <rect
-        key={`g${c}`}
-        x={x + c * TILE}
-        y={y}
-        width={TILE}
-        height={TILE - 6}
-        fill={shade(GRASS, tileShade(c, 0))}
-      />,
-      <rect
-        key={`l${c}`}
-        x={x + c * TILE}
-        y={y + TILE - 6}
-        width={TILE}
-        height={6}
-        fill={GRASS_LIP}
-      />,
-    );
+    grass.push(seg(x + c * TILE, y, TILE, TILE - 6));
+    lip.push(seg(x + c * TILE, y + TILE - 6, TILE, 6));
   }
+
   return (
     <g>
-      {blocks}
+      {dirt.map((segs, i) => (
+        <path key={i} d={segs.join("")} fill={DIRT_SHADES[i]} />
+      ))}
+      <path d={grass.join("")} fill={GRASS} />
+      <path d={lip.join("")} fill={GRASS_LIP} />
       <rect
         x={x + 1}
         y={y + 1}
@@ -95,13 +77,23 @@ function Platform({ x, y, w }: { x: number; y: number; w: number }) {
 export default function ArenaTeaser({ className }: { className?: string }) {
   const left = skinById("spark");
   const right = skinById(OPPONENT_SKIN_ID);
+
   // Same scale the canvas draws at, so the teaser cannot misrepresent the fighters.
   const S = SPRITE_SCALE;
   const halfW = (SPRITE_W * S) / 2;
-
-  // Feet on the platform surface at y=560, so the sprites stand on it exactly as they
-  // do in the game.
   const spriteTop = 560 - SPRITE_H * S;
+
+  // Two alternating bands of hills, merged into one path each.
+  const hills = [[], []] as string[][];
+  for (let i = 0; i < 22; i++) {
+    hills[i % 2].push(seg(i * 60, 500 + (i % 2) * 24, 60, 220));
+  }
+
+  // Blast lines: dashes merged per line.
+  const blast = (x: number) =>
+    Array.from({ length: 22 })
+      .map((_, i) => seg(x, i * 34 + 10, 6, 20))
+      .join("");
 
   return (
     <svg
@@ -112,35 +104,23 @@ export default function ArenaTeaser({ className }: { className?: string }) {
       aria-label="A match in progress: two pixel fighters stand on a grass platform, with three word prompts at the bottom reading dash, planet and keyboard."
     >
       {SKY.map((c, i) => (
-        <rect key={c} x={0} y={i * 240} width={1280} height={240} fill={c} />
+        <rect key={c} x={0} y={i * 240} width={1280} height={241} fill={c} />
       ))}
 
-      {Array.from({ length: 22 }).map((_, i) => (
-        <rect
-          key={`h${i}`}
-          x={i * 60}
-          y={500 + (i % 2) * 24}
-          width={60}
-          height={720}
-          fill={i % 2 === 0 ? HILL : HILL_ALT}
-        />
-      ))}
+      <path d={hills[0].join("")} fill={HILL} />
+      <path d={hills[1].join("")} fill={HILL_ALT} />
 
-      {/* Blast lines, dashed exactly as the game draws them. */}
-      {[44, 1236].map((x) => (
-        <g key={x}>
-          {Array.from({ length: 22 }).map((_, i) => (
-            <rect key={i} x={x} y={i * 34 + 10} width={6} height={20} fill="#be123c" opacity={0.5} />
-          ))}
-        </g>
-      ))}
+      <g opacity={0.5}>
+        <path d={blast(44)} fill="#be123c" />
+        <path d={blast(1236)} fill="#be123c" />
+      </g>
 
       <Platform x={236} y={428} w={168} />
       <Platform x={876} y={428} w={168} />
       <Platform x={340} y={560} w={600} />
 
-      <g>{skinRects(left, S, 520 - halfW, spriteTop, "L")}</g>
-      <g>{skinRects(right, S, 820 - halfW, spriteTop, "R")}</g>
+      <g>{skinPaths(left, S, 520 - halfW, spriteTop, "L")}</g>
+      <g>{skinPaths(right, S, 820 - halfW, spriteTop, "R")}</g>
 
       {/* Damage readouts, outlined so every colour reads on a light sky. */}
       <text

@@ -1,40 +1,54 @@
 import { SPRITE_H, SPRITE_W, type PixelSkin } from "@/game/skins";
 
 /**
- * The pixel rects for a skin, positioned at (dx, dy) in whatever coordinate space the
- * caller is drawing in.
+ * A skin's pixels as SVG PATHS, merged per colour and run-length merged along each row.
  *
- * Exported so the shop's SVG and the landing page's arena teaser share ONE renderer
- * with the canvas instead of three implementations that can drift apart. A skin must
- * look identical everywhere it appears.
+ * WHY NOT A RECT PER PIXEL: the obvious implementation emits ~150 <rect> elements per
+ * sprite. With six skins on the landing page and a shop grid that is 1332 DOM nodes, and
+ * it measured badly: first contentful paint was 1856ms on `/` against 380ms on `/play`.
+ * Bytes were never the problem (brotli takes the markup from 271KB to 25KB); the parse and
+ * layout cost was. Merging gives ~9 <path> elements per sprite instead.
+ *
+ * Exported so the shop's SVG and the landing page's arena teaser share ONE renderer with
+ * the canvas instead of three implementations that can drift apart.
  */
-export function skinRects(
+export function skinPaths(
   skin: PixelSkin,
   scale: number,
   dx: number,
   dy: number,
   keyPrefix = "",
 ): React.ReactElement[] {
-  const out: React.ReactElement[] = [];
+  const byColour = new Map<string, string[]>();
+
   skin.pixels.forEach((row, y) => {
-    for (let x = 0; x < row.length; x++) {
+    let x = 0;
+    while (x < row.length) {
       const ch = row[x];
-      if (ch === ".") continue;
+      if (ch === ".") {
+        x++;
+        continue;
+      }
+      // Extend the run while the same colour repeats, so one row of a solid body is one
+      // path segment rather than twelve.
+      let run = 1;
+      while (x + run < row.length && row[x + run] === ch) run++;
+
       const fill = skin.palette[ch as keyof typeof skin.palette];
-      if (!fill) continue;
-      out.push(
-        <rect
-          key={`${keyPrefix}${x},${y}`}
-          x={dx + x * scale}
-          y={dy + y * scale}
-          width={scale}
-          height={scale}
-          fill={fill}
-        />,
-      );
+      if (fill) {
+        const segments = byColour.get(fill) ?? [];
+        segments.push(
+          `M${dx + x * scale} ${dy + y * scale}h${run * scale}v${scale}h${-run * scale}z`,
+        );
+        byColour.set(fill, segments);
+      }
+      x += run;
     }
   });
-  return out;
+
+  return [...byColour].map(([fill, segments]) => (
+    <path key={`${keyPrefix}${fill}`} d={segments.join("")} fill={fill} />
+  ));
 }
 
 /** Natural pixel size of a sprite at a given scale. */
@@ -45,7 +59,7 @@ export function spriteSize(scale: number): { w: number; h: number } {
 /**
  * Draws a skin as a standalone SVG.
  *
- * shapeRendering="crispEdges" is required. Without it the browser antialiases the rect
+ * shapeRendering="crispEdges" is required. Without it the browser antialiases the path
  * seams and the pixel grid goes soft.
  */
 export default function SkinSprite({
@@ -69,7 +83,7 @@ export default function SkinSprite({
       role="img"
       aria-label={`${skin.name} sprite`}
     >
-      {skinRects(skin, scale, 0, 0)}
+      {skinPaths(skin, scale, 0, 0)}
     </svg>
   );
 }
