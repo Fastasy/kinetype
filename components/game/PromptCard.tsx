@@ -144,7 +144,19 @@ export default function PromptCard({
                       color: committed ? theme.accent : theme.textMuted,
                       ...(next ? { background: theme.accent, color: theme.onAccent } : {}),
                     }}
-                    className={committed || next ? "px-0.5 font-bold" : undefined}
+                    // NO PADDING HERE, deliberately. This used to be "px-0.5 font-bold", which
+                    // added 4px of real width to every character the moment it became committed
+                    // or next. The sentence is a wrapping flex row, so the text physically grew
+                    // about 4px per keystroke: over a long sentence that is 200px of growth,
+                    // enough to push a word onto the next line, which changed the card's height
+                    // and shoved the whole page up and down while the player typed. Ruan
+                    // reported exactly that: "the website shifts up and down when I type."
+                    //
+                    // Font weight is safe because the sentence is monospace (bold and regular
+                    // share an advance width), so bold is kept for the design and the padding is
+                    // not. Anything that changes a character's BOX as the player types will
+                    // reflow the sentence and reintroduce the shift.
+                    className={committed || next ? "font-bold" : undefined}
                   >
                     {ch}
                   </span>
@@ -155,10 +167,22 @@ export default function PromptCard({
         })}
       </div>
 
-      {compact && prompt.flawed ? (
+      {/*
+        ALWAYS RENDERED, hidden rather than removed. This chip sits in the normal flow, so
+        adding and removing it changed its panel's height — and because the chips come and go as
+        a fighter makes and recovers from mistakes, the page shifted up and down repeatedly
+        during play. Reserving the space permanently costs a few pixels of layout and removes the
+        movement entirely. Do not go back to conditionally rendering it.
+      */}
+      {compact ? (
         <span
           className="ml-2 px-1.5 py-0.5 font-mono text-[10px] font-bold"
-          style={{ background: "#be123c", color: CHIP_TEXT }}
+          style={{
+            background: "#be123c",
+            color: CHIP_TEXT,
+            visibility: prompt.flawed ? "visible" : "hidden",
+          }}
+          aria-hidden={prompt.flawed ? undefined : true}
         >
           flawed
         </span>
