@@ -266,14 +266,14 @@ export default function FightClient({ wide = false }: { wide?: boolean }) {
    }
    className={
      isFullscreen
-       ? "mx-auto w-full max-w-6xl bg-page px-4 py-4"
+       ? "mx-auto flex h-screen max-h-screen w-full max-w-none flex-col overflow-hidden bg-page px-4 py-3"
        : wide
          ? "mx-auto max-w-6xl px-3 sm:px-4"
          : "mx-auto max-w-5xl px-4 sm:px-6"
    }
  >
  {/* ---------------------------------------------------------- controls */}
- <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-card/40 px-4 py-3">
+ <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-card/40 px-4 py-3">
  <div className="flex flex-wrap items-center gap-3 text-xs">
  <label className="flex items-center gap-2">
  <span className="text-ink-faint">Bot speed</span>
@@ -359,7 +359,7 @@ export default function FightClient({ wide = false }: { wide?: boolean }) {
  {stage === "fighting" && them && (
  <div
  data-testid="bot-panel"
- className="mt-3 rounded-2xl border border-line/80 px-3 py-2"
+ className="mt-3 shrink-0 rounded-2xl border border-line/80 px-3 py-2"
  style={{ background: theme.surface }}
  >
  <div className="flex items-center justify-between gap-3">
@@ -419,22 +419,41 @@ export default function FightClient({ wide = false }: { wide?: boolean }) {
  )}
 
  {/* ---------------------------------------------------------- the fight */}
- <div className="relative mt-3 overflow-hidden border-2 border-line bg-page">
- {/* The vh cap keeps the bot panel, the arena and the player's prompts all inside
-     one screenful. Without it the prompts fell below the fold and the game could
-     not be played. Wide and fullscreen layouts get more room, because on those the
-     arena is the whole point of the page.
+ <div
+   className={
+     isFullscreen
+       ? "relative mt-3 flex min-h-0 flex-1 items-center justify-center overflow-hidden border-2 border-line bg-page"
+       : "relative mt-3 overflow-hidden border-2 border-line bg-page"
+   }
+ >
+ {/* The vh cap keeps the bot panel, the arena and the player's prompts all inside one
+     screenful. Without it the prompts fell below the fold and the game could not be
+     played. Wide layouts get more room, because there the arena is the point of the page.
+     The cap is measured, not guessed: scripts/probe-layout.mjs measures it.
 
-     The cap is measured, not guessed: with a long sentence wrapped over two lines the
-     arena, the bot panel and the player panel come to about 900px at a 1000px viewport
-     and about 880px at 900px, which is why the prompt card carries its legend in its own
-     header instead of on a row of its own. scripts/probe-layout.mjs measures it. */}
+     FULLSCREEN DOES NOT USE A VH NUMBER, and that is deliberate. It used to ask for 76vh of
+     arena on top of roughly 200px of panels; on a 768px-tall screen that is over 100vh, and a
+     fullscreen element does not scroll, so the sentence was pushed off the bottom of the screen
+     and the game became unplayable. Ruan hit exactly that: "fullscreen mode does not work
+     properly as I cannot see the words I need to type."
+
+     So in fullscreen the section is a flex column filling the screen and the arena takes
+     whatever height is LEFT: flex-1 with min-height:0, sizing itself from aspect-ratio plus
+     max-height/max-width so it behaves like object-fit: contain. The panels are shrink-0 so the
+     arena can never squeeze them out. No arithmetic over viewport height is involved, so no
+     viewport height can break it. */}
  <div
    data-testid="arena"
-   className="relative mx-auto aspect-[16/9] w-full"
-   style={{
-     maxWidth: `min(100%, calc(${isFullscreen ? 76 : wide ? 66 : 58}vh * 16 / 9))`,
-   }}
+   className={
+     isFullscreen
+       ? "relative aspect-[16/9] max-h-full max-w-full"
+       : "relative mx-auto aspect-[16/9] w-full"
+   }
+   style={
+     isFullscreen
+       ? undefined
+       : { maxWidth: `min(100%, calc(${wide ? 66 : 58}vh * 16 / 9))` }
+   }
  >
  <canvas
  ref={canvasRef}
@@ -533,7 +552,7 @@ export default function FightClient({ wide = false }: { wide?: boolean }) {
  {stage === "fighting" && me && (
  <div
  data-testid="player-panel"
- className="mt-3 rounded-2xl border border-brand-deep/40 px-3 py-3"
+ className="mt-3 shrink-0 rounded-2xl border border-brand-deep/40 px-3 py-3"
  style={{ background: theme.surface }}
  >
  <div className="flex flex-wrap items-center justify-between gap-3">

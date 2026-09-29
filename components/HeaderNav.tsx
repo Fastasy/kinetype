@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { saveStore } from "@/game/store";
+import BrandMark from "./brand/BrandMark";
 
 const LINKS = [
   { href: "/play", label: "Play" },
@@ -24,23 +25,21 @@ export default function HeaderNav() {
  );
 
  const linkClass = (active: boolean) =>
- `rounded-lg px-3 py-2 text-sm font-medium transition hover:bg-card hover:text-brand-bright ${
- active ? "bg-card text-brand-bright" : "text-ink-soft"
- }`;
+   `rounded-lg px-3 py-2 text-sm font-medium transition hover:bg-card hover:text-secondary ${
+     active ? "bg-card text-secondary" : "text-ink-soft"
+   }`;
 
  return (
  <header className="sticky top-0 z-50 border-b-2 border-line bg-page">
  <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
  <Link
- href="/"
- className="flex items-center gap-2 font-pixel text-[13px] text-ink transition hover:opacity-90"
+   href="/"
+   className="flex items-center gap-2 font-pixel text-[13px] text-ink transition hover:opacity-90"
  >
- <span className="flex h-7 w-7 items-center justify-center border-2 border-brand/40 bg-brand/10 text-sm text-brand-bright">
-   ⌨
- </span>
- <span>
- kine<span className="text-brand-bright">type</span>
- </span>
+   <BrandMark className="h-7 w-7" label="Kinetype" />
+   <span>
+     kine<span className="text-secondary">type</span>
+   </span>
  </Link>
 
  <nav className="hidden items-center gap-1 md:flex" aria-label="Main navigation">

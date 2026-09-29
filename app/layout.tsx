@@ -4,6 +4,7 @@ import Link from "next/link";
 import "./globals.css";
 
 import HeaderNav from "@/components/HeaderNav";
+import BrandMark from "@/components/brand/BrandMark";
 
 const inter = Inter({
  variable: "--font-inter",
@@ -102,11 +103,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
  <footer className="mt-16 border-t border-line/80 bg-page">
  <div className="mx-auto max-w-5xl px-4 py-10 text-sm text-ink-faint sm:px-6">
  <div className="flex flex-wrap items-center gap-2 font-pixel text-sm text-ink">
-   <span className="flex h-6 w-6 items-center justify-center border-2 border-brand/40 bg-brand/10 text-xs text-brand-bright">
-     ⌨
-   </span>
+   <BrandMark className="h-6 w-6" label={null} />
  <span>
- kine<span className="text-brand-bright">type</span>
+ kine<span className="text-secondary">type</span>
  </span>
  </div>
  <p className="mt-3 max-w-lg text-xs leading-relaxed">
@@ -117,7 +116,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
  <ul className="mt-6 grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-3">
  {FOOTER_LINKS.map((l) => (
  <li key={l.href}>
- <Link href={l.href} className="transition hover:text-brand-bright">
+ <Link href={l.href} className="transition hover:text-secondary">
  {l.label}
  </Link>
  </li>

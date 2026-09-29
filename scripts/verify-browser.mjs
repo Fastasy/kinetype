@@ -262,6 +262,50 @@ check(
   `arena starts at ${fightBlock?.arenaTop ?? -1}px in the document`,
 );
 
+// ---------------------------------------------------------------- fullscreen
+// Ruan: "fullscreen mode does not work properly as I cannot see the words I need to type."
+//
+// Run this at a SHORT viewport on purpose. At the suite's 1000px the old layout happened to fit,
+// which is exactly why nothing caught this: the arena asked for a fixed 76vh on top of roughly
+// 200px of panels, and 76% of the screen plus 200px only overflows once the screen is short.
+// 768px is an ordinary laptop height, so it is the case worth pinning.
+{
+  await page.setViewportSize({ width: 1280, height: 768 });
+  await page.waitForTimeout(250);
+
+  await page.getByTestId("fullscreen-button").click();
+  await page.waitForTimeout(900);
+  const inFullscreen = await page.evaluate(() => Boolean(document.fullscreenElement));
+
+  // Scroll to the top BEFORE measuring. A real fullscreen element cannot be scrolled, so
+  // anything below the fold is genuinely unreachable; measuring wherever the page happened to be
+  // scrolled lets a broken layout look fine.
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(200);
+
+  // Scoped to the player panel. BOTH panels carry a sentence and the bot panel comes first in
+  // the DOM, so a bare [data-testid="sentence"] matches the bot's, which always sits near the
+  // top of the page and would report "visible" however badly the player's own prompt overflowed.
+  const fsSentence = await page
+    .locator('[data-testid="player-panel"] [data-testid="sentence"]')
+    .boundingBox();
+
+  check(
+    "fullscreen keeps the player's sentence on screen",
+    inFullscreen && !!fsSentence && fsSentence.y + fsSentence.height <= 768 + 2,
+    inFullscreen
+      ? `sentence ends at ${fsSentence ? Math.round(fsSentence.y + fsSentence.height) : "?"}px, viewport 768px`
+      : "the browser did not enter fullscreen",
+  );
+
+  if (inFullscreen) {
+    await page.evaluate(() => void document.exitFullscreen());
+    await page.waitForTimeout(400);
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.waitForTimeout(250);
+}
+
 const initial = await readPrompts("player-panel");
 check(
   "exactly one sentence is live for the player",

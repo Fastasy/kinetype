@@ -48,6 +48,21 @@
   --color-brand-soft: #a78bfa;
   --color-brand-deep: #ede9fe;
 
+  /*
+   * Secondary: cyan, paired with the violet primary.
+   *
+   * Two values, not one, because the paper background (#f2ede3, relative luminance 0.85) is
+   * very light and a single bright cyan fails on it. --color-secondary is dark enough to be
+   * read as TEXT (4.59:1, AA) and is what the wordmark and links use. --color-secondary-bright
+   * is for GRAPHICS only (3.15:1, which clears the 3:1 WCAG bar for non-text) and is what the
+   * logo mark uses, because the darker value reads as navy next to the violet rather than as a
+   * second colour.
+   */
+  --color-secondary: #0e7490;
+  --color-secondary-bright: #0891b2;
+  --color-secondary-soft: #22d3ee;
+  --color-secondary-deep: #cffafe;
+
   --color-coin: #92400e;
   --color-coin-deep: #fef3c7;
   --color-heat: #be123c;
