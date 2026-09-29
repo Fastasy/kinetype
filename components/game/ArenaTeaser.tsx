@@ -26,11 +26,12 @@ const DIRT_SHADES = ["#b07a4e", "#a87448", "#b87f52"];
 const INK = "#2a2118";
 const TILE = 20;
 
-const CHIPS = [
-  { tier: "LIGHT", word: "dash" },
-  { tier: "MID", word: "planet" },
-  { tier: "HEAVY", word: "keyboard" },
-];
+/**
+ * ONE prompt, because the game shows one word at a time. This teaser drew three chips
+ * when the game offered a three-word choice, and would otherwise advertise a mechanic
+ * that no longer exists.
+ */
+const PROMPT = { tier: "HEAVY", word: "keyboard" };
 
 /** rect as a path segment. */
 const seg = (x: number, y: number, w: number, h: number) =>
@@ -101,7 +102,7 @@ export default function ArenaTeaser({ className }: { className?: string }) {
       className={className}
       shapeRendering="crispEdges"
       role="img"
-      aria-label="A match in progress: two pixel fighters stand on a grass platform, with three word prompts at the bottom reading dash, planet and keyboard."
+      aria-label="A match in progress: two pixel fighters stand on a grass platform, with one word prompt at the bottom reading keyboard."
     >
       {SKY.map((c, i) => (
         <rect key={c} x={0} y={i * 240} width={1280} height={241} fill={c} />
@@ -154,37 +155,29 @@ export default function ArenaTeaser({ className }: { className?: string }) {
 
       {/* The prompt panel, shown as part of the frame so the mechanic is legible at a
           glance before anyone plays. */}
-      {CHIPS.map((c, i) => {
-        const w = 240;
-        const gap = 16;
-        const totalW = CHIPS.length * w + (CHIPS.length - 1) * gap;
-        const x = (1280 - totalW) / 2 + i * (w + gap);
-        return (
-          <g key={c.tier}>
-            <rect x={x} y={636} width={w} height={64} fill="#fffdf7" stroke={INK} strokeWidth={4} />
-            <text
-              x={x + 16}
-              y={666}
-              fontSize={16}
-              fontFamily="ui-monospace, monospace"
-              fontWeight={700}
-              fill="#6f6656"
-            >
-              {c.tier}
-            </text>
-            <text
-              x={x + 16}
-              y={690}
-              fontSize={24}
-              fontFamily="ui-monospace, monospace"
-              fontWeight={700}
-              fill="#1e1a14"
-            >
-              {c.word}
-            </text>
-          </g>
-        );
-      })}
+      <g>
+        <rect x={340} y={622} width={600} height={86} fill="#fffdf7" stroke={INK} strokeWidth={4} />
+        <text
+          x={360}
+          y={650}
+          fontSize={16}
+          fontFamily="ui-monospace, monospace"
+          fontWeight={700}
+          fill="#be123c"
+        >
+          {PROMPT.tier}
+        </text>
+        <text
+          x={360}
+          y={692}
+          fontSize={36}
+          fontFamily="ui-monospace, monospace"
+          fontWeight={700}
+          fill="#1e1a14"
+        >
+          {PROMPT.word}
+        </text>
+      </g>
     </svg>
   );
 }

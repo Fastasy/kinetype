@@ -93,8 +93,13 @@ export const FINISH_DAMAGE_HINT = 110;
 export const SPARK_DISTANCE = 240;
 
 // ---------------------------------------------------------------- typing
-export const PROMPTS_PER_FIGHTER = 3;
-/** Guard words appear in the middle slot; recovery words replace everything. */
+/**
+ * How many word prompts are live at once. One: the player is given a word, not a menu.
+ * The input path only ever reads `prompts[0]`, so raising this number on its own is not
+ * enough — a multi-word mode means reworking the input layer too.
+ */
+export const PROMPT_COUNT = 1;
+/** Guard and recovery words replace the live word entirely. */
 export const GUARD_WORD_LENGTH = 5;
 export const RECOVERY_WORD_LENGTH = 5;
 export const RECOVERY_WINDOW = 1.8; // seconds

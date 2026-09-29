@@ -26,6 +26,7 @@ import {
   HITSTUN_MIN,
   PARRY_MULTIPLIER,
   PRECISION_DAMAGE_BONUS,
+  PROMPT_COUNT,
   RECOVERY_WINDOW,
   RECOVERY_WINDOW_MIN,
   RECOVERY_WINDOW_STEP,
@@ -88,9 +89,9 @@ function toLive(m: Match, maxSteps = 400): void {
   assert.equal(m.phase, "live", "match should reach the live phase");
 }
 
-function typeWord(m: Match, side: Side, slot: number): void {
-  m.selectSlot(side, slot);
-  const text = m.typing[side].prompts[slot].text;
+/** Types the live word out. There is exactly one, so there is no slot to choose. */
+function typeWord(m: Match, side: Side): void {
+  const text = m.typing[side].prompts[0].text;
   for (const ch of text) m.type(side, ch);
 }
 
@@ -115,7 +116,7 @@ const SAMPLE: Record<WordTier, string> = {
 };
 
 /**
- * Put a known word of the given tier in slot 0 and type it out.
+ * Put a known word of the given tier up and type it out.
  *
  * Prompt tiers are rolled at random. Cycling the pool by attacking in order to
  * fish for a tier accumulated damage on the target until it died, which made a
@@ -133,7 +134,7 @@ function strike(m: Match, side: Side, tier: WordTier): void {
     flawed: false,
     age: 0,
   };
-  typeWord(m, side, 0);
+  typeWord(m, side);
 }
 
 // ================================================================ word pools
@@ -312,7 +313,6 @@ section("Typing (commit point is the whole word)");
 test("a partial word never commits", () => {
   const run = new TypingRun(createRng(7), { guardEnabled: true, strictMode: false });
   const text = run.prompts[0].text;
-  run.selectSlot(0);
   for (let i = 0; i < text.length - 1; i++) {
     const out = run.handleChar(text[i]);
     assert.notEqual(out.kind, "commit", `committed early at char ${i}`);
@@ -323,7 +323,6 @@ test("a partial word never commits", () => {
 test("the final correct character is what fires the push", () => {
   const run = new TypingRun(createRng(7), { guardEnabled: true, strictMode: false });
   const text = run.prompts[0].text;
-  run.selectSlot(0);
   let committed = false;
   for (const ch of text) {
     const out = run.handleChar(ch);
@@ -336,7 +335,6 @@ test("the final correct character is what fires the push", () => {
 test("there is no sub-word window: an early extra character cannot commit", () => {
   const run = new TypingRun(createRng(11), { guardEnabled: true, strictMode: false });
   const text = run.prompts[0].text;
-  run.selectSlot(0);
   run.handleChar(text[0]);
   // The exploit from the research is holding the last letter for the right
   // moment. There is nothing to hold: the character is either correct or not.
@@ -344,22 +342,22 @@ test("there is no sub-word window: an early extra character cannot commit", () =
   assert.notEqual(extra.kind, "commit");
 });
 
-test("mistype loses the precision bonus and restarts the word, with no penalty by default", () => {
+test("a mistype loses the precision bonus but keeps the player's progress", () => {
   const run = new TypingRun(createRng(3), { guardEnabled: true, strictMode: false });
   const text = run.prompts[0].text;
-  run.selectSlot(0);
   run.handleChar(text[0]);
   const wrong = run.handleChar("z" === text[1] ? "q" : "z");
   assert.equal(wrong.kind, "wrong");
   assert.equal(wrong.penalise, false, "default mode must not penalise");
-  assert.equal(run.prompts[0].typed, 0, "the word restarts");
+  // With three words live, a mistype wiped the word and let the player switch. With one
+  // word, wiping it would just be punishing: progress stands and the player carries on.
+  assert.equal(run.prompts[0].typed, 1, "progress must be kept");
   assert.ok(run.prompts[0].flawed, "the precision bonus is forfeit");
 });
 
 test("strict mode reports a penalty instead (opt-in only)", () => {
   const run = new TypingRun(createRng(3), { guardEnabled: true, strictMode: true });
   const text = run.prompts[0].text;
-  run.selectSlot(0);
   run.handleChar(text[0]);
   const wrong = run.handleChar("z" === text[1] ? "q" : "z");
   assert.equal(wrong.penalise, true);
@@ -369,12 +367,28 @@ test("precision scales damage by the designed bonus", () => {
   assert.equal(PRECISION_DAMAGE_BONUS, 0.25);
 });
 
-test("typing a letter locks the prompt that starts with it", () => {
+test("every keystroke counts from the first one", () => {
+  // Regression. With three words live, the first keystroke was spent PICKING a word: it
+  // never advanced the prompt, so the player had to type that same letter a second time,
+  // and a letter matching no word counted as an error.
   const run = new TypingRun(createRng(23), { guardEnabled: true, strictMode: false });
-  const first = run.prompts[0].text[0];
-  const out = run.handleChar(first);
-  assert.equal(out.kind, "locked", "the first letter should lock a prompt");
-  assert.ok(run.activePrompt(), "a prompt should now be active");
+  const text = run.prompts[0].text;
+  const out = run.handleChar(text[0]);
+  assert.equal(out.kind, "correct", "the first letter must count toward the word");
+  assert.equal(run.prompts[0].typed, 1, "and must advance it");
+  assert.equal(run.errors, 0, "the first letter must never count as an error");
+});
+
+test("one word is live at a time and the next arrives with no gap", () => {
+  const run = new TypingRun(createRng(23), { guardEnabled: true, strictMode: false });
+  assert.equal(PROMPT_COUNT, 1);
+  assert.equal(run.prompts.length, 1, "exactly one prompt");
+  const first = run.prompts[0].text;
+  for (const ch of first) run.handleChar(ch);
+  assert.equal(run.words, 1);
+  assert.equal(run.prompts.length, 1, "handing over the next word changes nothing about the count");
+  assert.equal(run.prompts[0].typed, 0, "the next word starts clean");
+  assert.notEqual(run.prompts[0].text, first, "and is not the word just typed");
 });
 
 // ================================================================ the parry
@@ -386,9 +400,8 @@ test("completing a guard word opens a counter window", () => {
   toLive(m);
   const def: Side = "right";
   assert.ok(m.typing[def].offerGuard(), "a guard word should be offered");
-  const slot = m.typing[def].prompts.findIndex((p) => p.kind === "guard");
-  assert.ok(slot >= 0);
-  typeWord(m, def, slot);
+  assert.equal(m.typing[def].prompts[0].kind, "guard", "the guard REPLACES the live word");
+  typeWord(m, def);
   assert.ok(m.fighter(def).counter > 0, "the parry should grant a counter window");
 });
 
@@ -409,8 +422,7 @@ test("a parry multiplies incoming knockback by PARRY_MULTIPLIER", () => {
   toLive(m2);
   m2.fighter(def).damage = 60;
   assert.ok(m2.typing[def].offerGuard());
-  const gslot = m2.typing[def].prompts.findIndex((p) => p.kind === "guard");
-  typeWord(m2, def, gslot);
+  typeWord(m2, def);
   assert.ok(m2.fighter(def).counter > 0);
   strike(m2, atk, "heavy");
   const parried = Math.abs(m2.fighter(def).vx);
@@ -608,9 +620,6 @@ test("winning pays more than losing", () => {
         for (const ch of word) m.type(side, ch);
         return;
       }
-      const slot = t.prompts.findIndex((p) => p.kind === "attack");
-      if (slot < 0) return;
-      if (!t.activePrompt()) m.selectSlot(side, slot);
       budget += ((wpm * 5) / 60) * dt;
       let guard = 0;
       while (budget >= 1 && guard++ < 10) {

@@ -374,18 +374,17 @@ export default function FightClient({ wide = false }: { wide?: boolean }) {
  round {snap?.round} · {snap?.wins[playerSide]}-{snap?.wins[opponent]}
  </span>
  </div>
- <div className="mt-1.5 flex gap-1.5">
- {them.prompts.map((p, i) => (
- <PromptCard
- key={p.id}
- prompt={p}
- overlay={overlay}
- compact
- slot={i}
- isGuard={p.kind === "guard"}
- isRecovery={p.kind === "recovery"}
- />
- ))}
+ <div className="mt-1.5">
+   {them.prompts.map((p) => (
+     <PromptCard
+       key={p.id}
+       prompt={p}
+       overlay={overlay}
+       compact
+       isGuard={p.kind === "guard"}
+       isRecovery={p.kind === "recovery"}
+     />
+   ))}
  </div>
  </div>
  )}
@@ -435,14 +434,13 @@ export default function FightClient({ wide = false }: { wide?: boolean }) {
  Type to knock them off
  </h2>
  <p className="max-w-md text-sm text-ink-faint">
- Three words are live. Type one to hit. Long words hit harder, but they take
- longer to land. Push the bot past the red line to win.
+   One word at a time. Type it to land a hit. Long words hit harder, and they
+   take longer to finish. Push the bot past the red line to win.
  </p>
  <ul className="max-w-md space-y-1 text-left text-xs text-ink-faint">
- <li>
- <span className="font-mono text-brand-bright">1 2 3</span> pick a word, or just
- start typing one
- </li>
+   <li>
+     Every keystroke counts, starting with the first letter
+   </li>
  <li>
  <span className="font-mono text-heat">HEAVY INCOMING</span> means a big hit is
  coming: complete the <span className="font-mono text-aqua">GUARD</span> word to
@@ -541,17 +539,16 @@ export default function FightClient({ wide = false }: { wide?: boolean }) {
  </span>
  </div>
 
- <div className="mt-2.5 grid grid-cols-1 gap-2 sm:grid-cols-3">
- {me.prompts.map((p, i) => (
- <PromptCard
- key={p.id}
- prompt={p}
- overlay={overlay}
- slot={i}
- isGuard={p.kind === "guard"}
- isRecovery={p.kind === "recovery"}
- />
- ))}
+ <div className="mt-2.5">
+   {me.prompts.map((p) => (
+     <PromptCard
+       key={p.id}
+       prompt={p}
+       overlay={overlay}
+       isGuard={p.kind === "guard"}
+       isRecovery={p.kind === "recovery"}
+     />
+   ))}
  </div>
  </div>
  )}

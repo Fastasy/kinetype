@@ -169,11 +169,6 @@ export class GameEngine {
   handleKey(key: string): boolean {
     if (this.paused) return false;
     const k = key.toLowerCase();
-    if (k === "1" || k === "2" || k === "3") {
-      const changed = this.match.selectSlot(this.cfg.humanSide, Number(k) - 1);
-      if (changed) this.dirty = true;
-      return changed;
-    }
     if (!/^[a-z]$/.test(k)) return false;
     const used = this.match.type(this.cfg.humanSide, k);
     this.dirty = true;

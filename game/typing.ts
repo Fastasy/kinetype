@@ -1,17 +1,21 @@
 // The typing layer. Pure logic, no rendering, no timers of its own.
 //
-// Three rules from the design research are enforced here, not in the UI:
+// THREE RULES FROM THE DESIGN RESEARCH ARE ENFORCED HERE, NOT IN THE UI:
 //   1. COMMIT POINT IS THE WHOLE WORD. A prompt only fires on its final correct
-//      character. There is no sub-word timing window anywhere in this file, so
-//      the documented "hold the last letter until the right moment" exploit has
-//      nothing to exploit.
-//   2. MISTYPE LOSES THE BONUS, NOT THE TURN. By default a wrong character marks
-//      the word flawed and restarts it. No stun. Strict mode is opt-in and lives
-//      in the match layer, not here.
-//   3. CHOICE IS A REAL INPUT. Three prompts are live at once. Locking is either
-//      explicit (1/2/3) or implicit (the first letter you type picks the word).
+//      character. There is no sub-word timing window anywhere in this file, so the
+//      documented "hold the last letter until the right moment" exploit has nothing to
+//      exploit.
+//   2. THE PLAYER IS GIVEN A WORD, NOT A MENU. Exactly one prompt is live at any moment.
+//      The game rolls the word and the player types it. See the note on PROMPT_COUNT.
+//   3. A MISTAKE COSTS THE BONUS, NOT THE WORD. A wrong character marks the word flawed
+//      and does NOT reset progress: the player must press the correct key to continue.
+//
+// Why rule 2 replaced the three-slot design: with three words live, the first keystroke
+// was consumed to pick a word rather than counting toward it, so a player had to type the
+// same letter twice, and a letter matching no word's first character counted as an error.
+// With one word every keystroke counts, which is the whole point of a typing game.
 
-import { COUNTER_WINDOW, PROMPTS_PER_FIGHTER, WPM_WINDOW } from "./constants";
+import { COUNTER_WINDOW, PROMPT_COUNT, WPM_WINDOW } from "./constants";
 import type { Rng } from "./rng";
 import type { Prompt, PromptKind, WordTier } from "./types";
 import { GUARD_WORDS, POOLS, RECOVERY_WORDS } from "./words";
@@ -25,7 +29,7 @@ export interface CommitResult {
 }
 
 export interface CharOutcome {
-  kind: "none" | "correct" | "wrong" | "locked" | "commit";
+  kind: "none" | "correct" | "wrong" | "commit";
   commit?: CommitResult;
   /** Strict mode only: the caller applies the stagger. */
   penalise?: boolean;
@@ -37,13 +41,17 @@ export interface TypingOptions {
 }
 
 export class TypingRun {
+  /**
+   * Always exactly one prompt. Kept as an array because the match layer, the renderer and
+   * the bot all read it positionally, and because a future "two words" mode would be a
+   * one-line change rather than a refactor.
+   */
   readonly prompts: Prompt[] = [];
   private rng: Rng;
   private opts: TypingOptions;
-  private activeId: number | null = null;
   private recent: { t: number; correct: boolean }[] = [];
   private clock = 0;
-  /** When set, every slot is replaced by a single recovery prompt. */
+  /** When set, the single slot holds a recovery prompt. */
   private recovery: Prompt | null = null;
 
   chars = 0;
@@ -66,9 +74,11 @@ export class TypingRun {
     const resolvedTier: WordTier = kind === "attack" ? (tier ?? this.rollTier()) : "light";
     const pool: readonly string[] =
       kind === "guard" ? GUARD_WORDS : kind === "recovery" ? RECOVERY_WORDS : POOLS[resolvedTier];
-    const inUse = new Set(this.prompts.map((p) => p.text));
+    const current = this.prompts[0]?.text;
     let text = this.rng.pick(pool);
-    for (let i = 0; i < 24 && inUse.has(text); i++) text = this.rng.pick(pool);
+    // Avoid handing the player the word they just finished. The pools are thousands of
+    // words deep, so one retry is plenty and this cannot loop.
+    for (let i = 0; i < 8 && text === current; i++) text = this.rng.pick(pool);
     return {
       id: nextPromptId++,
       text,
@@ -87,41 +97,40 @@ export class TypingRun {
     return "heavy";
   }
 
+  /** Guarantees exactly one live prompt. */
   refill(): void {
     if (this.recovery) {
       this.prompts.length = 0;
       this.prompts.push(this.recovery);
       return;
     }
-    while (this.prompts.length < PROMPTS_PER_FIGHTER) {
-      this.prompts.push(this.spawn("attack"));
-    }
+    while (this.prompts.length < PROMPT_COUNT) this.prompts.push(this.spawn("attack"));
+    this.prompts.length = PROMPT_COUNT;
   }
 
   // ------------------------------------------------------------- guard/recovery
 
   /**
-   * The telegraph fired: swap the middle slot for a guard word. Returns false if
-   * a guard is already live, so the caller cannot stack parries.
+   * The telegraph fired: the live word becomes a guard word. Returns false if a guard or
+   * recovery is already up, so parries cannot stack.
+   *
+   * This REPLACES the attack word rather than sitting beside it. That is the cost of a
+   * one-word design, and it is what makes a telegraphed heavy hit a real reaction test:
+   * you drop what you were typing and block, or you eat the hit.
    */
   offerGuard(): boolean {
     if (this.recovery) return false;
-    if (this.prompts.some((p) => p.kind === "guard")) return false;
-    const slot = Math.min(1, this.prompts.length - 1);
-    this.prompts[slot] = this.spawn("guard");
-    if (this.activeId !== null) this.activeId = null;
+    if (this.prompts[0]?.kind === "guard") return false;
+    this.prompts[0] = this.spawn("guard");
     return true;
   }
 
   hasGuard(): boolean {
-    return this.prompts.some((p) => p.kind === "guard");
+    return this.prompts[0]?.kind === "guard";
   }
 
   clearGuard(): void {
-    for (let i = 0; i < this.prompts.length; i++) {
-      if (this.prompts[i].kind === "guard") this.prompts[i] = this.spawn("attack");
-    }
-    this.activeId = null;
+    if (this.prompts[0]?.kind === "guard") this.prompts[0] = this.spawn("attack");
   }
 
   /** A fighter past the blast line gets one word to save themselves. */
@@ -129,14 +138,12 @@ export class TypingRun {
     this.recovery = this.spawn("recovery");
     this.prompts.length = 0;
     this.prompts.push(this.recovery);
-    this.activeId = this.recovery.id;
     return this.recovery;
   }
 
   exitRecovery(): void {
     this.recovery = null;
     this.prompts.length = 0;
-    this.activeId = null;
     this.refill();
   }
 
@@ -146,57 +153,26 @@ export class TypingRun {
 
   // ------------------------------------------------------------- input
 
-  private active(): Prompt | undefined {
-    return this.prompts.find((p) => p.id === this.activeId);
-  }
-
-  /** The prompt currently being typed, if any. The telegraph logic reads this. */
-  activePrompt(): Prompt | undefined {
-    return this.active();
-  }
-
-  /** Explicit slot selection with 1/2/3. Returns true if it did anything. */
-  selectSlot(index: number): boolean {
-    const p = this.prompts[index];
-    if (!p) return false;
-    if (this.activeId === p.id && p.typed === 0) return false;
-    this.activeId = p.id;
-    for (const q of this.prompts) if (q.id !== p.id) q.typed = 0;
-    return true;
-  }
-
   /**
-   * Implicit selection: the first letter typed locks the prompt that starts with
-   * it. This keeps word choice to a single keystroke instead of a select step.
+   * The live prompt. It is always the first one, because there is only ever one, but this
+   * stays a method so callers do not reach into the array.
    */
-  private implicitLock(ch: string): Prompt | undefined {
-    const candidates = this.prompts.filter((p) => p.text[0] === ch);
-    if (candidates.length === 0) return undefined;
-    const chosen = candidates[0];
-    this.activeId = chosen.id;
-    return chosen;
+  activePrompt(): Prompt | undefined {
+    return this.prompts[0];
   }
 
   handleChar(ch: string): CharOutcome {
     if (!/^[a-z]$/.test(ch)) return { kind: "none" };
     this.clock += 0.016;
 
-    let prompt = this.active();
-    if (!prompt) {
-      const locked = this.implicitLock(ch);
-      if (!locked) {
-        this.errors++;
-        this.recent.push({ t: this.clock, correct: false });
-        return { kind: "wrong", penalise: this.opts.strictMode };
-      }
-      prompt = locked;
-      return { kind: "locked" };
-    }
+    const prompt = this.prompts[0];
+    if (!prompt) return { kind: "none" };
 
     const expected = prompt.text[prompt.typed];
     if (ch !== expected) {
+      // Rule 3: mark it flawed, but do NOT wipe the player's progress. A typo costs the
+      // precision bonus and an accuracy point; it does not send them back to the start.
       prompt.flawed = true;
-      prompt.typed = 0;
       this.errors++;
       this.recent.push({ t: this.clock, correct: false });
       if (prompt.kind === "guard") this.parryAttempts++;
@@ -224,9 +200,8 @@ export class TypingRun {
       return { kind: "commit", commit: { prompt: committed, precision } };
     }
 
-    const slot = this.prompts.findIndex((p) => p.id === prompt!.id);
-    if (slot >= 0) this.prompts[slot] = this.spawn("attack");
-    this.activeId = null;
+    // Immediately hand the player the next word. There is no gap and no menu.
+    this.prompts[0] = this.spawn("attack");
     return { kind: "commit", commit: { prompt: committed, precision } };
   }
 

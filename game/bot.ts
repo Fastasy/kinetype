@@ -15,7 +15,6 @@ import {
   BOT_DECISION_DELAY,
   BOT_PARRY_SKILL,
   BOT_WPM_LADDER,
-  FINISH_DAMAGE_HINT,
 } from "./constants";
 import type { Rng } from "./rng";
 import type { Fighter, Prompt } from "./types";
@@ -62,6 +61,9 @@ export class BotController {
   private targetId: number | null = null;
   /** 0..1, rises when the bot is losing. Bounded by ADAPT_MAX. */
   private adapt = 0;
+  /** Which guard word the parry roll was made for, and what it decided. */
+  private guardDecisionId: number | null = null;
+  private willParry = false;
 
   constructor(cfg: BotConfig, rng: Rng) {
     this.cfg = cfg;
@@ -78,6 +80,8 @@ export class BotController {
     this.budget = 0;
     this.wait = 0;
     this.targetId = null;
+    this.guardDecisionId = null;
+    this.willParry = false;
   }
 
   private effective(metric: "wpm" | "accuracy" | "parry"): number {
@@ -86,37 +90,19 @@ export class BotController {
     return Math.max(0, Math.min(0.95, this.cfg.parrySkill + this.adapt * 0.2));
   }
 
-  private chooseTarget(
-    typing: TypingRun,
-    self: Fighter,
-    opponent: Fighter,
-    opponentParryRate: number,
-  ): Prompt | undefined {
-    if (typing.inRecovery) return typing.prompts[0];
-
-    // Parry opportunity: a guard word is live and we have the skill to take it.
-    const guard = typing.prompts.find((p) => p.kind === "guard");
-    if (guard && this.rng.chance(this.effective("parry"))) return guard;
-
-    const attacks = typing.prompts.filter((p) => p.kind === "attack");
-    if (attacks.length === 0) return undefined;
-
-    // Yomi layer 2: a player who parries a lot is wasting windows. Punish with speed.
-    if (opponentParryRate > 0.45) {
-      return attacks.find((p) => p.tier === "light") ?? attacks[0];
+  /**
+   * Roll parry competence ONCE per guard word, not per keystroke.
+   *
+   * With a single live word the bot has no word to choose, so parry skill had to move
+   * somewhere. A bot that fails this roll never types the guard word and eats the hit it
+   * failed to block, which is what "missed the parry" should look like.
+   */
+  private shouldParry(prompt: Prompt): boolean {
+    if (this.guardDecisionId !== prompt.id) {
+      this.guardDecisionId = prompt.id;
+      this.willParry = this.rng.chance(this.effective("parry"));
     }
-    // Counter window is live: cash it with the biggest word available.
-    if (self.counter > 0) {
-      return attacks.find((p) => p.tier === "heavy") ?? attacks[attacks.length - 1];
-    }
-    // Target is nearly dead: take the KO.
-    if (opponent.damage >= FINISH_DAMAGE_HINT) {
-      return attacks.find((p) => p.tier === "heavy") ?? attacks[0];
-    }
-    // Default: prefer light for tempo, occasionally pick mid.
-    const lights = attacks.filter((p) => p.tier === "light");
-    if (lights.length && this.rng.chance(0.7)) return lights[0];
-    return attacks[this.rng.int(attacks.length)];
+    return this.willParry;
   }
 
   /**
@@ -132,8 +118,6 @@ export class BotController {
     dt: number,
     typing: TypingRun,
     self: Fighter,
-    opponent: Fighter,
-    opponentParryRate: number,
   ): { prompt: Prompt; precision: boolean } | null {
     if (self.state === "ko" || self.state === "hitstun" || self.state === "staggered") {
       return null;
@@ -142,13 +126,12 @@ export class BotController {
     this.wait -= dt;
     if (this.wait > 0) return null;
 
-    let target = typing.prompts.find((p) => p.id === this.targetId);
-    if (!target) {
-      target = this.chooseTarget(typing, self, opponent, opponentParryRate);
-      if (!target) return null;
-      const idx = typing.prompts.findIndex((p) => p.id === target!.id);
-      typing.selectSlot(idx);
-      this.targetId = target.id;
+    const live = typing.prompts[0];
+    if (!live) return null;
+
+    // A word the bot has not started yet: take a beat, the way a human reads it first.
+    if (live.id !== this.targetId) {
+      this.targetId = live.id;
       // No deliberation while falling: a recovery word is on a 1.8s clock.
       this.wait = typing.inRecovery
         ? 0
@@ -156,14 +139,19 @@ export class BotController {
       return null;
     }
 
+    // Guard word: only a bot that won its parry roll types it.
+    if (live.kind === "guard" && !this.shouldParry(live)) return null;
+
     const cps = (this.effective("wpm") * 5) / 60;
     this.budget += cps * dt;
     let guard = 0;
     while (this.budget >= 1 && guard++ < 12) {
       this.budget -= 1;
-      const live = typing.prompts.find((p) => p.id === this.targetId);
-      if (!live || live.typed >= live.text.length) break;
-      const expected = live.text[live.typed];
+      const current = typing.prompts[0];
+      // The word changed under us (guard offered, recovery entered), or it is finished.
+      if (!current || current.id !== this.targetId) break;
+      if (current.typed >= current.text.length) break;
+      const expected = current.text[current.typed];
       const ok = this.rng.next() < this.effective("accuracy");
       const ch = ok ? expected : this.wrongFor(expected);
       const outcome = typing.handleChar(ch);

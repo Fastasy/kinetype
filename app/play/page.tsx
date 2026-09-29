@@ -86,8 +86,7 @@ export default function PlayPage() {
         <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
           <h1 className="font-pixel text-lg text-ink sm:text-2xl">Play Kinetype</h1>
           <p className="font-mono text-xs text-ink-faint sm:text-sm">
-            Type a word to hit. <span className="text-ink">1 2 3</span> locks a word.{" "}
-            <span className="text-ink">Esc</span> quits.
+            Type the word to hit. <span className="text-ink">Esc</span> quits.
           </p>
         </div>
       </section>

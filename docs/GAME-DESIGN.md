@@ -92,12 +92,18 @@ It also improves the game on its own terms: hits become scarce, so timing a heav
 | Element | Decision |
 |---|---|
 | Commit point | **The whole word.** Push fires on the last correct character only. No sub-word timing window exists, so the documented "hold the last letter for the right moment" exploit has nothing to exploit. |
-| Prompts on screen | 3 per fighter, always. Slots refill when one is consumed. |
-| Mistype default | **Bonus lost, not malus applied.** A wrong character clears the word's precision bonus and restarts that word. No stun, no penalty beyond lost time. |
+| Prompts on screen | **1 per fighter, always.** The next word arrives the instant the current one commits, with no gap and nothing to select. |
+| Mistype default | **Bonus lost, not progress lost.** A wrong character clears the word's precision bonus. Progress stands, so the player presses the correct key and carries on. No stun, no penalty beyond lost time. |
 | Strict mode (opt-in) | A player setting. Mistype adds 0.4s of stagger. For players who want the risk dial turned up. |
 | Precision bonus | Completing a word with zero errors increases that hit's damage by 25% and shows a distinct flash. |
 | Accuracy | Tracked per round and per match. Feeds the coin payout. |
 | WPM | Live, computed on committed characters over a rolling window. |
+
+**Why one word and not three.** The first build put three prompts on screen at once and made the player pick. It failed twice over. Mechanically, the first keystroke was spent *choosing* a word rather than counting toward it, so the player had to type the same letter twice, and a letter matching no word's first character registered as an error. Strategically, the choice it created was not a real one: word tiers are rolled by the game, so the "risk dial" was picking whichever of three random words looked best, which is a menu, not a decision. Ruan asked for one word and the game is better for it. Every keystroke counts from the first press.
+
+The cost is that the parry is now a **forced reaction** rather than a choice between blocking and attacking: the telegraph replaces your live word with the guard word. That is the honest trade for a one-word design, and it is what makes a telegraphed heavy hit a genuine reaction test.
+
+Word pools, expanded from ~720 to 2,050 attack words: LIGHT 450 (3-4 chars), MID 800 (5-7), HEAVY 800 (8+), plus 53 guard and 59 recovery words. Drawn from a frequency-ranked English list so prompts are words a player knows and can spell, then filtered for profanity, brand and web noise, abbreviations, and lowercased proper nouns. This game targets the school market, so the bar is "a teacher would be fine with it". Regenerating the pools is a scripted job, not a hand edit.
 
 **Difficulty is exposed as WPM, not easy/normal/hard**, because typing skill is uncorrelated with gaming skill. The bot's WPM is chosen from an explicit ladder: 20, 30, 40, 50, 60, 70, 85, 100, 120.
 
@@ -107,7 +113,7 @@ The unsolved question from the research gets this answer:
 
 **Telegraph.** When a fighter commits to the first 2 characters of a **heavy** word, the opponent's HUD shows a telegraph for that word. The defender can see the opposition's prompt tier at all times, so this is information they could already act on. The telegraph only makes the timing legible.
 
-**Parry.** On telegraph, the defender's middle prompt slot is replaced by a single **guard word** (4 characters, visually distinct). Completing it before the attacker's heavy word lands:
+**Parry.** On telegraph, the defender's live word is replaced by a **guard word** (5 characters, visually distinct). Completing it before the attacker's heavy word lands:
 
 - locks incoming knockback to `r = 0.30`
 - grants the defender a **counter window**: their next completed word within 2.5s deals `r = 2.0`

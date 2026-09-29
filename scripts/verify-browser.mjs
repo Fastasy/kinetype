@@ -83,20 +83,19 @@ async function matchOver() {
   return (await page.locator('[data-testid="result"]').count()) > 0;
 }
 
-/** One exchange: pick the longest word available (the heavy tier, most damage)
- *  and type it out. Returns false when there is nothing left to type. */
+/**
+ * One exchange: type out the live word. There is exactly one.
+ *
+ * The expected character is re-read from the DOM on every keystroke rather than cached
+ * up front, because a telegraphed heavy hit swaps the live word for a guard word mid-word.
+ * A cached copy would keep typing the old word into the new prompt and rack up errors.
+ */
 async function playOneWord() {
-  const prompts = await readPrompts("player-panel");
-  if (prompts.length === 0) return false;
-  let slot = 0;
-  for (let i = 1; i < prompts.length; i++) {
-    if (prompts[i].text.length > prompts[slot].text.length) slot = i;
-  }
-  const target = prompts[slot];
-  // Explicit slot selection also exercises the 1/2/3 input path.
-  await page.keyboard.press(String(slot + 1));
-  for (const ch of target.text) {
-    await page.keyboard.press(ch);
+  for (let i = 0; i < 30; i++) {
+    const [prompt] = await readPrompts("player-panel");
+    if (!prompt) return false;
+    if (prompt.typed >= prompt.text.length) return true;
+    await page.keyboard.press(prompt.text[prompt.typed]);
     await page.waitForTimeout(CHAR_MS);
   }
   return true;
@@ -207,11 +206,38 @@ check(
 );
 
 const initial = await readPrompts("player-panel");
-check("three prompts are live for the player", initial.length === 3, initial.map((p) => p.text).join(", "));
+check(
+  "exactly one word is live for the player",
+  initial.length === 1,
+  `${initial.length} prompts: ${initial.map((p) => p.text).join(", ")}`,
+);
 
-// Word choice is measured ACROSS the match, not on one draw. Tiers are rolled at
-// roughly 42/40/18, so three same-tier prompts is a normal ~7% outcome and a
-// single-draw assertion is simply wrong.
+// REGRESSION GUARD for the bug Ruan reported. With three words live, the first keystroke
+// was spent CHOOSING a word: it never advanced the prompt, so you had to type that same
+// letter a second time, and a letter matching no word counted as an error. With one word
+// the very first press must move the word forward.
+{
+  const [before] = await readPrompts("player-panel");
+  await page.keyboard.press(before.text[0]);
+  // POLL, do not read once. The engine pushes a React snapshot on a ~90ms cadence and the
+  // press also flips the focus overlay, so a single read 120ms later raced the re-render
+  // and reported a false failure. The behaviour itself is verified by
+  // scripts/probe-first-key.mjs, which shows the word advancing within 30ms.
+  let after = before;
+  for (let i = 0; i < 20; i++) {
+    [after] = await readPrompts("player-panel");
+    if (after && after.typed > before.typed) break;
+    await page.waitForTimeout(100);
+  }
+  check(
+    "the first keystroke advances the word",
+    !!after && after.typed === before.typed + 1,
+    `typed ${before.typed} -> ${after?.typed} after pressing "${before.text[0]}"`,
+  );
+}
+
+// Word variety is measured ACROSS the match, never on one draw. Tiers are rolled at
+// roughly 42/40/18, so any single prompt proves nothing about the pool.
 const tiersSeen = new Set(initial.map((p) => p.tier));
 const lengthsSeen = new Set(initial.map((p) => p.text.length));
 
@@ -258,7 +284,7 @@ while (Date.now() - started < FIRST_WINDOW_MS) {
 
 check("words were typed into the game", wordsTyped > 3, `${wordsTyped} words`);
 check(
-  "the word pool offers real choice across a match",
+  "the word pool varies across a match",
   tiersSeen.size >= 2 && lengthsSeen.size >= 2,
   `tiers ${[...tiersSeen].join("/")}, lengths ${[...lengthsSeen].join("/")}`,
 );

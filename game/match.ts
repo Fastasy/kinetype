@@ -217,10 +217,6 @@ export class Match {
     return true;
   }
 
-  selectSlot(side: Side, index: number): boolean {
-    return this.typing[side].selectSlot(index);
-  }
-
   // ---------------------------------------------------------------- step
 
   step(dt: number): void {
@@ -280,13 +276,7 @@ export class Match {
         // The bot's commit goes through commitWord, the SAME door as the player's.
         // Applying damage inside the bot instead meant bots typed at full speed
         // and never landed a single hit.
-        const committed = bot.update(
-          dt,
-          this.typing[side],
-          f,
-          this.fighter(other(side)),
-          this.parryRate(other(side)),
-        );
+        const committed = bot.update(dt, this.typing[side], f);
         if (committed) {
           this.publish({ type: "key", side, correct: true });
           this.commitWord(side, committed.prompt, committed.precision);
@@ -564,7 +554,7 @@ export class Match {
     // A bot victim must be able to save itself, or every bot death is automatic.
     const bot = this.bots[side];
     if (bot) {
-      const committed = bot.update(dt, this.typing[side], f, this.fighter(other(side)), 0);
+      const committed = bot.update(dt, this.typing[side], f);
       if (committed) {
         this.publish({ type: "key", side, correct: true });
         this.commitWord(side, committed.prompt, committed.precision);
