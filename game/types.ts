@@ -3,19 +3,42 @@
 
 export type Side = "left" | "right";
 
-export type WordTier = "light" | "mid" | "heavy";
+/**
+ * What a word does when it is completed.
+ *
+ * The move is decided by how hard the word is to type: a small word is a block, a
+ * normal word is a punch, a difficult one is a kick. There is no menu and no word
+ * choice — the sentence decides the sequence, and the sentence is rolled per fighter.
+ */
+export type MoveKind = "block" | "punch" | "kick";
 
-export type PromptKind = "attack" | "guard" | "recovery";
+/** The moves that land a hit. A block never damages; it defends. */
+export type AttackMove = Exclude<MoveKind, "block">;
+
+export type PromptKind = "attack" | "recovery";
+
+/** One word of a sentence prompt, with its own progress. */
+export interface SentenceWord {
+  text: string;
+  move: MoveKind;
+  /** Characters of this word committed correctly so far. */
+  typed: number;
+  /** A mistake was made on this word, so its precision bonus is forfeit. */
+  flawed: boolean;
+}
 
 export interface Prompt {
   /** Stable id so the UI can animate a specific prompt slot. */
   id: number;
+  /** The whole sentence, single-spaced. Always `words` joined, never stale. */
   text: string;
-  tier: WordTier;
+  words: SentenceWord[];
   kind: PromptKind;
-  /** Characters committed correctly so far. Fires when === text.length. */
+  /** Index of the live word. Equals words.length once the sentence is finished. */
+  index: number;
+  /** Characters committed, as an index into `text`. Spaces are skipped, never typed. */
   typed: number;
-  /** A mistake was made on this word, so the precision bonus is forfeit. */
+  /** Some word in this sentence was mistyped, for the HUD's flawed chip. */
   flawed: boolean;
   /** Ms the prompt has been live, for the bot's decision delay. */
   age: number;
@@ -39,10 +62,12 @@ export interface FighterStats {
   chars: number;
   correct: number;
   errors: number;
+  /** Words committed, i.e. moves thrown. */
   words: number;
-  /** Errors made while a guard prompt was live. */
-  parryAttempts: number;
-  parries: number;
+  /** Block words completed: guards raised. */
+  blocks: number;
+  /** Incoming kicks that were parried on a raised guard. */
+  parried: number;
 }
 
 export interface Fighter {
@@ -62,6 +87,8 @@ export interface Fighter {
   invuln: number;
   /** Seconds of counter window remaining. */
   counter: number;
+  /** Seconds of guard remaining: raised by a completed block word. */
+  guard: number;
   /** Seconds before this fighter can be hit again. Guarantees a turn. */
   hitCooldown: number;
   /** 0..1 squash impulse, decays. */
@@ -96,10 +123,10 @@ export interface Stage {
 
 export type GameEvent =
   | { type: "key"; side: Side; correct: boolean }
-  | { type: "commit"; side: Side; tier: WordTier; precision: boolean; x: number; y: number }
-  | { type: "hit"; side: Side; power: number; tier: WordTier; x: number; y: number }
+  | { type: "commit"; side: Side; move: MoveKind; precision: boolean; x: number; y: number }
+  | { type: "hit"; side: Side; power: number; move: AttackMove; guarded: boolean; x: number; y: number }
+  | { type: "block"; side: Side; x: number; y: number }
   | { type: "parry"; side: Side; x: number; y: number }
-  | { type: "guardLost"; side: Side }
   | { type: "recoverPrompt"; side: Side }
   | { type: "recover"; side: Side; ok: boolean }
   | { type: "spark"; side: Side }

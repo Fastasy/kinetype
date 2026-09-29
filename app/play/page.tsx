@@ -7,7 +7,7 @@ import JsonLd from "@/components/JsonLd";
 export const metadata: Metadata = {
   title: "Play Kinetype: Free Online Typing Fighting Game",
   description:
-    "Play Kinetype free in your browser. Choose a bot from 20 to 120 WPM, type words to land hits, knock your opponent off the stage and parry the heavy shots. No download and no account.",
+    "Play Kinetype free in your browser. Choose a bot from 20 to 120 WPM, then type a sentence where small words block, ordinary words punch and long words kick. Knock your opponent off the stage. No download and no account.",
   alternates: { canonical: "/play" },
   keywords: [
     "play typing fighting game",
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 const PLAY_FAQ = [
   {
     q: "How do I control the fight?",
-    a: "Just type. Your words are on screen: type any one of them and it fires. Number keys 1, 2 and 3 lock onto a specific word if two of them start with the same letter. Escape leaves the match.",
+    a: "Just type. One sentence is on screen and you type it straight through, one word at a time, with no spaces to type and nothing to select. Every word is a move: small words block, ordinary words punch, long words kick. Escape leaves the match.",
   },
   {
     q: "Which difficulty should I start on?",
@@ -47,7 +47,7 @@ export default function PlayPage() {
       name: "Kinetype",
       url: "https://kinetype.app/play",
       description:
-        "A free browser typing fighting game. Type words to land hits and knock your opponent off the stage, and parry heavy attacks with a guard word.",
+        "A free browser typing fighting game. Type a sentence where every word is a move, block and parry the incoming kicks, and knock your opponent off the stage.",
       applicationCategory: "GameApplication",
       genre: ["Fighting", "Typing", "Platform fighter"],
       gamePlatform: "Web browser",
@@ -86,7 +86,7 @@ export default function PlayPage() {
         <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
           <h1 className="font-pixel text-lg text-ink sm:text-2xl">Play Kinetype</h1>
           <p className="font-mono text-xs text-ink-faint sm:text-sm">
-            Type the word to hit. <span className="text-ink">Esc</span> quits.
+            Small words block, ordinary words punch, long words kick. <span className="text-ink">Esc</span> quits.
           </p>
         </div>
       </section>

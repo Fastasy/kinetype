@@ -16,25 +16,32 @@
 //      players cancel hitstun on a fixed schedule and true combos collapsed.
 
 import { HITSTUN_FACTOR, HITSTUN_MAX, HITSTUN_MIN, KB_TO_VELOCITY } from "./constants";
-import type { WordTier } from "./types";
+import type { AttackMove } from "./types";
 
-export interface TierProfile {
-  /** d — damage dealt by a completed word of this tier. */
+export interface MoveProfile {
+  /** d — damage dealt by this move. */
   damage: number;
   /** s — knockback scaling, expressed as a multiplier (Smash divides by 100). */
   scaling: number;
   /** b — base knockback, added after scaling. Gives launch even at 0%. */
   base: number;
-  /** Launch angle above horizontal, degrees. Light words pop up, heavies send flat. */
+  /** Launch angle above horizontal, degrees. Punches pop up, kicks send flat. */
   angle: number;
   /** Label for the HUD. */
   label: string;
 }
 
-export const TIER: Record<WordTier, TierProfile> = {
-  light: { damage: 4, scaling: 0.9, base: 24, angle: 42, label: "LIGHT" },
-  mid: { damage: 8, scaling: 1.05, base: 20, angle: 32, label: "MID" },
-  heavy: { damage: 14, scaling: 1.25, base: 14, angle: 20, label: "HEAVY" },
+/**
+ * The two attacking moves. Blocks are not here: a block never enters the knockback
+ * maths, it only changes what the defender takes (see BLOCK_* in constants.ts).
+ *
+ * Kicks carry the heavy profile: lower base knockback, higher scaling, so they are
+ * ordinary early and lethal once damage has accumulated. That two-knob structure is
+ * the one the design research documents, and it is why the KO move is the long word.
+ */
+export const MOVE: Record<AttackMove, MoveProfile> = {
+  punch: { damage: 8, scaling: 1.05, base: 20, angle: 32, label: "PUNCH" },
+  kick: { damage: 14, scaling: 1.25, base: 14, angle: 20, label: "KICK" },
 };
 
 export interface KnockbackInput {

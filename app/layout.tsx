@@ -31,7 +31,7 @@ const pixelFace = Press_Start_2P({
 const SITE_NAME = "Kinetype";
 const SITE_URL = "https://kinetype.app";
 const SITE_DESCRIPTION =
- "A free typing fighting game. Type words to hit, knock your opponent off the stage, and parry the heavy shots. Play in your browser, no download and no account.";
+  "A free typing fighting game. Type a sentence and every word in it is a move: small words block, ordinary words punch, long words kick. Knock your opponent off the stage. Play in your browser, no download and no account.";
 
 export const metadata: Metadata = {
  metadataBase: new URL(SITE_URL),

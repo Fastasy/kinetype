@@ -2,53 +2,53 @@
 
 import type { PromptView } from "@/game/engine";
 import type { Theme } from "@/game/themes";
+import type { MoveKind } from "@/game/types";
 
 /**
- * Tier and kind colours are FIXED, not themed.
+ * Move colours are FIXED, not themed.
  *
- * They encode how much a word hits for, which makes them a signal rather than decoration, in
- * the same family as the damage ramp. A player must never relearn that heavy means red
- * because they changed theme. They are drawn as filled chips with their own background
- * precisely so a fixed colour stays readable on a dark theme as well as a light one.
+ * They encode what a word does when it completes, which makes them a signal rather
+ * than decoration, in the same family as the damage ramp. A player must never relearn
+ * that a kick is red because they changed theme, so these are drawn as filled chips
+ * and underlines with their own background, and they stay readable on a dark theme as
+ * well as a light one.
  */
-const KIND_CHIP: Record<string, { label: string; bg: string }> = {
-  light: { label: "LIGHT", bg: "#7c3aed" },
-  mid: { label: "MID", bg: "#b45309" },
-  heavy: { label: "HEAVY", bg: "#be123c" },
+export const MOVE_CHIP: Record<MoveKind, { label: string; bg: string; ink: string }> = {
+  block: { label: "BLOCK", bg: "#0e7490", ink: "#ffffff" },
+  punch: { label: "PUNCH", bg: "#7c3aed", ink: "#ffffff" },
+  kick: { label: "KICK", bg: "#be123c", ink: "#ffffff" },
 };
 
 const CHIP_TEXT = "#ffffff";
 
 /**
- * The word the player types.
+ * The sentence the player types, one word at a time.
  *
- * There is exactly one of these on screen at a time, so it can be large. That matters
- * because the player is looking at their KEYBOARD, not the screen: the text is big, the
- * committed characters are high contrast, the next character is a filled block, and a
- * mistake is called out. Audio alone is not enough feedback for a typing game, and visual
+ * Every word is a move and the card says which, because the player is looking at their
+ * KEYBOARD, not the screen: the words are large, each word carries its move as an
+ * underline in the move's colour, the committed characters are high contrast, the next
+ * character is a filled block, and the live word is filled so the eye can find it after
+ * every glance away. Audio alone is not enough feedback for a typing game, and visual
  * alone is not enough either. This is the visual half.
  */
 export default function PromptCard({
   prompt,
   theme,
   compact = false,
-  isGuard,
   isRecovery,
 }: {
   prompt: PromptView;
   theme: Theme;
   compact?: boolean;
-  isGuard: boolean;
   isRecovery: boolean;
 }) {
-  const active = prompt.typed > 0;
-  const done = prompt.typed >= prompt.text.length;
-
-  const chip = isGuard
-    ? { label: "GUARD", bg: "#0e7490" }
-    : isRecovery
-      ? { label: "SAVE", bg: "#0e7490" }
-      : KIND_CHIP[prompt.tier] ?? KIND_CHIP.light;
+  const live = prompt.words[prompt.index];
+  const done = prompt.index >= prompt.words.length;
+  const chip = isRecovery
+    ? { label: "SAVE", bg: "#0e7490", ink: CHIP_TEXT }
+    : live
+      ? MOVE_CHIP[live.move]
+      : MOVE_CHIP.punch;
 
   return (
     <div
@@ -56,54 +56,100 @@ export default function PromptCard({
       data-text={prompt.text}
       data-typed={prompt.typed}
       data-kind={prompt.kind}
-      data-tier={prompt.tier}
+      data-move={live?.move ?? ""}
+      data-index={prompt.index}
       data-flawed={prompt.flawed ? "1" : "0"}
-      className={`relative border-2 transition ${
-        compact ? "px-2 py-1.5" : "px-4 py-3"
-      } ${isRecovery ? "ring-2" : ""}`}
+      className={`relative border-2 transition ${compact ? "px-2 py-1.5" : "px-4 py-3"} ${
+        isRecovery ? "ring-2" : ""
+      }`}
       style={{
         background: theme.promptBg,
-        borderColor: active ? theme.accent : theme.promptBorder,
+        borderColor: done || prompt.typed > 0 ? theme.accent : theme.promptBorder,
         ...(isRecovery ? { ["--tw-ring-color" as string]: theme.accent } : {}),
       }}
     >
       {!compact && (
-        <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="mb-1.5 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
           <span
             className="px-2 py-0.5 font-mono text-[11px] font-bold tracking-wider"
-            style={{ background: chip.bg, color: CHIP_TEXT }}
+            style={{ background: chip.bg, color: chip.ink }}
           >
-            {isGuard ? "GUARD — BLOCK IT" : isRecovery ? "SAVE — TYPE IT NOW" : chip.label}
+            {isRecovery ? "SAVE — TYPE IT NOW" : `${chip.label} — TYPE THE HIGHLIGHTED WORD`}
           </span>
+          {/* The legend rides on the card header rather than a row of its own: the arena,
+              the bot panel and the prompts all have to fit one screenful, and a separate
+              line cost ~14px of the budget the prompts need. */}
+          {!isRecovery && (
+            <span
+              className="flex flex-wrap items-center gap-x-2 font-mono text-[9px] leading-none"
+              style={{ color: theme.textMuted }}
+            >
+              {(["block", "punch", "kick"] as const).map((m) => (
+                <span key={m} className="flex items-center gap-1">
+                  <span
+                    className="inline-block h-1.5 w-3"
+                    style={{ background: MOVE_CHIP[m].bg }}
+                  />
+                  {m === "block" ? "SMALL" : m === "punch" ? "NORMAL" : "LONG"} ={" "}
+                  {MOVE_CHIP[m].label}
+                </span>
+              ))}
+            </span>
+          )}
           {prompt.flawed ? (
             <span
               className="px-2 py-0.5 font-mono text-[11px] font-bold"
               style={{ background: "#be123c", color: CHIP_TEXT }}
             >
-              flawed · no bonus
+              flawed word · no bonus
             </span>
           ) : null}
         </div>
       )}
 
       <div
-        className={`font-mono tracking-wide ${
-          compact ? "text-base" : isRecovery ? "text-4xl sm:text-5xl" : "text-3xl sm:text-4xl"
+        data-testid="sentence"
+        className={`flex flex-wrap items-baseline gap-x-[0.6ch] gap-y-1 font-mono tracking-wide ${
+          compact ? "text-sm sm:text-base" : isRecovery ? "text-3xl sm:text-4xl" : "text-xl sm:text-2xl"
         }`}
       >
-        {prompt.text.split("").map((ch, i) => {
-          const committed = i < prompt.typed;
-          const next = i === prompt.typed && !done;
+        {prompt.words.map((word, i) => {
+          const isLive = i === prompt.index;
+          const finished = word.typed >= word.text.length;
+          const chipStyle = MOVE_CHIP[word.move];
           return (
             <span
               key={`${prompt.id}-${i}`}
+              data-word={word.text}
+              data-move={word.move}
+              data-typed={word.typed}
+              data-live={isLive ? "1" : "0"}
+              className="whitespace-nowrap"
               style={{
-                color: committed ? theme.accent : theme.textMuted,
-                ...(next ? { background: theme.accent, color: theme.onAccent } : {}),
+                // The underline IS the move: teal blocks, purple punches, red kicks.
+                borderBottom: `3px solid ${chipStyle.bg}`,
+                opacity: finished && !isLive ? 0.55 : 1,
+                ...(isLive && !compact
+                  ? { background: `${theme.accent}1f`, padding: "0 0.25rem", margin: "0 -0.25rem" }
+                  : {}),
               }}
-              className={committed || next ? "px-0.5 font-bold" : undefined}
             >
-              {ch}
+              {word.text.split("").map((ch, j) => {
+                const committed = j < word.typed;
+                const next = isLive && j === word.typed;
+                return (
+                  <span
+                    key={`${prompt.id}-${i}-${j}`}
+                    style={{
+                      color: committed ? theme.accent : theme.textMuted,
+                      ...(next ? { background: theme.accent, color: theme.onAccent } : {}),
+                    }}
+                    className={committed || next ? "px-0.5 font-bold" : undefined}
+                  >
+                    {ch}
+                  </span>
+                );
+              })}
             </span>
           );
         })}

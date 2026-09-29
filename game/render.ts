@@ -18,7 +18,7 @@ import {
   type PixelPalette,
   type PixelSkin,
 } from "./skins";
-import { HURTBOX, STAGE } from "./constants";
+import { BLOCK_HOLD, HURTBOX, STAGE } from "./constants";
 import { damageColour } from "./knockback";
 import { themeById, type Theme } from "./themes";
 import type { Fighter, Side } from "./types";
@@ -234,6 +234,26 @@ function drawFighter(
   ctx.drawImage(sc, -w / 2, -h, w, h);
   ctx.globalAlpha = 1;
   ctx.restore();
+
+  // Guard: a raised block. A solid slab with a bright lip, deliberately NOT the
+  // parry's corner brackets, so "I am blocking" and "I have a read" cannot be
+  // confused at a glance. Fades as the guard runs out.
+  if (f.guard > 0) {
+    ctx.save();
+    const remaining = Math.min(1, f.guard / BLOCK_HOLD);
+    const gw = HURTBOX.w + 26;
+    const gh = HURTBOX.h + 22;
+    const gx = f.x - gw / 2;
+    const gy = bottom - h * 0.72 - gh / 2;
+    ctx.globalAlpha = 0.2 + remaining * 0.4;
+    ctx.fillStyle = "#0e7490";
+    ctx.fillRect(gx, gy, gw, gh);
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = "#22d3ee";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(gx, gy, gw, gh);
+    ctx.restore();
+  }
 
   // Parry window: a chunky bracket, not a smooth ring.
   if (f.counter > 0) {

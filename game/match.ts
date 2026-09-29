@@ -5,6 +5,9 @@
 
 import {
   AIR_DRAG,
+  BLOCK_DAMAGE_MULTIPLIER,
+  BLOCK_HOLD,
+  BLOCK_KB_MULTIPLIER,
   COIN_ACCURACY_FACTOR,
   COIN_BASE_LOSS,
   COIN_BASE_WIN,
@@ -36,29 +39,25 @@ import {
   SPAWN,
   STAGE,
   STRICT_STAGGER,
-  TELEGRAPH_COMMIT_CHARS,
 } from "./constants";
 import { Fx } from "./fx";
-import { TIER, launchFrom } from "./knockback";
+import { MOVE, launchFrom } from "./knockback";
 import { BotController, botConfigForTier } from "./bot";
 import { createRng, type Rng } from "./rng";
 import { skinById, type PixelSkin } from "./skins";
-import { TypingRun } from "./typing";
+import { TypingRun, type CommitResult } from "./typing";
 import type {
+  AttackMove,
   Fighter,
   GameEvent,
   MatchOptions,
   MatchResult,
-  Prompt,
   RoundPhase,
   Side,
-  WordTier,
 } from "./types";
 
 const HH = HURTBOX.h / 2;
 const HW = HURTBOX.w / 2;
-/** Longest a guard offer stays live before it expires. */
-const GUARD_WINDOW = 2.5;
 
 function other(side: Side): Side {
   return side === "left" ? "right" : "left";
@@ -79,12 +78,13 @@ function createFighter(side: Side): Fighter {
     onGround: false,
     invuln: 0,
     counter: 0,
+    guard: 0,
     hitCooldown: 0,
     squash: 0,
     vibrate: 0,
     trail: [],
     prompts: [],
-    stats: { chars: 0, correct: 0, errors: 0, words: 0, parryAttempts: 0, parries: 0 },
+    stats: { chars: 0, correct: 0, errors: 0, words: 0, blocks: 0, parried: 0 },
     sinceCommit: 0,
   };
 }
@@ -118,7 +118,6 @@ export class Match {
   finishSide: Side | null = null;
   /** True once the "spark" telegraph has fired for a side this round. */
   private sparkFired: Record<Side, boolean> = { left: false, right: false };
-  private guardAsked: Record<Side, boolean> = { left: false, right: false };
   private rng: Rng;
 
   result: MatchResult | null = null;
@@ -132,7 +131,10 @@ export class Match {
     this.skins = { left: skinById(opts.skins.left), right: skinById(opts.skins.right) };
     this.left = createFighter("left");
     this.right = createFighter("right");
-    const typingOpts = { guardEnabled: true, strictMode: opts.strictMode };
+    // Both fighters type the same sentence bands: the tier follows the chosen bot
+    // speed, and a player facing a slow bot should not be handed 55-character
+    // sentences they cannot finish.
+    const typingOpts = { strictMode: opts.strictMode, tier: this.botTier };
     this.typing = {
       left: new TypingRun(createRng(seed ^ 0x9e3779b9), typingOpts),
       right: new TypingRun(createRng(seed ^ 0x85ebca6b), typingOpts),
@@ -175,13 +177,6 @@ export class Match {
     return side === "left" ? this.left : this.right;
   }
 
-  /** Rate at which a side has successfully parried, for the bot's yomi layer. */
-  parryRate(side: Side): number {
-    const t = this.typing[side];
-    if (t.parryAttempts === 0) return 0;
-    return t.parries / t.parryAttempts;
-  }
-
   // ---------------------------------------------------------------- input
 
   /** Feed one character from a human player. Returns true if it was consumed. */
@@ -212,7 +207,7 @@ export class Match {
       return true;
     }
     if (outcome.kind === "commit" && outcome.commit) {
-      this.commitWord(side, outcome.commit.prompt, outcome.commit.precision);
+      this.commitMove(side, outcome.commit);
     }
     return true;
   }
@@ -273,18 +268,20 @@ export class Match {
 
       const bot = this.bots[side];
       if (bot && this.phase !== "recovery") {
-        // The bot's commit goes through commitWord, the SAME door as the player's.
+        // The bot's commit goes through commitMove, the SAME door as the player's.
         // Applying damage inside the bot instead meant bots typed at full speed
         // and never landed a single hit.
-        const committed = bot.update(dt, this.typing[side], f);
+        // `threat` is the opponent's kick telegraph. A bot with the reflexes for it
+        // finishes the block word it is already on instead of eating the kick.
+        const threat = this.typing[other(side)].telegraphing();
+        const committed = bot.update(dt, this.typing[side], f, threat);
         if (committed) {
           this.publish({ type: "key", side, correct: true });
-          this.commitWord(side, committed.prompt, committed.precision);
+          this.commitMove(side, committed);
           if (this.phase !== "live" && this.phase !== "finish") break;
         }
       }
 
-      this.expireGuard(side);
       this.armedFinish(f);
       this.physics(f, dt);
 
@@ -301,8 +298,6 @@ export class Match {
       f.trail = f.trail.filter((p) => p.life > 0);
     }
 
-    this.telegraphs();
-
     // Blast line check -> recovery phase, not instant death.
     for (const side of ["left", "right"] as Side[]) {
       const f = this.fighter(side);
@@ -317,6 +312,9 @@ export class Match {
   private stepTimers(f: Fighter, dt: number): void {
     if (f.invuln > 0) f.invuln -= dt;
     if (f.counter > 0) f.counter -= dt;
+    // Clamped at zero, not merely counted down: a timer left at -1e-15 makes
+    // `guard > 0` false but `guard === 0` false too, and the test suite reads both.
+    if (f.guard > 0) f.guard = Math.max(0, f.guard - dt);
     if (f.hitCooldown > 0) f.hitCooldown -= dt;
     if (f.stateTimer > 0) {
       f.stateTimer -= dt;
@@ -354,32 +352,6 @@ export class Match {
   private finishZoom(): void {
     this.fx.zoom = 0.9;
     this.fx.addHitstop(HITSTOP_MAX);
-  }
-
-  /**
-   * The telegraph. A committed heavy word offers the defender a guard word. This
-   * is the defensive verb: a read available to the losing player that is not
-   * "type faster".
-   */
-  private telegraphs(): void {
-    for (const side of ["left", "right"] as Side[]) {
-      const active = this.typing[side].activePrompt();
-      const telegraphing =
-        !!active && active.tier === "heavy" && active.typed >= TELEGRAPH_COMMIT_CHARS;
-      const defender = other(side);
-      if (telegraphing && !this.guardAsked[side]) {
-        const offered = this.typing[defender].offerGuard();
-        this.guardAsked[side] = true;
-        if (offered) this.publish({ type: "guardLost", side: defender });
-      }
-      if (!telegraphing) this.guardAsked[side] = false;
-    }
-  }
-
-  private expireGuard(side: Side): void {
-    const t = this.typing[side];
-    const guard = t.prompts.find((p) => p.kind === "guard");
-    if (guard && guard.age > GUARD_WINDOW) t.clearGuard();
   }
 
   private trailWorthy(f: Fighter): boolean {
@@ -425,59 +397,94 @@ export class Match {
     if (f.y > STAGE.height + 200) f.y = STAGE.height + 200;
   }
 
-  // ---------------------------------------------------------------- commits
+  // ---------------------------------------------------------------- moves
 
-  private commitWord(side: Side, prompt: Prompt, precision: boolean): void {
+  /**
+   * A word completed. Every word in a sentence is a move, so this is where a block, a
+   * punch and a kick part company.
+   */
+  private commitMove(side: Side, commit: CommitResult): void {
     const f = this.fighter(side);
     const style = this.skins[side].trail;
     f.sinceCommit = 0;
+    f.stats.words++;
 
-    if (prompt.kind === "recovery") {
+    if (commit.prompt.kind === "recovery") {
       this.typing[side].exitRecovery();
       f.prompts = this.typing[side].prompts;
       this.recoverSuccess(side);
       return;
     }
 
-    if (prompt.kind === "guard") {
-      // Parry: locks incoming knockback AND opens a counter window.
-      f.counter = COUNTER_WINDOW;
-      f.vibrate = Math.max(f.vibrate, 0.6);
-      this.typing[side].clearGuard();
-      f.prompts = this.typing[side].prompts;
-      this.fx.emitGuard(f.x, f.y, this.skins[side].palette.t);
-      this.fx.addShake(6);
-      this.publish({ type: "parry", side, x: f.x, y: f.y });
-      return;
-    }
-
+    const move = commit.word.move;
     this.publish({
       type: "commit",
       side,
-      tier: prompt.tier,
-      precision,
+      move,
+      precision: commit.precision,
       x: f.x,
       y: f.y,
     });
-    this.applyHit(side, prompt.tier, precision, style.colour);
+
+    if (move === "block") {
+      this.raiseGuard(side);
+      return;
+    }
+    this.applyHit(side, move, commit.precision, style.colour);
   }
 
-  private applyHit(side: Side, tier: WordTier, precision: boolean, colour: string): void {
+  /**
+   * A block word went through, so the guard goes up for BLOCK_HOLD seconds.
+   *
+   * A block is not an attack and never damages. It buys the next second, which is what
+   * makes a sentence containing a small word a defensive option and one without it an
+   * all-in. The guard does not stack: a second block inside the window just refreshes
+   * the timer.
+   */
+  private raiseGuard(side: Side): void {
+    const f = this.fighter(side);
+    f.guard = BLOCK_HOLD;
+    f.stats.blocks++;
+    f.squash = Math.max(f.squash, 0.35);
+    this.fx.emitGuard(f.x, f.y, this.skins[side].palette.t);
+    this.fx.addShake(3);
+    this.publish({ type: "block", side, x: f.x, y: f.y });
+  }
+
+  /**
+   * Land a hit.
+   *
+   * The hit cooldown is what stops a fast typist locking the opponent out of the game
+   * entirely. A move that arrives during the window is spent for nothing, which is why
+   * timing beats volume here.
+   */
+  private applyHit(side: Side, move: AttackMove, precision: boolean, colour: string): void {
     const atk = this.fighter(side);
     const def = this.fighter(other(side));
-    const prof = TIER[tier];
+    const prof = MOVE[move];
 
-    // The hit cooldown is what stops a fast typist locking the opponent out of the
-    // game entirely. A word that arrives during the window is spent for nothing,
-    // which is why timing beats volume here.
     if (def.invuln > 0 || def.hitCooldown > 0) return;
 
-    const damage = prof.damage * (precision ? 1 + PRECISION_DAMAGE_BONUS : 1);
+    let damage = prof.damage * (precision ? 1 + PRECISION_DAMAGE_BONUS : 1);
 
-    // Situational multiplier. The parry protects; the counter cashes in.
+    // Situational multiplier, in the order the fight actually resolves: a raised guard
+    // smothers what is coming, a parried kick turns it back, and a counter cashes in.
     let r = 1;
-    let cashedCounter = false;
+    const guarded = def.guard > 0;
+    let parried = false;
     if (def.counter > 0) r *= PARRY_MULTIPLIER;
+    if (guarded) {
+      damage *= BLOCK_DAMAGE_MULTIPLIER;
+      if (move === "kick") {
+        // The read the defensive layer exists for: block the kick and you get the
+        // counter window, which is the answer to "type faster or lose".
+        r *= PARRY_MULTIPLIER;
+        parried = true;
+      } else {
+        r *= BLOCK_KB_MULTIPLIER;
+      }
+    }
+    let cashedCounter = false;
     if (atk.counter > 0) {
       r *= COUNTER_MULTIPLIER;
       cashedCounter = true;
@@ -507,14 +514,27 @@ export class Match {
     def.squash = Math.min(1, 0.5 + launch.kb / 400);
     atk.squash = 0.5;
     if (cashedCounter) atk.counter = 0;
-    // A completed attack consumes any guard window the defender was holding open.
-    this.typing[other(side)].clearGuard();
+    if (parried) {
+      def.stats.parried++;
+      def.counter = COUNTER_WINDOW;
+      def.squash = Math.max(def.squash, 0.6);
+      this.fx.addFlash(0.12);
+      this.publish({ type: "parry", side: other(side), x: def.x, y: def.y });
+    }
 
     const stop = Math.min(HITSTOP_MAX, Math.max(HITSTOP_MIN, launch.kb * 0.0005));
     this.fx.addHitstop(stop);
     this.fx.addShake(Math.min(26, 3 + launch.kb * 0.07));
     this.fx.emitImpact(def.x, def.y, launch.kb, colour, 1 + launch.kb / 500);
-    this.publish({ type: "hit", side: other(side), power: launch.kb, tier, x: def.x, y: def.y });
+    this.publish({
+      type: "hit",
+      side: other(side),
+      power: launch.kb,
+      move,
+      guarded,
+      x: def.x,
+      y: def.y,
+    });
   }
 
   // ---------------------------------------------------------------- recovery
@@ -554,10 +574,11 @@ export class Match {
     // A bot victim must be able to save itself, or every bot death is automatic.
     const bot = this.bots[side];
     if (bot) {
-      const committed = bot.update(dt, this.typing[side], f);
+      // No kick telegraph matters while falling: the save word is the only move left.
+      const committed = bot.update(dt, this.typing[side], f, false);
       if (committed) {
         this.publish({ type: "key", side, correct: true });
-        this.commitWord(side, committed.prompt, committed.precision);
+        this.commitMove(side, committed);
         if (this.phase !== "recovery") return;
       }
     }
@@ -642,13 +663,13 @@ export class Match {
       f.onGround = false;
       f.invuln = 0;
       f.counter = 0;
+      f.guard = 0;
       f.hitCooldown = 0;
       f.squash = 0;
       f.vibrate = 0;
       f.trail = [];
       f.sinceCommit = 0;
       this.typing[side].exitRecovery();
-      this.typing[side].clearGuard();
       f.prompts = this.typing[side].prompts;
       this.bots[side]?.reset();
     }
@@ -656,7 +677,6 @@ export class Match {
     this.recoveries = 0;
     this.finishSide = null;
     this.sparkFired = { left: false, right: false };
-    this.guardAsked = { left: false, right: false };
     this.roundTimer = ROUND_TIME;
     this.phase = "countdown";
     this.phaseTimer = COUNTDOWN_TIME;
@@ -704,6 +724,7 @@ export class Match {
       wpm: t.wpm(),
       accuracy: t.accuracy(),
       counter: f.counter > 0,
+      guard: f.guard > 0,
       invuln: f.invuln > 0,
       state: f.state,
       inRecovery: t.inRecovery,

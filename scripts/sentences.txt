@@ -1,0 +1,334 @@
+# Kinetype sentence source (hand-written).
+#
+# One sentence per line, lowercase a-z and single spaces only. No punctuation, no
+# digits, no proper nouns. Blank lines and # comments are ignored; longer lines are
+# wrapped for reading only, never in the data.
+#
+# scripts/build-sentences.py validates every line and sorts it into a band by total
+# character count, then writes game/sentences.ts. scripts/validate-sentences.py
+# re-checks the generated file.
+#
+# Rules the build enforces:
+#   - 4 to 11 words, 16 to 62 characters
+#   - no word longer than 12 characters
+#   - every sentence contains at least one block word (3 characters or fewer) and at
+#     least one punch word (4 to 7 characters), so every sentence can both defend and
+#     attack
+#   - no profanity, brands, web noise, abbreviations or lowercased proper nouns
+#   - this game is played in classrooms, so the bar is "a teacher would be fine with it"
+
+# ------------------------------------------------------------------ short band
+the cat naps on the mat
+we run to the old park
+my dog can jump the fence
+she can type very fast
+the sun sets on the bay
+you have one more try
+the kids play in the yard
+a cold wind hits the town
+he can fix the old truck
+the map shows a long road
+we swim in the warm sea
+the bus stops at our gate
+our team wins the big game
+the rain taps on the roof
+she reads a book at dusk
+the fire glows in the dark
+we like the smell of rain
+the horse runs past the gate
+you need to rest your eyes
+the cake is warm and sweet
+he sends a text to mum
+the bird sings on the wire
+we plant a tree each year
+the ice melts in the sun
+the shop is shut for now
+my bike has a flat tyre
+the band plays a loud tune
+we save coins in a jar
+the road turns by the hill
+the fish swim in the lake
+she draws a bird in class
+the hall is full of noise
+the clock ticks on the wall
+the fox hides in the grass
+we walk home in the dark
+the wind blows the dry leaves
+the boat drifts to the shore
+a warm fire and a good book
+the park is calm at dawn
+he writes a note to you
+the tea is still too hot
+our class reads a new book
+the van is packed with tools
+she rides the bus to work
+the moon looks bright tonight
+the tap drips all night
+we catch the last train home
+the dog sleeps by the door
+the game ends in a draw
+you type and you win
+the test is in the hall
+the sky turns pink at dusk
+the cat sits on my desk
+the shop sells fresh bread
+the wind is cold and sharp
+he runs five miles each day
+the kids laugh at the joke
+the pond is deep and cold
+our dog barks at the mail
+the fire is out at last
+the train is on time
+she types the last line
+we need a plan for this
+the road is wet and dark
+the web is down again
+the lamp is on the desk
+you have a good idea
+the ice cream melts fast
+the goal is close to hand
+we send the file to you
+the cat is not very shy
+the kite lifts in the wind
+we clean the yard on a hot day
+he keeps his tools in a box
+the bell rings at nine
+the corn grows in neat rows
+the ink in my pen is done
+the kids jump in the pool
+
+# ---------------------------------------------------------------- medium band
+the old truck rolls down the dusty road
+we pack the van and leave at dawn
+my sister reads a novel in the garden
+the team trains hard for the final game
+a warm wind moves the tall green grass
+the shop on the corner sells fresh bread
+you can learn to type much faster
+the rain falls soft on the tin roof
+he plants a small tree by the fence
+the bus is late so we wait in the shade
+she writes a long list of things to do
+the lake is calm and the sky is clear
+we need a plan before the big exam
+the dog digs a hole by the back gate
+the fire in the hall kept us warm
+we climb the hill for a wide view
+the train moves slow through the wet town
+the kids build a fort from old boxes
+our class sends a card to the nurse
+the roast is in the oven for an hour
+you should rest your eyes every hour
+the boat swings on the cold dark water
+the bird lands on the wooden fence
+a fresh coat of paint makes it new
+the phone rings twice and then goes quiet
+the moon looks calm over the dark bay
+she packs her bag and walks to the gate
+the pool is warm so we swim at night
+the young horse jumps the low fence
+we count the coins and save the rest
+the storm takes down the old power line
+the roads are wet so drive with care
+the bread is warm and the butter melts
+our team needs three more points to win
+the cat sleeps all day on the soft bed
+we write the report and send it today
+the fish are close to the rocky shore
+a sharp wind cuts across the open field
+the shop has fresh fruit at a good price
+the kids run laps round the dusty track
+she draws the plan on a sheet of paper
+we plant the seeds and wait for the rain
+the sun sinks low behind the tall trees
+the clock is wrong so we are late
+the class is quiet while the teacher reads
+my bike needs a new chain and a brake
+the wind blows the leaves across the yard
+we keep the tools in a box by the door
+the exam starts soon so read the notes
+the old man tells a long true story
+the streets are full of cars at noon
+you can fix the leak with a new ring
+the horse stands still in the cool shade
+we meet at the shop and walk to the park
+the night is cold so bring a warm coat
+the kids share the last slice of cake
+the tower is tall and the stairs are steep
+the rain stops and the clouds move on
+she sends the file before the shop closes
+the path leads down to a small dark cave
+we help the team move the heavy table
+the heat is high so drink lots of water
+the dog is old but it still loves a walk
+the house on the hill has a wide view
+the game is close and the crowd is loud
+the boat is tied to the old stone wall
+we plan the trip and book a cheap room
+the wind is strong so the kite pulls hard
+the goal is to type clean and stay calm
+the shop is closed so we cook at home
+the sun is harsh so wear a big hat
+we need to buy a new lock for the gate
+the pond is still and the reeds stand tall
+the train is full so we stand and wait
+she keeps a cool head when the test starts
+
+# ------------------------------------------------------------------ long band
+the students gather in the hall to hear the results
+we pack the car with food and water for the drive
+the community builds a new library on the open ground
+she practices the piano every evening before the show
+the weather changes fast so take a warm coat with you
+we need to measure the temperature before we begin
+the garden is full of vegetables that we planted in spring
+the class visits the museum to study the old machines
+he repairs the broken engine with the tools in the garage
+the company offers a discount on the whole order today
+we should practise the difficult sections of the song
+the mountain path is steep but the view is wonderful
+our neighbour collects rainwater in a large plastic drum
+the meeting is scheduled for tomorrow at the usual time
+the machine needs attention before the next production run
+the children are learning to spell the longest words
+the internet connection drops whenever the storm arrives
+she studies the map carefully before the long journey
+we respect the rules and we keep the environment clean
+the kitchen table is covered with paper and pencils
+the teacher explains the difference between the two methods
+the athlete trains in the morning and again in the evening
+we record the results and compare them with last year
+the project requires patience and a clear set of instructions
+the factory produces hundreds of components every hour
+the garden needs water and the grass needs a good cut
+the passengers wait patiently for the delayed connection
+the students organise a collection for the local shelter
+the manager approves the budget for the equipment
+we measure the distance and we calculate the time
+the community centre offers evening classes for adults
+the technician replaces the damaged part in the printer
+the weather forecast promises sunshine for the weekend
+the library is quiet so we can concentrate on our work
+the business grows slowly but the customers keep returning
+she completes the application before the final deadline
+the instructor demonstrates the correct position for the drill
+the temperature drops quickly when the cold front moves in
+we appreciate the effort that went into the presentation
+the restaurant provides a separate menu for young children
+the council approved the proposal for a new sports facility
+he practises his speech in front of a small audience
+the volunteers collected clothing for the winter programme
+the computer requires a password before it will continue
+the families watch the storm from a safe distance
+we discussed the schedule and agreed on a shorter meeting
+the engineers tested the bridge before the traffic returned
+the classroom is decorated with drawings and bright posters
+she improved her typing speed by practising every morning
+the organisation supports families in the surrounding area
+the electricity went out during the worst part of the storm
+we celebrated the achievement with a simple family dinner
+the mechanics repaired the vehicle in a single afternoon
+the manuscript was edited carefully before it was published
+the coach explained the strategy on a large white board
+the committee reviewed the applications and selected three
+the atmosphere in the stadium was electric before the match
+we purchased the equipment from a reliable local supplier
+the expedition prepared for the journey across the desert
+the instructor corrected his posture and demonstrated again
+the room stayed cool and the readings never changed
+the community responded generously to the emergency appeal
+the architect presented the drawings for the new library
+
+# --------------------------------------------- sentences that carry a kick word
+# A kick needs an eight-letter word, which a short sentence only fits if the word is
+# chosen for it. Without these, a player on the slow bot speeds never throws a kick
+# and can never land the knockout blow the game is built around.
+my keyboard is on the desk
+the mountain is cold at dawn
+we climb the mountain at dawn
+the sandwich is in my lunch bag
+she got a birthday card
+we share chocolate at dusk
+the elephant drinks a lot
+we travel together by train
+the computer is not slow
+the internet is down again
+my telephone is on the desk
+we exercise at the local gym
+the calendar is on the wall
+the football game is on now
+the holidays start today
+the building is very tall
+we remember that warm day
+we practise maths at home
+the distance is not that far
+the question is very hard
+my favourite colour is blue
+the hospital is on the hill
+our neighbours are very kind
+the afternoon is warm
+the mountain trail is steep
+the chocolate melts fast
+my birthday is next week
+the keyboard needs a clean
+the argument was not long
+we finished the whole project
+the sentence is far too long
+the computer stopped again
+the exercise takes an hour
+the visitors arrive at noon
+the pressure is too high
+the parcel delivery is on its way
+we practise typing each day
+the material is quite strong
+the electrical fault is fixed
+the teacher gave a difficult test
+my computer needs a new battery
+we watched the elephant at the pool
+the school calendar is on the wall
+the birthday cake is in the kitchen
+she practices the guitar each evening
+the vegetables are ready to be picked
+we travelled together for the whole week
+the mountain path takes about an hour
+the company sent the documents today
+the temperature dropped after the rain
+he measured the distance with a tape
+the restaurant is busy tonight
+the exercise was harder than we thought
+the internet is slow when it rains
+we remember the answer to that question
+the hospital is close to the main road
+the keyboard is dusty and needs a clean
+the chocolate cake is in the fridge
+the election results arrive tomorrow
+we should celebrate the small wins
+the security gate was open all night
+the afternoon sun is warm and bright
+the director gave a short speech
+the volunteers cleaned the river bank
+he finished the project on time
+the students gathered in the hall
+we collect the equipment today
+the mechanics fixed the engine
+the visitors arrived at noon
+the pressure in the tyre is low
+the delivery arrived at last
+the material is strong and light
+the electrical fault is now fixed
+we practise typing every morning
+the audience clapped for the team
+the manager signed the contract
+the family gathered for a meal
+the instructor showed us the drill
+our neighbour fixed the back gate
+the technician replaced the part
+the community built a new park
+the passengers waited by the gate
+the organisation sent a reply
+the engineer checked the bridge
+the engineer explained the fault
+we appreciate your kind support
+the volunteers packed the boxes
+the calendar shows a busy month
+the chocolate melted in the heat

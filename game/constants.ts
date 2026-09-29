@@ -77,10 +77,43 @@ export const STAGE = {
 };
 
 export const SPAWN = {
-  // Equidistant from their OWN blast line, so neither side starts at an advantage.
-  left: { x: 540, y: 500 },
-  right: { x: 740, y: 500 },
+  // Both fighters start in the MIDDLE of the main platform (340..940, centre 640).
+  // Ruan's call: after a KO the next round should restart in the centre of the stage,
+  // not out at the wide marks. 88px apart, which clears the 84px-wide sprite and the
+  // 62px hurtbox, so nobody starts already overlapping their opponent. Symmetric about
+  // the centre, so it is still equidistant from each own blast line and neither side
+  // starts at an advantage.
+  left: { x: 596, y: 500 },
+  right: { x: 684, y: 500 },
 };
+
+// ---------------------------------------------------------------- sentence moves
+/**
+ * A sentence is the unit of input and every word in it is a move:
+ *
+ *   <= BLOCK_MAX_CHARS                block  — raises a guard
+ *   BLOCK_MAX_CHARS+1 .. KICK_MIN_CHARS-1  punch — the ordinary hit
+ *   >= KICK_MIN_CHARS                 kick   — the heavy, KO-capable hit
+ *
+ * Kept in sync with scripts/build-sentences.py, which classifies the pool with the
+ * same two numbers, and asserted by game/tests/engine.test.ts.
+ */
+export const BLOCK_MAX_CHARS = 3;
+export const KICK_MIN_CHARS = 8;
+
+/**
+ * The guard a completed block word raises.
+ *
+ * The guard is short on purpose. A long one would mean the fighter who happens to be
+ * mid-sentence on a small word is permanently protected, and knockback would stop
+ * mattering. BLOCK_HOLD is roughly one word's worth of typing, so blocking is
+ * something a player aims rather than something they sit in.
+ */
+export const BLOCK_HOLD = 1.15; // seconds
+/** Knockback taken while guarded. A punch is smothered, never stopped dead. */
+export const BLOCK_KB_MULTIPLIER = 0.45;
+/** Damage taken while guarded. Chip damage, so the escalation clock keeps ticking. */
+export const BLOCK_DAMAGE_MULTIPLIER = 0.6;
 
 // ---------------------------------------------------------------- match
 export const ROUND_TIME = 90; // seconds
@@ -94,13 +127,12 @@ export const SPARK_DISTANCE = 240;
 
 // ---------------------------------------------------------------- typing
 /**
- * How many word prompts are live at once. One: the player is given a word, not a menu.
+ * How many prompts are live at once. One: the player is given a sentence, not a menu.
  * The input path only ever reads `prompts[0]`, so raising this number on its own is not
- * enough — a multi-word mode means reworking the input layer too.
+ * enough — a multi-sentence mode means reworking the input layer too.
  */
 export const PROMPT_COUNT = 1;
-/** Guard and recovery words replace the live word entirely. */
-export const GUARD_WORD_LENGTH = 5;
+/** The recovery word replaces the live sentence entirely, while falling. */
 export const RECOVERY_WORD_LENGTH = 5;
 export const RECOVERY_WINDOW = 1.8; // seconds
 export const RECOVERY_INVULN = 0.6; // seconds

@@ -2,28 +2,32 @@
 //
 // These assert the DESIGN CONTRACT in docs/GAME-DESIGN.md, not merely that the
 // code runs. If a balance decision is changed, these are the tests that should
-// fail: monotone knockback, the Brawl rule, the commit point, the parry, the
-// recovery path, and the anti-degeneracy requirement that damage (not the move
-// alone) is what kills.
+// fail: monotone knockback, the Brawl rule, the commit point, the sentence-to-move
+// mapping, the block, the parry, the recovery path, and the anti-degeneracy
+// requirement that damage (not the move alone) is what kills.
 //
 // Run: npx tsx game/tests/engine.test.ts
 
 import assert from "node:assert/strict";
 
-
 import {
-  GUARD_WORDS,
-  HEAVY_WORDS,
-  LIGHT_WORDS,
-  MID_WORDS,
-  POOLS,
+  BAND_BOUNDS,
   RECOVERY_WORDS,
-} from "../words";
+  SENTENCE_BANDS,
+  SENTENCES,
+  bandsForTier,
+} from "../sentences";
+import { charOffset, moveForWord, sentenceText, splitSentence } from "../moves";
 import {
+  BLOCK_DAMAGE_MULTIPLIER,
+  BLOCK_HOLD,
+  BLOCK_KB_MULTIPLIER,
+  BLOCK_MAX_CHARS,
   COUNTER_MULTIPLIER,
   HIT_COOLDOWN,
   HITSTUN_MAX,
   HITSTUN_MIN,
+  KICK_MIN_CHARS,
   PARRY_MULTIPLIER,
   PRECISION_DAMAGE_BONUS,
   PROMPT_COUNT,
@@ -33,8 +37,9 @@ import {
   SPAWN,
   STAGE,
   STEP,
+  TELEGRAPH_COMMIT_CHARS,
 } from "../constants";
-import { TIER, hitstunSeconds, knockbackUnits } from "../knockback";
+import { MOVE, hitstunSeconds, knockbackUnits } from "../knockback";
 import { Match } from "../match";
 import { TypingRun } from "../typing";
 import { createRng } from "../rng";
@@ -42,7 +47,7 @@ import { applyOutcome, DEFAULT_SAVE, type SaveData } from "../storage";
 import { purchaseWithCoins } from "../commerce";
 import { OPPONENT_SKIN_ID, PIXEL_KEYS, SKINS, SPRITE_H, SPRITE_W } from "../skins";
 import { contrast, THEMES, themeById, DEFAULT_THEME_ID } from "../themes";
-import type { MatchOptions, Side, WordTier } from "../types";
+import type { MatchOptions, MoveKind, Prompt, PromptKind, Side } from "../types";
 
 let passed = 0;
 let failed = 0;
@@ -75,7 +80,7 @@ const OPTS: MatchOptions = {
   skins: { left: "spark", right: "ember" },
 };
 
-/** A match with the right-hand bot removed, so tests fully control both sides. */
+/** A match with both bots removed, so tests fully control both sides. */
 function sandbox(seed = 42, opts: Partial<MatchOptions> = {}): Match {
   const m = new Match({ ...OPTS, ...opts }, seed, {}, "left");
   m.bots.right = null;
@@ -88,12 +93,6 @@ function toLive(m: Match, maxSteps = 400): void {
   let i = 0;
   while (m.phase !== "live" && i++ < maxSteps) m.step(STEP);
   assert.equal(m.phase, "live", "match should reach the live phase");
-}
-
-/** Types the live word out. There is exactly one, so there is no slot to choose. */
-function typeWord(m: Match, side: Side): void {
-  const text = m.typing[side].prompts[0].text;
-  for (const ch of text) m.type(side, ch);
 }
 
 /**
@@ -109,87 +108,511 @@ function stepWhileRunning(m: Match, maxSteps: number): void {
   }
 }
 
-/** One known word per tier, so a strike is fully deterministic. */
-const SAMPLE: Record<WordTier, string> = {
-  light: "dash",
-  mid: "planet",
-  heavy: "keyboard",
+/** One known one-word sentence per move, so a single move is fully deterministic. */
+const SAMPLE: Record<MoveKind, string> = {
+  block: "the",
+  punch: "planet",
+  kick: "keyboard",
 };
 
-/**
- * Put a known word of the given tier up and type it out.
- *
- * Prompt tiers are rolled at random. Cycling the pool by attacking in order to
- * fish for a tier accumulated damage on the target until it died, which made a
- * heavy word rarely reachable. Setting the prompt directly keeps the commit -> hit
- * path exercised end to end while making the test deterministic.
- */
-function strike(m: Match, side: Side, tier: WordTier): void {
-  const text = SAMPLE[tier];
-  m.typing[side].prompts[0] = {
+/** Build a prompt exactly as TypingRun would, for a sentence the test chooses. */
+function promptFor(text: string, kind: PromptKind = "attack"): Prompt {
+  const words = splitSentence(text);
+  return {
     id: 900000 + text.length,
-    text,
-    tier,
-    kind: "attack",
+    text: sentenceText(words),
+    words,
+    kind,
+    index: 0,
     typed: 0,
     flawed: false,
     age: 0,
   };
-  typeWord(m, side);
 }
 
-// ================================================================ word pools
+/**
+ * Put a known word up as a one-word sentence and type it out, so exactly one move
+ * fires.
+ *
+ * Sentence composition is rolled at random from a pool of hundreds, so cycling it to
+ * fish for a kick would accumulate damage on the target until it died and make the
+ * heavy rarely reachable. Injecting the prompt keeps the commit -> move path
+ * exercised end to end while making the test deterministic.
+ */
+function strike(m: Match, side: Side, move: MoveKind): void {
+  const text = SAMPLE[move];
+  m.typing[side].prompts[0] = promptFor(text);
+  for (const ch of text) m.type(side, ch);
+}
 
-section("Word pools (the balance table depends on these bands)");
+// ================================================================ sentence pool
 
-test("every light word is 3-4 characters", () => {
-  for (const w of LIGHT_WORDS) {
-    assert.ok(w.length >= 3 && w.length <= 4, `light word out of band: ${w} (${w.length})`);
+section("Sentence pool (the move sequence depends on these words)");
+
+test("every sentence is lowercase a-z words separated by single spaces", () => {
+  for (const s of SENTENCES) {
+    assert.match(s, /^[a-z]+( [a-z]+)*$/, `illegal characters or spacing in: ${s}`);
   }
 });
 
-test("every mid word is 5-7 characters", () => {
-  for (const w of MID_WORDS) {
-    assert.ok(w.length >= 5 && w.length <= 7, `mid word out of band: ${w} (${w.length})`);
+test("every sentence is 4 to 11 words, 16 to 62 characters", () => {
+  for (const s of SENTENCES) {
+    const words = s.split(" ");
+    assert.ok(
+      words.length >= 4 && words.length <= 11,
+      `${words.length} words in: ${s}`,
+    );
+    assert.ok(s.length >= 16 && s.length <= 62, `${s.length} characters in: ${s}`);
   }
 });
 
-test("every heavy word is 8+ characters", () => {
-  for (const w of HEAVY_WORDS) {
-    assert.ok(w.length >= 8, `heavy word out of band: ${w} (${w.length})`);
+test("no word in any sentence is longer than 12 characters", () => {
+  for (const s of SENTENCES) {
+    for (const w of s.split(" ")) {
+      assert.ok(w.length <= 12, `word too long (${w.length}): ${w} in "${s}"`);
+    }
   }
 });
 
-test("guard words are exactly 5 characters", () => {
-  for (const w of GUARD_WORDS) assert.equal(w.length, 5, `guard word not 5: ${w}`);
+test("every sentence can both defend and attack", () => {
+  // A sentence with no block word cannot defend, and one with no punch word is a
+  // wasted exchange. scripts/build-sentences.py refuses to write either.
+  for (const s of SENTENCES) {
+    const moves = new Set(s.split(" ").map(moveForWord));
+    assert.ok(moves.has("block"), `no block word in: ${s}`);
+    assert.ok(moves.has("punch"), `no punch word in: ${s}`);
+  }
+});
+
+test("kicks exist at every sentence band", () => {
+  // Otherwise a player on a slow bot speed never throws a kick and can never land
+  // the knockout the game is built around.
+  for (const [band, sentences] of Object.entries(SENTENCE_BANDS)) {
+    const withKick = sentences.filter((s) => s.split(" ").some((w) => moveForWord(w) === "kick"));
+    assert.ok(
+      withKick.length > 0,
+      `${band}: no sentence contains a kick word (needs ${KICK_MIN_CHARS}+ characters)`,
+    );
+  }
+});
+
+test("the bands follow total character count, not word count", () => {
+  for (const s of SENTENCE_BANDS.short) {
+    assert.ok(s.length <= BAND_BOUNDS.short, `${s.length} chars in the short band: ${s}`);
+  }
+  for (const s of SENTENCE_BANDS.medium) {
+    assert.ok(
+      s.length > BAND_BOUNDS.short && s.length <= BAND_BOUNDS.medium,
+      `${s.length} chars is not medium: ${s}`,
+    );
+  }
+  for (const s of SENTENCE_BANDS.long) {
+    assert.ok(s.length > BAND_BOUNDS.medium, `${s.length} chars is not long: ${s}`);
+  }
+  assert.equal(
+    SENTENCES.length,
+    SENTENCE_BANDS.short.length + SENTENCE_BANDS.medium.length + SENTENCE_BANDS.long.length,
+  );
+});
+
+test("no duplicate sentences", () => {
+  const seen = new Set<string>();
+  for (const s of SENTENCES) {
+    assert.ok(!seen.has(s), `duplicate sentence: ${s}`);
+    seen.add(s);
+  }
 });
 
 test("recovery words are exactly 5 characters", () => {
   for (const w of RECOVERY_WORDS) assert.equal(w.length, 5, `recovery word not 5: ${w}`);
 });
 
-test("all words are lowercase a-z with no punctuation or digits", () => {
-  for (const pool of Object.values(POOLS)) {
-    for (const w of pool) assert.match(w, /^[a-z]+$/, `bad characters in: ${w}`);
-  }
-  for (const w of [...GUARD_WORDS, ...RECOVERY_WORDS]) assert.match(w, /^[a-z]+$/);
+// ================================================================ move mapping
+
+section("Moves (word difficulty decides what the word does)");
+
+test("a small word blocks, a normal word punches, a difficult word kicks", () => {
+  assert.equal(BLOCK_MAX_CHARS, 3);
+  assert.equal(KICK_MIN_CHARS, 8);
+  assert.equal(moveForWord("the"), "block");
+  assert.equal(moveForWord("cat"), "block");
+  assert.equal(moveForWord("naps"), "punch");
+  assert.equal(moveForWord("planet"), "punch");
+  assert.equal(moveForWord("keyboard"), "kick");
+  assert.equal(moveForWord("temperature"), "kick");
 });
 
-test("no duplicate words within a pool", () => {
-  for (const [name, pool] of Object.entries(POOLS)) {
-    const seen = new Set<string>();
-    for (const w of pool) {
-      assert.ok(!seen.has(w), `duplicate in ${name}: ${w}`);
-      seen.add(w);
+test("the thresholds are a contiguous partition of word lengths", () => {
+  for (let len = 1; len <= 16; len++) {
+    const word = "a".repeat(len);
+    const move = moveForWord(word);
+    if (len <= BLOCK_MAX_CHARS) assert.equal(move, "block", `${len} chars should block`);
+    else if (len >= KICK_MIN_CHARS) assert.equal(move, "kick", `${len} chars should kick`);
+    else assert.equal(move, "punch", `${len} chars should punch`);
+  }
+});
+
+test("splitSentence produces the whole sentence back", () => {
+  const text = "the students gather in the hall";
+  const words = splitSentence(text);
+  assert.equal(words.length, 6);
+  assert.equal(sentenceText(words), text, "the split must be lossless");
+  assert.equal(words[5].move, "punch");
+  assert.equal(words[4].move, "block");
+});
+
+test("charOffset skips the space after each word", () => {
+  const words = splitSentence("the cat naps");
+  assert.equal(charOffset(words, 0), 0);
+  assert.equal(charOffset(words, 1), 4, "after 'the ' the cursor is on 'c'");
+  assert.equal(charOffset(words, 2), 8, "after 'cat ' the cursor is on 'n'");
+});
+
+// ================================================================ typed input
+
+section("Typing (the sentence advances one word at a time)");
+
+test("a partial word never commits", () => {
+  const run = new TypingRun(createRng(7), { strictMode: false, tier: 4 });
+  const word = run.activeWord()!;
+  for (let i = 0; i < word.text.length - 1; i++) {
+    const out = run.handleChar(word.text[i]);
+    assert.notEqual(out.kind, "commit", `committed early at char ${i}`);
+  }
+  assert.equal(run.words, 0, "no word should be committed yet");
+});
+
+test("the final correct character is what fires the move", () => {
+  const run = new TypingRun(createRng(7), { strictMode: false, tier: 4 });
+  const word = run.activeWord()!;
+  let committed = false;
+  for (const ch of word.text) {
+    const out = run.handleChar(ch);
+    if (out.kind === "commit") committed = true;
+  }
+  assert.ok(committed, "the word should commit on its last character");
+  assert.equal(run.words, 1);
+});
+
+test("spaces are never typed: the cursor jumps to the next word's first letter", () => {
+  const run = new TypingRun(createRng(19), { strictMode: false, tier: 4 });
+  const prompt = run.prompts[0];
+  const first = prompt.words[0];
+  for (const ch of first.text) run.handleChar(ch);
+  assert.ok(prompt.index === 1, "the live word should have advanced");
+  assert.equal(prompt.typed, charOffset(prompt.words, 1));
+  assert.notEqual(prompt.text[prompt.typed], " ", "the cursor must not land on a space");
+  assert.equal(prompt.text[prompt.typed], prompt.words[1].text[0]);
+});
+
+test("a mistype costs that word's bonus but keeps the player's progress", () => {
+  const run = new TypingRun(createRng(3), { strictMode: false, tier: 4 });
+  const word = run.activeWord()!;
+  run.handleChar(word.text[0]);
+  const wrong = run.handleChar(word.text[1] === "z" ? "q" : "z");
+  assert.equal(wrong.kind, "wrong");
+  assert.equal(wrong.penalise, false, "default mode must not penalise");
+  assert.equal(word.typed, 1, "progress must be kept");
+  assert.ok(word.flawed, "the precision bonus for THIS word is forfeit");
+});
+
+test("a mistake on one word does not write off the next one", () => {
+  // Per-word precision. A single flag per sentence meant one typo early on killed
+  // the bonus for every remaining word, which punished the length of the sentence
+  // rather than the mistake.
+  const run = new TypingRun(createRng(5), { strictMode: false, tier: 4 });
+  const prompt = run.prompts[0];
+  const first = prompt.words[0];
+  run.handleChar(first.text[0]);
+  run.handleChar(first.text[1] === "z" ? "q" : "z");
+  for (let i = 1; i < first.text.length; i++) run.handleChar(first.text[i]);
+  const second = prompt.words[1];
+  let precision: boolean | null = null;
+  for (const ch of second.text) {
+    const out = run.handleChar(ch);
+    if (out.kind === "commit" && out.commit) precision = out.commit.precision;
+  }
+  assert.equal(precision, true, "a clean word must still earn its bonus");
+});
+
+test("strict mode reports a penalty instead (opt-in only)", () => {
+  const run = new TypingRun(createRng(3), { strictMode: true, tier: 4 });
+  const word = run.activeWord()!;
+  run.handleChar(word.text[0]);
+  const wrong = run.handleChar(word.text[1] === "z" ? "q" : "z");
+  assert.equal(wrong.penalise, true);
+});
+
+test("precision scales damage by the designed bonus", () => {
+  assert.equal(PRECISION_DAMAGE_BONUS, 0.25);
+});
+
+test("every keystroke counts from the first one", () => {
+  const run = new TypingRun(createRng(23), { strictMode: false, tier: 4 });
+  // A one-letter word would commit on its own first press, which would test nothing,
+  // so put a known multi-word sentence up instead of whatever was rolled.
+  run.prompts[0] = promptFor("the cat naps on the mat");
+  const word = run.activeWord()!;
+  const out = run.handleChar(word.text[0]);
+  assert.equal(out.kind, "correct", "the first letter must count toward the word");
+  assert.equal(word.typed, 1, "and must advance it");
+  assert.equal(run.errors, 0, "the first letter must never count as an error");
+});
+
+test("one prompt is live at a time and the next sentence arrives with no gap", () => {
+  const run = new TypingRun(createRng(23), { strictMode: false, tier: 4 });
+  assert.equal(PROMPT_COUNT, 1);
+  assert.equal(run.prompts.length, 1, "exactly one prompt");
+  const first = run.prompts[0].text;
+  let sentences = 0;
+  while (run.prompts[0].text === first && sentences < 200) {
+    const word = run.activeWord();
+    if (!word) break;
+    for (const ch of word.text) {
+      const out = run.handleChar(ch);
+      if (out.kind === "commit" && out.commit?.sentenceDone) sentences++;
     }
   }
+  assert.equal(sentences, 1, "the sentence should finish exactly once");
+  assert.equal(run.prompts.length, 1, "handing over the next sentence changes nothing");
+  assert.equal(run.prompts[0].typed, 0, "the next sentence starts clean");
+  assert.notEqual(run.prompts[0].text, first, "and is not the sentence just typed");
 });
 
-// ================================================================ knockback
+test("sentences scale with the chosen difficulty", () => {
+  // A 20 WPM player handed a 55-character sentence spends half a minute on it.
+  assert.deepEqual(bandsForTier(0), ["short"]);
+  assert.ok(bandsForTier(4).includes("medium"), "mid tiers should see medium sentences");
+  assert.ok(bandsForTier(8).includes("long"), "the top of the ladder gets long sentences");
+  for (let tier = 0; tier <= 8; tier++) {
+    const bands = bandsForTier(tier);
+    assert.ok(bands.length > 0, `tier ${tier} must have a band`);
+    for (const b of bands) assert.ok(b in SENTENCE_BANDS, `unknown band ${b}`);
+  }
+});
+
+test("the telegraph fires only on a kick, and only once it has been committed to", () => {
+  const run = new TypingRun(createRng(31), { strictMode: false, tier: 4 });
+  const words = run.prompts[0].words;
+  const kickAt = words.findIndex((w) => w.move === "kick");
+  assert.ok(kickAt >= 0, "this seed should offer a kick");
+  const kick = words[kickAt];
+  for (let i = 0; i < kickAt; i++) for (const ch of words[i].text) run.handleChar(ch);
+  assert.equal(run.telegraphing(), false, "an untouched kick is not a telegraph");
+  for (let i = 0; i < TELEGRAPH_COMMIT_CHARS; i++) run.handleChar(kick.text[i]);
+  assert.equal(run.telegraphing(), true, "two characters in, the kick is legible");
+});
+
+// ================================================================ the defensive verb
+
+section("Blocks (a small word is a guard, and a blocked kick is a parry)");
+
+test("completing a block word raises a guard", () => {
+  const m = sandbox();
+  toLive(m);
+  assert.equal(m.fighter("left").guard, 0, "no guard before the block");
+  strike(m, "left", "block");
+  assert.equal(m.fighter("left").guard, BLOCK_HOLD, "the guard should go up");
+  assert.equal(m.typing.left.blocks, 1);
+});
+
+test("a block never damages the opponent", () => {
+  const m = sandbox();
+  toLive(m);
+  m.fighter("right").damage = 20;
+  strike(m, "left", "block");
+  assert.equal(m.fighter("right").damage, 20, "a block is not an attack");
+  assert.equal(m.fighter("right").vx, 0, "and it does not push");
+});
+
+test("a punch into a guard is smothered by BLOCK_KB_MULTIPLIER", () => {
+  const launchThrough = (guarded: boolean) => {
+    const m = sandbox();
+    toLive(m);
+    m.fighter("right").damage = 60;
+    if (guarded) m.fighter("right").guard = BLOCK_HOLD;
+    strike(m, "left", "punch");
+    return Math.abs(m.fighter("right").vx);
+  };
+  const open = launchThrough(false);
+  const blocked = launchThrough(true);
+  assert.ok(open > 0, "the unguarded punch should launch");
+  assert.ok(blocked < open, `a guard must reduce knockback: ${blocked} vs ${open}`);
+  const ratio = blocked / open;
+
+  // The guard does two things at once: it multiplies knockback by BLOCK_KB_MULTIPLIER
+  // and it cuts the damage dealt, and knockback is itself a function of damage dealt.
+  // So the measured ratio is the product of both effects, and the assertion is exact
+  // rather than approximate. A clean strike carries the +25% precision bonus.
+  const strikeDamage = MOVE.punch.damage * (1 + PRECISION_DAMAGE_BONUS);
+  const kbOf = (damage: number, situational: number) =>
+    knockbackUnits({
+      targetDamage: 60,
+      damage,
+      weight: 100,
+      scaling: MOVE.punch.scaling,
+      base: MOVE.punch.base,
+      situational,
+    });
+  const expected =
+    kbOf(strikeDamage * BLOCK_DAMAGE_MULTIPLIER, BLOCK_KB_MULTIPLIER) / kbOf(strikeDamage, 1);
+  assert.ok(
+    Math.abs(ratio - expected) < 0.01,
+    `expected ${expected.toFixed(3)}x, got ${ratio.toFixed(3)}x`,
+  );
+  assert.ok(ratio < BLOCK_KB_MULTIPLIER, "chip damage must compound the reduction");
+});
+
+test("a guarded hit deals chip damage, not nothing", () => {
+  const m = sandbox();
+  toLive(m);
+  m.fighter("right").damage = 40;
+  m.fighter("right").guard = BLOCK_HOLD;
+  strike(m, "left", "punch");
+  const dealt = m.fighter("right").damage - 40;
+  assert.ok(dealt > 0, "damage must still accumulate or the clock stops");
+  const clean = MOVE.punch.damage * (1 + PRECISION_DAMAGE_BONUS);
+  assert.ok(dealt < clean, `chip damage should be less than a clean hit: ${dealt}`);
+  assert.ok(
+    Math.abs(dealt - clean * BLOCK_DAMAGE_MULTIPLIER) < 1e-6,
+    "chip damage should use BLOCK_DAMAGE_MULTIPLIER",
+  );
+});
+
+test("a kick into a guard is parried: third knockback and a counter window", () => {
+  const launchThrough = (guarded: boolean) => {
+    const m = sandbox();
+    toLive(m);
+    m.fighter("right").damage = 60;
+    if (guarded) m.fighter("right").guard = BLOCK_HOLD;
+    strike(m, "left", "kick");
+    return { vx: Math.abs(m.fighter("right").vx), counter: m.fighter("right").counter };
+  };
+  const open = launchThrough(false);
+  const blocked = launchThrough(true);
+  assert.ok(blocked.vx < open.vx, "the parry must reduce a kick: it is the read");
+  const ratio = blocked.vx / open.vx;
+
+  const strikeDamage = MOVE.kick.damage * (1 + PRECISION_DAMAGE_BONUS);
+  const kbOf = (damage: number, situational: number) =>
+    knockbackUnits({
+      targetDamage: 60,
+      damage,
+      weight: 100,
+      scaling: MOVE.kick.scaling,
+      base: MOVE.kick.base,
+      situational,
+    });
+  const expected =
+    kbOf(strikeDamage * BLOCK_DAMAGE_MULTIPLIER, PARRY_MULTIPLIER) / kbOf(strikeDamage, 1);
+  assert.ok(
+    Math.abs(ratio - expected) < 0.01,
+    `expected ${expected.toFixed(3)}x, got ${ratio.toFixed(3)}x`,
+  );
+  assert.equal(open.counter, 0, "an unguarded kick grants nothing");
+  assert.ok(blocked.counter > 0, "a parried kick opens the counter window");
+});
+
+test("the guard expires after BLOCK_HOLD", () => {
+  const m = sandbox();
+  toLive(m);
+  strike(m, "left", "block");
+  assert.ok(m.fighter("left").guard > 0);
+  for (let i = 0; i < Math.ceil((BLOCK_HOLD + 0.1) * 60); i++) m.step(STEP);
+  assert.equal(m.fighter("left").guard, 0, "the guard must run out");
+});
+
+test("a block word that is only partly typed raises nothing", () => {
+  const m = sandbox();
+  toLive(m);
+  const text = SAMPLE.block;
+  m.typing.left.prompts[0] = promptFor(text);
+  for (const ch of text.slice(0, -1)) m.type("left", ch);
+  assert.equal(m.fighter("left").guard, 0, "a partial word must not raise a guard");
+});
+
+test("a counter is cashed in on the next landed move and then consumed", () => {
+  const m = sandbox();
+  toLive(m);
+  const atk: Side = "left";
+  m.fighter(atk).counter = 5;
+  strike(m, atk, "punch");
+  assert.equal(m.fighter(atk).counter, 0, "the counter should be spent");
+});
+
+test("the counter multiplier is stronger than a plain hit", () => {
+  const mk = (withCounter: boolean) => {
+    const m = sandbox();
+    toLive(m);
+    m.fighter("right").damage = 40;
+    if (withCounter) m.fighter("left").counter = 5;
+    strike(m, "left", "punch");
+    return Math.abs(m.fighter("right").vx);
+  };
+  assert.ok(mk(true) > mk(false) * 1.5, "a cashed counter should hit much harder");
+  assert.ok(COUNTER_MULTIPLIER > 1);
+});
+
+// ================================================================ escalation
+
+section("Escalation (damage is what kills, not the move alone)");
+
+test("a kick at 0% does NOT cross the blast line from spawn", () => {
+  const m = sandbox();
+  toLive(m);
+  strike(m, "left", "kick");
+  for (let i = 0; i < 240 && m.phase === "live"; i++) m.step(STEP);
+  assert.notEqual(m.phase, "recovery", "a kick at 0% must not kill");
+});
+
+test("a kick at high damage DOES cross the blast line", () => {
+  const m = sandbox();
+  toLive(m);
+  m.fighter("right").damage = 110;
+  strike(m, "left", "kick");
+  let crossed = false;
+  for (let i = 0; i < 400; i++) {
+    m.step(STEP);
+    if (m.phase === "recovery" || m.recoveryVictim) {
+      crossed = true;
+      break;
+    }
+    if (m.phase === "roundOver" || m.phase === "matchOver") {
+      crossed = true;
+      break;
+    }
+  }
+  assert.ok(crossed, "a kick at 110% should reach the blast line");
+});
+
+test("at equal damage a kick out-pushes a punch", () => {
+  const at = (move: "punch" | "kick") =>
+    knockbackUnits({
+      targetDamage: 60,
+      damage: MOVE[move].damage,
+      weight: 100,
+      scaling: MOVE[move].scaling,
+      base: MOVE[move].base,
+      situational: 1,
+    });
+  assert.ok(at("kick") > at("punch") * 1.5, `a kick should be much stronger`);
+});
+
+test("punches have higher base knockback than kicks (positional value early)", () => {
+  assert.ok(MOVE.punch.base > MOVE.kick.base);
+});
+
+// ================================================================ knockback maths
 
 section("Knockback (monotone, superlinear, escalation clock)");
 
-const baseHit = { damage: 8, weight: 100, scaling: 1.05, base: 20, situational: 1 };
+const baseHit = {
+  damage: MOVE.punch.damage,
+  weight: 100,
+  scaling: MOVE.punch.scaling,
+  base: MOVE.punch.base,
+  situational: 1,
+};
 
 test("knockback rises with accumulated damage", () => {
   const k0 = knockbackUnits({ ...baseHit, targetDamage: 0 });
@@ -203,35 +626,10 @@ test("knockback growth is superlinear in damage (it is a clock, not a health bar
   const a = knockbackUnits({ ...baseHit, targetDamage: 20 });
   const b = knockbackUnits({ ...baseHit, targetDamage: 40 });
   const c = knockbackUnits({ ...baseHit, targetDamage: 80 });
-  // Equal damage steps must produce growing knockback steps.
   assert.ok(
     c - b > b - a,
     `expected accelerating knockback, got steps ${(b - a).toFixed(1)} then ${(c - b).toFixed(1)}`,
   );
-});
-
-test("at equal damage a heavy word out-pushes a light word", () => {
-  const light = knockbackUnits({
-    targetDamage: 60,
-    damage: TIER.light.damage,
-    weight: 100,
-    scaling: TIER.light.scaling,
-    base: TIER.light.base,
-    situational: 1,
-  });
-  const heavy = knockbackUnits({
-    targetDamage: 60,
-    damage: TIER.heavy.damage,
-    weight: 100,
-    scaling: TIER.heavy.scaling,
-    base: TIER.heavy.base,
-    situational: 1,
-  });
-  assert.ok(heavy > light * 1.5, `heavy should be much stronger: ${heavy} vs ${light}`);
-});
-
-test("light words have higher base knockback than heavies (positional value early)", () => {
-  assert.ok(TIER.light.base > TIER.heavy.base);
 });
 
 // ================================================================ the Brawl rule
@@ -251,8 +649,6 @@ test("hitstun is clamped to its bounds", () => {
 });
 
 test("a Brawl-style fixed escape timer is NOT used (hitstun differs per knockback)", () => {
-  // The failure mode being guarded against: escape at a constant frame count
-  // regardless of knockback. Two very different knockbacks must not share hitstun.
   const low = hitstunSeconds(60);
   const high = hitstunSeconds(210);
   assert.notEqual(low, high, "hitstun must not be constant across knockback levels");
@@ -263,9 +659,6 @@ test("a Brawl-style fixed escape timer is NOT used (hitstun differs per knockbac
 section("Anti-lockout (a victim must always get a turn)");
 
 test("the hit cooldown exceeds the maximum hitstun, guaranteeing a free window", () => {
-  // Found by playing the game in a browser: a fast player landed a word every
-  // ~0.17s against a 0.75s max hitstun, so the opponent was stunned forever and
-  // never got to type. That is a degenerate state, not a difficulty setting.
   assert.ok(
     HIT_COOLDOWN > HITSTUN_MAX,
     `HIT_COOLDOWN (${HIT_COOLDOWN}) must exceed HITSTUN_MAX (${HITSTUN_MAX})`,
@@ -279,215 +672,24 @@ test("a second hit cannot land while the victim is in hit cooldown", () => {
   toLive(m);
   m.fighter("right").damage = 20;
 
-  strike(m, "left", "light");
+  strike(m, "left", "punch");
   const afterFirst = m.fighter("right").damage;
   assert.ok(afterFirst > 20, "the first hit should land");
 
-  // A second word immediately after must be absorbed by the cooldown.
-  strike(m, "left", "light");
-  assert.equal(
-    m.fighter("right").damage,
-    afterFirst,
-    "a hit inside the cooldown window must not deal damage",
-  );
+  // A second move immediately after must be absorbed by the cooldown.
+  strike(m, "left", "punch");
+  assert.equal(m.fighter("right").damage, afterFirst, "the cooldown must absorb the second hit");
 });
 
 test("after the cooldown expires the victim can be hit again", () => {
   const m = sandbox();
   toLive(m);
   m.fighter("right").damage = 20;
-  strike(m, "left", "light");
-  const afterFirst = m.fighter("right").damage;
-
-  for (let i = 0; i < Math.ceil((HIT_COOLDOWN + 0.05) * 60); i++) m.step(STEP);
-  strike(m, "left", "light");
-  assert.ok(
-    m.fighter("right").damage > afterFirst,
-    "once the cooldown lapses the next hit must land",
-  );
-});
-
-// ================================================================ typed input
-
-section("Typing (commit point is the whole word)");
-
-test("a partial word never commits", () => {
-  const run = new TypingRun(createRng(7), { guardEnabled: true, strictMode: false });
-  const text = run.prompts[0].text;
-  for (let i = 0; i < text.length - 1; i++) {
-    const out = run.handleChar(text[i]);
-    assert.notEqual(out.kind, "commit", `committed early at char ${i}`);
-  }
-  assert.equal(run.words, 0, "no word should be committed yet");
-});
-
-test("the final correct character is what fires the push", () => {
-  const run = new TypingRun(createRng(7), { guardEnabled: true, strictMode: false });
-  const text = run.prompts[0].text;
-  let committed = false;
-  for (const ch of text) {
-    const out = run.handleChar(ch);
-    if (out.kind === "commit") committed = true;
-  }
-  assert.ok(committed, "the word should commit on its last character");
-  assert.equal(run.words, 1);
-});
-
-test("there is no sub-word window: an early extra character cannot commit", () => {
-  const run = new TypingRun(createRng(11), { guardEnabled: true, strictMode: false });
-  const text = run.prompts[0].text;
-  run.handleChar(text[0]);
-  // The exploit from the research is holding the last letter for the right
-  // moment. There is nothing to hold: the character is either correct or not.
-  const extra = run.handleChar(text[1]);
-  assert.notEqual(extra.kind, "commit");
-});
-
-test("a mistype loses the precision bonus but keeps the player's progress", () => {
-  const run = new TypingRun(createRng(3), { guardEnabled: true, strictMode: false });
-  const text = run.prompts[0].text;
-  run.handleChar(text[0]);
-  const wrong = run.handleChar("z" === text[1] ? "q" : "z");
-  assert.equal(wrong.kind, "wrong");
-  assert.equal(wrong.penalise, false, "default mode must not penalise");
-  // With three words live, a mistype wiped the word and let the player switch. With one
-  // word, wiping it would just be punishing: progress stands and the player carries on.
-  assert.equal(run.prompts[0].typed, 1, "progress must be kept");
-  assert.ok(run.prompts[0].flawed, "the precision bonus is forfeit");
-});
-
-test("strict mode reports a penalty instead (opt-in only)", () => {
-  const run = new TypingRun(createRng(3), { guardEnabled: true, strictMode: true });
-  const text = run.prompts[0].text;
-  run.handleChar(text[0]);
-  const wrong = run.handleChar("z" === text[1] ? "q" : "z");
-  assert.equal(wrong.penalise, true);
-});
-
-test("precision scales damage by the designed bonus", () => {
-  assert.equal(PRECISION_DAMAGE_BONUS, 0.25);
-});
-
-test("every keystroke counts from the first one", () => {
-  // Regression. With three words live, the first keystroke was spent PICKING a word: it
-  // never advanced the prompt, so the player had to type that same letter a second time,
-  // and a letter matching no word counted as an error.
-  const run = new TypingRun(createRng(23), { guardEnabled: true, strictMode: false });
-  const text = run.prompts[0].text;
-  const out = run.handleChar(text[0]);
-  assert.equal(out.kind, "correct", "the first letter must count toward the word");
-  assert.equal(run.prompts[0].typed, 1, "and must advance it");
-  assert.equal(run.errors, 0, "the first letter must never count as an error");
-});
-
-test("one word is live at a time and the next arrives with no gap", () => {
-  const run = new TypingRun(createRng(23), { guardEnabled: true, strictMode: false });
-  assert.equal(PROMPT_COUNT, 1);
-  assert.equal(run.prompts.length, 1, "exactly one prompt");
-  const first = run.prompts[0].text;
-  for (const ch of first) run.handleChar(ch);
-  assert.equal(run.words, 1);
-  assert.equal(run.prompts.length, 1, "handing over the next word changes nothing about the count");
-  assert.equal(run.prompts[0].typed, 0, "the next word starts clean");
-  assert.notEqual(run.prompts[0].text, first, "and is not the word just typed");
-});
-
-// ================================================================ the parry
-
-section("The defensive verb (parry and counter)");
-
-test("completing a guard word opens a counter window", () => {
-  const m = sandbox();
-  toLive(m);
-  const def: Side = "right";
-  assert.ok(m.typing[def].offerGuard(), "a guard word should be offered");
-  assert.equal(m.typing[def].prompts[0].kind, "guard", "the guard REPLACES the live word");
-  typeWord(m, def);
-  assert.ok(m.fighter(def).counter > 0, "the parry should grant a counter window");
-});
-
-test("a parry multiplies incoming knockback by PARRY_MULTIPLIER", () => {
-  const m = sandbox();
-  toLive(m);
-  const atk: Side = "left";
-  const def: Side = "right";
-
-  // Baseline: a heavy word with no parry active.
-  m.fighter(def).damage = 60;
-  strike(m, atk, "heavy");
-  const unparried = Math.abs(m.fighter(def).vx);
-  assert.ok(unparried > 0, "the hit should have launched the target");
-
-  // Reset and repeat with the parry live.
-  const m2 = sandbox();
-  toLive(m2);
-  m2.fighter(def).damage = 60;
-  assert.ok(m2.typing[def].offerGuard());
-  typeWord(m2, def);
-  assert.ok(m2.fighter(def).counter > 0);
-  strike(m2, atk, "heavy");
-  const parried = Math.abs(m2.fighter(def).vx);
-
-  assert.ok(parried < unparried, `parry should reduce knockback: ${parried} vs ${unparried}`);
-  const ratio = parried / unparried;
-  assert.ok(
-    Math.abs(ratio - PARRY_MULTIPLIER) < 0.06,
-    `expected roughly ${PARRY_MULTIPLIER}x, got ${ratio.toFixed(3)}x`,
-  );
-});
-
-test("a counter is cashed in on the next landed word and then consumed", () => {
-  const m = sandbox();
-  toLive(m);
-  const atk: Side = "left";
-  m.fighter(atk).counter = 5;
-  strike(m, atk, "mid");
-  assert.equal(m.fighter(atk).counter, 0, "the counter should be spent");
-});
-
-test("the counter multiplier is stronger than a plain hit", () => {
-  const mk = (withCounter: boolean) => {
-    const m = sandbox();
-    toLive(m);
-    m.fighter("right").damage = 40;
-    if (withCounter) m.fighter("left").counter = 5;
-    strike(m, "left", "mid");
-    return Math.abs(m.fighter("right").vx);
-  };
-  assert.ok(mk(true) > mk(false) * 1.5, "a cashed counter should hit much harder");
-  assert.ok(COUNTER_MULTIPLIER > 1);
-});
-
-// ================================================================ escalation
-
-section("Escalation (damage is what kills, not the move alone)");
-
-test("a heavy word at 0% does NOT cross the blast line from spawn", () => {
-  const m = sandbox();
-  toLive(m);
-  strike(m, "left", "heavy");
-  for (let i = 0; i < 240 && m.phase === "live"; i++) m.step(STEP);
-  assert.notEqual(m.phase, "recovery", "a heavy at 0% must not kill");
-});
-
-test("a heavy word at high damage DOES cross the blast line", () => {
-  const m = sandbox();
-  toLive(m);
-  m.fighter("right").damage = 110;
-  strike(m, "left", "heavy");
-  let crossed = false;
-  for (let i = 0; i < 400; i++) {
-    m.step(STEP);
-    if (m.phase === "recovery" || m.recoveryVictim) {
-      crossed = true;
-      break;
-    }
-    if (m.phase === "roundOver" || m.phase === "matchOver") {
-      crossed = true;
-      break;
-    }
-  }
-  assert.ok(crossed, "a heavy at 110% should reach the blast line");
+  strike(m, "left", "punch");
+  const first = m.fighter("right").damage;
+  for (let i = 0; i < Math.ceil(HIT_COOLDOWN * 60) + 2; i++) m.step(STEP);
+  strike(m, "left", "punch");
+  assert.ok(m.fighter("right").damage > first, "the next hit should land once the window opens");
 });
 
 // ================================================================ recovery
@@ -498,19 +700,20 @@ test("crossing the blast line opens a recovery prompt rather than killing", () =
   const m = sandbox();
   toLive(m);
   m.fighter("right").damage = 110;
-  strike(m, "left", "heavy");
+  strike(m, "left", "kick");
   stepWhileRunning(m, 400);
   assert.equal(m.phase, "recovery", "should be in the recovery phase");
   assert.equal(m.recoveryVictim, "right");
   assert.ok(m.typing.right.inRecovery, "the victim should hold a recovery prompt");
   assert.equal(m.typing.right.prompts.length, 1, "only the recovery word is live");
+  assert.equal(m.typing.right.prompts[0].words.length, 1, "the save is a single word");
 });
 
 test("completing the recovery word restores the fighter and resumes the fight", () => {
   const m = sandbox();
   toLive(m);
   m.fighter("right").damage = 110;
-  strike(m, "left", "heavy");
+  strike(m, "left", "kick");
   stepWhileRunning(m, 400);
   assert.equal(m.phase, "recovery");
 
@@ -527,16 +730,19 @@ test("completing the recovery word restores the fighter and resumes the fight", 
     `should be back on the platform, x=${back.x}`,
   );
   assert.ok(back.y < STAGE.blast.bottom, "should not be below the blast line");
+  assert.ok(
+    m.typing.right.prompts[0].kind === "attack",
+    "a fresh sentence should replace the save word",
+  );
 });
 
 test("failing to recover ends the round", () => {
   const m = sandbox();
   toLive(m);
   m.fighter("right").damage = 110;
-  strike(m, "left", "heavy");
+  strike(m, "left", "kick");
   stepWhileRunning(m, 400);
   assert.equal(m.phase, "recovery");
-  // Do nothing and let the window expire.
   for (let i = 0; i < 400 && m.phase === "recovery"; i++) m.step(STEP);
   assert.ok(m.wins.left >= 1, "the attacker should win the round");
   const endPhase: string = m.phase;
@@ -544,9 +750,6 @@ test("failing to recover ends the round", () => {
 });
 
 test("each save in a round shortens the next recovery window", () => {
-  // Without this, a bot that types well saves itself every time and a round can
-  // only end on the clock, so a KO never lands. Verified by measuring the window
-  // the match actually grants, not by reading the constant back.
   const window = (recoveries: number) =>
     Math.max(RECOVERY_WINDOW_MIN, RECOVERY_WINDOW - recoveries * RECOVERY_WINDOW_STEP);
   assert.equal(window(0), RECOVERY_WINDOW);
@@ -566,9 +769,9 @@ test("the granted window actually shrinks after a save in the same round", () =>
     victim.hitCooldown = 0;
     victim.invuln = 0;
     victim.state = "idle";
-    victim.x = 740;
-    victim.y = 500;
-    strike(m, "left", "heavy");
+    victim.x = SPAWN.right.x;
+    victim.y = SPAWN.right.y;
+    strike(m, "left", "kick");
     stepWhileRunning(m, 400);
   };
 
@@ -576,7 +779,6 @@ test("the granted window actually shrinks after a save in the same round", () =>
   assert.equal(m.phase, "recovery", "the first launch should open a recovery prompt");
   const first = m.recoveryTimer;
 
-  // Save ourselves by typing the save word, which is the only way to continue.
   for (const ch of m.typing.right.prompts[0].text) m.type("right", ch);
   assert.equal(m.phase, "live", "completing the save word should resume the fight");
 
@@ -590,7 +792,7 @@ test("the granted window actually shrinks after a save in the same round", () =>
   );
 });
 
-// ================================================================ termination
+// ================================================================ match structure
 
 section("Match structure");
 
@@ -617,8 +819,7 @@ test("winning pays more than losing", () => {
     return (dt: number) => {
       const t = m.typing[side];
       if (t.inRecovery) {
-        const word = t.prompts[0]?.text ?? "";
-        for (const ch of word) m.type(side, ch);
+        for (const ch of t.prompts[0]?.text ?? "") m.type(side, ch);
         return;
       }
       budget += ((wpm * 5) / 60) * dt;
@@ -627,12 +828,12 @@ test("winning pays more than losing", () => {
         budget -= 1;
         const live = t.activePrompt();
         if (!live || live.typed >= live.text.length) break;
+        // Spaces are skipped by the typing layer, so text[typed] is always a letter.
         m.type(side, live.text[live.typed]);
       }
     };
   };
 
-  // Case A: the human types fast against a slow bot, and should win.
   const win = new Match({ ...OPTS, botWpm: 20 }, 21, {}, "right");
   const drive = autoType(win, "right", 120);
   let s1 = 0;
@@ -642,7 +843,6 @@ test("winning pays more than losing", () => {
   }
   assert.ok(win.result, "the winning match should finish");
 
-  // Case B: the same setup, but the human never types.
   const lose = new Match({ ...OPTS, botWpm: 20 }, 21, {}, "right");
   let s2 = 0;
   while (!lose.result && s2++ < 60 * 60 * 8) lose.step(STEP);
@@ -655,6 +855,39 @@ test("winning pays more than losing", () => {
     win.result!.coins > lose.result!.coins,
     `winning should pay more: ${win.result!.coins} vs ${lose.result!.coins}`,
   );
+});
+
+test("a bot that types its sentences lands moves and wins rounds", () => {
+  // The whole point of routing the bot through commitMove: a bot that never lands a
+  // hit is a broken opponent, and this has silently regressed before.
+  const hits: Record<Side, number> = { left: 0, right: 0 };
+  const raised: Record<Side, number> = { left: 0, right: 0 };
+  const m = new Match(
+    { ...OPTS, botWpm: 60 },
+    77,
+    {
+      onEvent: (e) => {
+        if (e.type === "hit") hits[e.side]++;
+        if (e.type === "block") raised[e.side]++;
+      },
+    },
+    "left",
+  );
+  let steps = 0;
+  while (!m.result && steps++ < 60 * 60 * 8) m.step(STEP);
+  assert.ok(m.result, "the match must terminate");
+  assert.ok(m.right.stats.words >= 8, `the bot threw ${m.right.stats.words} moves`);
+  assert.ok(hits.left > 3, `the bot landed ${hits.left} hits on an idle player`);
+  assert.ok(raised.right > 0, "the bot raises guards as it types its sentences");
+  assert.ok(m.wins.right > 0, "the bot should win at least one round against an idle player");
+});
+
+test("blocks are thrown by both sides across a real match", () => {
+  const m = new Match({ ...OPTS, botWpm: 60 }, 123, {}, "left");
+  let steps = 0;
+  while (!m.result && steps++ < 60 * 60 * 8) m.step(STEP);
+  assert.ok(m.typing.right.blocks > 0, "the bot should raise guards");
+  assert.ok(m.right.stats.words > 0);
 });
 
 // ================================================================ determinism
@@ -671,6 +904,8 @@ function stateHash(m: Match): string {
     m.right.x.toFixed(3),
     m.typing.left.words,
     m.typing.right.words,
+    m.typing.left.sentences,
+    m.typing.right.sentences,
     m.wins.left,
     m.wins.right,
   ].join("|");
@@ -697,8 +932,6 @@ test("different seeds diverge", () => {
 });
 
 test("the simulation step is fixed, so a slow frame cannot change the outcome", () => {
-  // Stepping 1/60 twice must equal stepping 1/60 once in two calls: the engine
-  // never takes a variable dt.
   const a = new Match({ ...OPTS, botWpm: 60 }, 8, {}, "left");
   const b = new Match({ ...OPTS, botWpm: 60 }, 8, {}, "left");
   for (let i = 0; i < 600; i++) a.step(STEP);
@@ -749,8 +982,6 @@ test("every skin has a unique id and a sane price", () => {
     assert.ok(!ids.has(s.id), `duplicate skin id: ${s.id}`);
     ids.add(s.id);
     assert.ok(s.price >= 0);
-    // Every skin must actually draw something. Sprite geometry is asserted in the
-    // sprite section further down.
     assert.ok(s.pixels.length > 0, `${s.id} has no pixels`);
     assert.match(s.trail.colour, /^#[0-9a-f]{6}$/i, `${s.id} trail colour must be hex`);
   }
@@ -786,10 +1017,20 @@ test("the blast lines sit outside the main platform", () => {
   assert.ok(STAGE.blast.right > main.x + main.w, "right blast line must be past the platform edge");
 });
 
-test("spawns sit on the main platform, equally far from their own blast line", () => {
+test("both fighters spawn in the middle of the stage, symmetric and apart", () => {
   const main = STAGE.platforms[0];
-  assert.ok(SPAWN.left.x > main.x && SPAWN.left.x < main.x + main.w);
-  assert.ok(SPAWN.right.x > main.x && SPAWN.right.x < main.x + main.w);
+  const centre = main.x + main.w / 2;
+  for (const side of ["left", "right"] as Side[]) {
+    const x = SPAWN[side].x;
+    assert.ok(x > main.x && x < main.x + main.w, `${side} spawn must be on the main platform`);
+    assert.ok(
+      Math.abs(x - centre) <= 100,
+      `${side} spawn (${x}) should be near the middle of the stage (${centre})`,
+    );
+  }
+  // Apart, or the two hurtboxes overlap on the first frame.
+  assert.ok(Math.abs(SPAWN.right.x - SPAWN.left.x) >= 62, "spawns must not overlap");
+  // Still symmetric about each own blast line, so neither side starts at an advantage.
   const leftDist = SPAWN.left.x - STAGE.blast.left;
   const rightDist = STAGE.blast.right - SPAWN.right.x;
   assert.ok(

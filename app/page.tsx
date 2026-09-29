@@ -9,14 +9,14 @@ import SkinSprite from "@/components/game/SkinSprite";
 export const metadata: Metadata = {
   title: "Typing Fighting Game: Type to Knock Them Off the Stage",
   description:
-    "Kinetype is a free typing fighting game. Three words are live at once: long words hit harder, short words land faster, and a well timed parry turns a heavy shot back on your opponent. Play in your browser.",
+    "Kinetype is a free typing fighting game. You type a sentence and every word in it is a move: small words block, ordinary words punch, long words kick. Knock your opponent off the stage. Play in your browser.",
   alternates: { canonical: "/" },
 };
 
 const FAQ = [
   {
     q: "What is a typing fighting game?",
-    a: "It is a fighting game where typing is the only input. Each player has words on screen. Completing a word lands a hit, and the hit pushes your opponent toward the edge of the stage. Land enough hits and they go off the edge. There is no health bar and no blocking button.",
+    a: "It is a fighting game where typing is the only input. Each player gets a sentence, and every word in it is a move: a small word raises a block, an ordinary word is a punch, and a long word is a kick. Each move pushes your opponent toward the edge of the stage, and once their damage is high enough a single kick sends them off it. There is no health bar and no blocking button, because the sentence is the button.",
   },
   {
     q: "Can I play it free without downloading anything?",
@@ -24,11 +24,11 @@ const FAQ = [
   },
   {
     q: "Do I have to be a fast typist to win?",
-    a: "No. Three words are live at once, and they differ in length. Long words hit much harder but take longer to land, so a slower typist who picks the right word can beat a faster one who spams short words.",
+    a: "No. Damage is what sets up a knockout, not speed, and the sentence decides which moves you get and when. A slower typist who reads the incoming kick and gets a block under it takes a third of the knockback and answers twice as hard, which is more than speed alone buys.",
   },
   {
     q: "How does the parry work?",
-    a: "When your opponent starts committing to a heavy word, the game shows a HEAVY INCOMING warning and gives you a GUARD word. Finish that word before their hit lands and you take a third of the knockback, plus you get a counter window where your next word hits twice as hard.",
+    a: "Small words in your sentence raise a block for about a second. When your opponent commits to a kick the game warns you with KICK INCOMING; if your block is up when that kick lands, you parry it, take a third of the knockback, and get a counter window where your next hit lands twice as hard. A block that is not needed is a lost exchange, because you spent the time typing it.",
   },
   {
     q: "What happens if I get knocked off the stage?",
@@ -75,10 +75,11 @@ export default function HomePage() {
           Typing fighting game: type to knock them off the stage
         </h1>
         <p className="mt-5 max-w-2xl text-sm leading-relaxed text-ink-soft sm:text-base">
-          Kinetype is a browser fighting game where the only weapon is your keyboard. Words appear
-          on screen, finishing one lands a hit, and every hit shoves your opponent closer to the
-          edge. Long words hurt more but take longer to land, so a slower typist who reads the fight
-          can beat a faster one who does not.
+          Kinetype is a browser fighting game where the only weapon is your keyboard. Type the
+          sentence in front of you and every word in it is a move: small words raise a block,
+          ordinary words punch, and the long words kick. Every hit shoves your opponent closer to
+          the edge, and reads beat speed, because a block timed on an incoming kick turns their
+          best shot back on them.
         </p>
 
         <div className="mt-7 flex flex-wrap items-center gap-3">
@@ -105,37 +106,38 @@ export default function HomePage() {
       <div className="mx-auto mt-9 max-w-5xl px-4 sm:px-6">
         <ArenaTeaser className="w-full border-2 border-line" />
         <p className="mt-3 font-mono text-xs text-ink-faint">
-          Three words are live. The long one hits hardest and takes longest to land.
+          One sentence is live. Its small words block, its ordinary words punch, and its long words kick.
         </p>
       </div>
 
       {/* ------------------------------------------------------ how it works */}
       <section className="mx-auto mt-16 max-w-5xl px-4 sm:px-6" aria-labelledby="how">
         <h2 id="how" className="font-pixel text-sm text-ink sm:text-lg">
-          Three decisions every exchange
+          Three things decide an exchange
         </h2>
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
           <article className="border-2 border-line bg-card p-5">
-            <h3 className="font-semibold text-ink">Which word you take</h3>
+            <h3 className="font-semibold text-ink">What your sentence gives you</h3>
             <p className="mt-2 text-sm leading-relaxed text-ink-faint">
-              Three words are live. A four letter word lands quickly and nudges them. An eight
-              letter word lands slowly and sends them flying. Which one you take decides most
-              exchanges.
+              Every word is a move. A small word raises a block, an ordinary word lands a punch, and
+              a long word kicks them across the stage. You cannot skip a word, so planning three
+              words ahead is the whole skill.
             </p>
           </article>
           <article className="border-2 border-line bg-card p-5">
             <h3 className="font-semibold text-ink">How much damage is on you</h3>
             <p className="mt-2 text-sm leading-relaxed text-ink-faint">
               Damage does not knock you out on its own. It makes the next hit throw you further, so
-              the same word that nudged you at 10 percent sends you off the stage at 120. Your
+              the same kick that nudged you at 10 percent sends you off the stage at 120. Your
               outline shifts from white through amber into red.
             </p>
           </article>
           <article className="border-2 border-line bg-card p-5">
-            <h3 className="font-semibold text-ink">Whether to parry or race</h3>
+            <h3 className="font-semibold text-ink">When your block is up</h3>
             <p className="mt-2 text-sm leading-relaxed text-ink-faint">
-              When a heavy word is coming you get a GUARD word. Finish it and you take a third of
-              the knockback and answer twice as hard. Guess wrong and you gave up an exchange.
+              A block lasts about a second. Spend it on an incoming kick and you parry it for a
+              third of the knockback plus a counter that doubles your next hit. Block at the wrong
+              moment and you simply gave up the time.
             </p>
           </article>
         </div>

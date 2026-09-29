@@ -74,7 +74,16 @@ async function readPrompts(panelTestId) {
       text: n.getAttribute("data-text") ?? "",
       typed: Number(n.getAttribute("data-typed") ?? "0"),
       kind: n.getAttribute("data-kind") ?? "attack",
-      tier: n.getAttribute("data-tier") ?? "light",
+      move: n.getAttribute("data-move") ?? "",
+      index: Number(n.getAttribute("data-index") ?? "0"),
+      // Every word in the sentence carries its own move, which is the mechanic: a small
+      // word blocks, an ordinary word punches, a difficult word kicks.
+      words: Array.from(n.querySelectorAll("[data-word]")).map((w) => ({
+        text: w.getAttribute("data-word") ?? "",
+        move: w.getAttribute("data-move") ?? "",
+        typed: Number(w.getAttribute("data-typed") ?? "0"),
+        live: w.getAttribute("data-live") === "1",
+      })),
     })),
   );
 }
@@ -104,21 +113,35 @@ async function waitForArena(maxMs = 8000) {
 }
 
 /**
- * One exchange: type out the live word. There is exactly one.
+ * One exchange: type out the live WORD of the sentence. Words are the commit unit, so
+ * this is one move.
  *
  * The expected character is re-read from the DOM on every keystroke rather than cached
- * up front, because a telegraphed heavy hit swaps the live word for a guard word mid-word.
- * A cached copy would keep typing the old word into the new prompt and rack up errors.
+ * up front: hitstun blocks input, a sentence rolls over to the next one, and (while
+ * falling) a save word replaces everything. A cached copy would keep typing into a
+ * prompt that no longer exists and rack up errors.
+ *
+ * Returns the move of the word that was completed, which is what the game acted on.
  */
 async function playOneWord() {
-  for (let i = 0; i < 30; i++) {
-    const [prompt] = await readPrompts("player-panel");
-    if (!prompt) return false;
-    if (prompt.typed >= prompt.text.length) return true;
-    await page.keyboard.press(prompt.text[prompt.typed]);
+  const [start] = await readPrompts("player-panel");
+  if (!start) return { typed: false, move: "" };
+  const live = start.words.find((w) => w.live);
+  if (!live) return { typed: false, move: "" };
+
+  for (let i = 0; i < 24; i++) {
+    const [now] = await readPrompts("player-panel");
+    const word = now?.words.find((w) => w.live);
+    // The sentence moved on without us, or it rolled over: either way this word is done.
+    if (!word || word.text !== live.text || word.typed >= word.text.length) {
+      return { typed: true, move: live.move };
+    }
+    const ch = word.text[word.typed];
+    if (!ch) return { typed: true, move: live.move };
+    await page.keyboard.press(ch);
     await page.waitForTimeout(CHAR_MS);
   }
-  return true;
+  return { typed: true, move: live.move };
 }
 
 // ------------------------------------------------------------- landing page
@@ -209,43 +232,61 @@ await page.waitForTimeout(2300); // countdown is 2.2s
 const mid = await waitForArena();
 check("arena is drawn during the match", mid.ok, mid.reason);
 
-// A typing game is unplayable if your own prompts are below the fold. This was a
-// real defect: the canvas was 16:9 at full width, so the prompt panel sat off the
-// bottom of a laptop screen.
+// A typing game is unplayable if your own prompts are below the fold, or if you have to
+// scroll between the fight and your sentence. Measure the arena + bot panel + player
+// panel as ONE BLOCK, in DOCUMENT coordinates.
+//
+// This used to scroll the panel into view and read getBoundingClientRect(), which reports
+// wherever the scroll happened to land: the game itself scrolls the arena into view with
+// smooth behaviour, so the check turned into a scroll-timing test and reported a 5px
+// overflow that the layout did not have. The requirement is scroll-independent.
 const viewportH = page.viewportSize()?.height ?? 0;
-// Scroll INSTANTLY before measuring. The game scrolls the arena into view with smooth
-// behaviour, so measuring mid-scroll reports wherever the animation happened to be (1097px
-// one run, 970px the next) and the check fails on timing instead of on layout. The actual
-// requirement is that the arena and the player's prompts fit one screenful, which is
-// scroll-independent.
-await page
-  .locator('[data-testid="player-panel"]')
-  .evaluate((el) => el.scrollIntoView({ block: "end", behavior: "instant" }));
-await page.waitForTimeout(250);
-const panelBox = await page.locator('[data-testid="player-panel"]').boundingBox();
-const canvasBox = await page.locator("canvas").boundingBox();
+const fightBlock = await page.evaluate(() => {
+  const docTop = (el) => el.getBoundingClientRect().top + window.scrollY;
+  const arena = document.querySelector('[data-testid="arena"]');
+  const panel = document.querySelector('[data-testid="player-panel"]');
+  if (!arena || !panel) return null;
+  return {
+    height: Math.round(docTop(panel) + panel.getBoundingClientRect().height - docTop(arena)),
+    arenaTop: Math.round(docTop(arena)),
+  };
+});
 check(
-  "the player's prompts are on screen while fighting",
-  !!panelBox && panelBox.y + panelBox.height <= viewportH + 2,
-  `panel ends at ${Math.round((panelBox?.y ?? 0) + (panelBox?.height ?? 0))}px, viewport ${viewportH}px`,
+  "the arena and the player's prompts fit one screenful",
+  !!fightBlock && fightBlock.height <= viewportH,
+  `arena + bot panel + prompts need ${fightBlock?.height ?? "?"}px, viewport ${viewportH}px`,
 );
 check(
-  "the arena is on screen while fighting",
-  !!canvasBox && canvasBox.y >= 0 && canvasBox.y < viewportH,
-  `canvas starts at ${Math.round(canvasBox?.y ?? -1)}px`,
+  "the arena is drawn above the prompts",
+  !!fightBlock && fightBlock.arenaTop > 0 && fightBlock.height > 0,
+  `arena starts at ${fightBlock?.arenaTop ?? -1}px in the document`,
 );
 
 const initial = await readPrompts("player-panel");
 check(
-  "exactly one word is live for the player",
+  "exactly one sentence is live for the player",
   initial.length === 1,
-  `${initial.length} prompts: ${initial.map((p) => p.text).join(", ")}`,
+  `${initial.length} prompts: ${initial.map((p) => p.text).join(" | ")}`,
+);
+check(
+  "the live sentence is split into words and each word carries a move",
+  (initial[0]?.words.length ?? 0) >= 4 &&
+    initial[0].words.every((w) => ["block", "punch", "kick"].includes(w.move)),
+  `${initial[0]?.words.length ?? 0} words: ${(initial[0]?.words ?? [])
+    .map((w) => `${w.text}/${w.move}`)
+    .join(" ")}`,
+);
+check(
+  "the sentence can both defend and attack",
+  (initial[0]?.words ?? []).some((w) => w.move === "block") &&
+    (initial[0]?.words ?? []).some((w) => w.move === "punch"),
+  "every sentence must contain a block word and a punch word",
 );
 
 // REGRESSION GUARD for the bug Ruan reported. With three words live, the first keystroke
 // was spent CHOOSING a word: it never advanced the prompt, so you had to type that same
-// letter a second time, and a letter matching no word counted as an error. With one word
-// the very first press must move the word forward.
+// letter a second time, and a letter matching no word counted as an error. The very first
+// press of a fight must move the prompt forward.
 {
   const [before] = await readPrompts("player-panel");
   // The first keystroke of a session can be lost if it lands before the keydown listener is
@@ -263,16 +304,41 @@ check(
     if (after && after.typed > before.typed) break;
   }
   check(
-    "the first keystroke advances the word",
+    "the first keystroke advances the sentence",
     !!after && after.typed === before.typed + 1,
     `typed ${before.typed} -> ${after?.typed} after pressing "${before.text[0]}"`,
   );
 }
 
-// Word variety is measured ACROSS the match, never on one draw. Tiers are rolled at
-// roughly 42/40/18, so any single prompt proves nothing about the pool.
-const tiersSeen = new Set(initial.map((p) => p.tier));
-const lengthsSeen = new Set(initial.map((p) => p.text.length));
+// The block is the defensive verb and it is invisible to a check that only reads damage
+// numbers, so prove it end to end: type words until a block word completes, then confirm
+// the guard actually reached the HUD. Every sentence contains a block word by
+// construction, so this cannot loop forever on a healthy build.
+{
+  let guardSeen = false;
+  for (let w = 0; w < 14 && !guardSeen; w++) {
+    const { typed, move } = await playOneWord();
+    if (!typed) break;
+    if (move !== "block") continue;
+    for (let i = 0; i < 8; i++) {
+      if ((await page.locator('[data-testid="player-guard"]').count()) > 0) {
+        guardSeen = true;
+        break;
+      }
+      await page.waitForTimeout(100);
+    }
+  }
+  check("a completed block word raises a visible guard", guardSeen);
+}
+
+// Move variety is measured ACROSS the match, never on one draw: one sentence proves
+// nothing about a pool of hundreds.
+const movesSeen = new Set();
+const sentencesSeen = new Set();
+for (const p of initial) {
+  sentencesSeen.add(p.text);
+  for (const w of p.words) movesSeen.add(w.move);
+}
 
 let wordsTyped = 0;
 let maxBotDamage = 0;
@@ -286,7 +352,7 @@ const FIRST_WINDOW_MS = 60000;
 
 while (Date.now() - started < FIRST_WINDOW_MS) {
   if (await matchOver()) break;
-  const typed = await playOneWord();
+  const { typed } = await playOneWord();
   if (!typed) {
     await page.waitForTimeout(150);
     continue;
@@ -297,8 +363,8 @@ while (Date.now() - started < FIRST_WINDOW_MS) {
   // resolves, so a single read after the loop can miss everything.
   const live = await readPrompts("player-panel");
   for (const p of live) {
-    tiersSeen.add(p.tier);
-    lengthsSeen.add(p.text.length);
+    sentencesSeen.add(p.text);
+    for (const w of p.words) movesSeen.add(w.move);
   }
   const bd = await valueOf("bot-damage");
   if (bd !== null) maxBotDamage = Math.max(maxBotDamage, bd);
@@ -317,9 +383,14 @@ while (Date.now() - started < FIRST_WINDOW_MS) {
 
 check("words were typed into the game", wordsTyped > 3, `${wordsTyped} words`);
 check(
-  "the word pool varies across a match",
-  tiersSeen.size >= 2 && lengthsSeen.size >= 2,
-  `tiers ${[...tiersSeen].join("/")}, lengths ${[...lengthsSeen].join("/")}`,
+  "the sentence pool varies across a match",
+  sentencesSeen.size >= 3,
+  `${sentencesSeen.size} distinct sentences`,
+);
+check(
+  "all three moves appear across a match",
+  movesSeen.has("block") && movesSeen.has("punch") && movesSeen.has("kick"),
+  `moves seen: ${[...movesSeen].sort().join(", ")}`,
 );
 check(
   "the focus prompt clears once typing works",
@@ -346,7 +417,7 @@ if (!sawResult) {
   const deadline = Date.now() + 280000;
   while (Date.now() < deadline) {
     if (await matchOver()) break;
-    const typed = await playOneWord();
+    const { typed } = await playOneWord();
     if (!typed) await page.waitForTimeout(200);
   }
   sawResult = await matchOver();

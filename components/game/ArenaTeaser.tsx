@@ -27,11 +27,45 @@ const INK = "#2a2118";
 const TILE = 20;
 
 /**
- * ONE prompt, because the game shows one word at a time. This teaser drew three chips
- * when the game offered a three-word choice, and would otherwise advertise a mechanic
- * that no longer exists.
+ * ONE sentence, because the game shows one sentence at a time and every word in it is
+ * a move. This teaser drew a single word when a lone word was the unit of input, and
+ * three chips before that; it has to change whenever the input model does, or it
+ * advertises a mechanic that no longer exists.
  */
-const PROMPT = { tier: "HEAVY", word: "keyboard" };
+const PROMPT = [
+  { text: "the", move: "block" },
+  { text: "students", move: "kick" },
+  { text: "gather", move: "punch" },
+  { text: "in", move: "block" },
+  { text: "the", move: "block" },
+  { text: "hall", move: "punch" },
+] as const;
+
+/** The same three colours the HUD uses for block, punch and kick. */
+const MOVE_COLOUR: Record<string, string> = {
+  block: "#0e7490",
+  punch: "#7c3aed",
+  kick: "#be123c",
+};
+
+/**
+ * Lay the sentence out once, at module load.
+ *
+ * The underline has to sit under the right word or the teaser teaches the wrong
+ * mechanic, so the positions are computed with monospace metrics rather than guessed
+ * with flexbox. Computed outside render so nothing is reassigned mid-render.
+ */
+const PROMPT_SIZE = 30;
+const PROMPT_CHAR = PROMPT_SIZE * 0.6;
+const PROMPT_LAYOUT = PROMPT.reduce<{ text: string; move: string; x: number; w: number }[]>(
+  (acc, word) => {
+    const prev = acc[acc.length - 1];
+    const x = prev ? prev.x + prev.w + PROMPT_CHAR : 360;
+    acc.push({ text: word.text, move: word.move, x, w: word.text.length * PROMPT_CHAR });
+    return acc;
+  },
+  [],
+);
 
 /** rect as a path segment. */
 const seg = (x: number, y: number, w: number, h: number) =>
@@ -102,7 +136,7 @@ export default function ArenaTeaser({ className }: { className?: string }) {
       className={className}
       shapeRendering="crispEdges"
       role="img"
-      aria-label="A match in progress: two pixel fighters stand on a grass platform, with one word prompt at the bottom reading keyboard."
+      aria-label="A match in progress: two pixel fighters stand on a grass platform, with a sentence prompt at the bottom reading the students gather in the hall, each word underlined in the colour of the move it becomes."
     >
       {SKY.map((c, i) => (
         <rect key={c} x={0} y={i * 240} width={1280} height={241} fill={c} />
@@ -120,12 +154,13 @@ export default function ArenaTeaser({ className }: { className?: string }) {
       <Platform x={876} y={428} w={168} />
       <Platform x={340} y={560} w={600} />
 
-      <g>{skinPaths(left, S, 520 - halfW, spriteTop, "L")}</g>
-      <g>{skinPaths(right, S, 820 - halfW, spriteTop, "R")}</g>
+      {/* Near the middle, because that is where the game spawns them now. */}
+      <g>{skinPaths(left, S, 600 - halfW, spriteTop, "L")}</g>
+      <g>{skinPaths(right, S, 720 - halfW, spriteTop, "R")}</g>
 
       {/* Damage readouts, outlined so every colour reads on a light sky. */}
       <text
-        x={520}
+        x={600}
         y={spriteTop - 16}
         textAnchor="middle"
         fontSize={26}
@@ -139,7 +174,7 @@ export default function ArenaTeaser({ className }: { className?: string }) {
         12%
       </text>
       <text
-        x={820}
+        x={720}
         y={spriteTop - 16}
         textAnchor="middle"
         fontSize={26}
@@ -163,20 +198,25 @@ export default function ArenaTeaser({ className }: { className?: string }) {
           fontSize={16}
           fontFamily="ui-monospace, monospace"
           fontWeight={700}
-          fill="#be123c"
+          fill={INK}
         >
-          {PROMPT.tier}
+          SMALL WORDS BLOCK · ORDINARY WORDS PUNCH · LONG WORDS KICK
         </text>
-        <text
-          x={360}
-          y={692}
-          fontSize={36}
-          fontFamily="ui-monospace, monospace"
-          fontWeight={700}
-          fill="#1e1a14"
-        >
-          {PROMPT.word}
-        </text>
+        {PROMPT_LAYOUT.map((word) => (
+          <g key={`${word.text}-${word.x}`}>
+            <text
+              x={word.x}
+              y={684}
+              fontSize={PROMPT_SIZE}
+              fontFamily="ui-monospace, monospace"
+              fontWeight={700}
+              fill="#1e1a14"
+            >
+              {word.text}
+            </text>
+            <rect x={word.x} y={690} width={word.w} height={4} fill={MOVE_COLOUR[word.move]} />
+          </g>
+        ))}
       </g>
     </svg>
   );

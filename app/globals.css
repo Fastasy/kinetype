@@ -19,7 +19,7 @@
  *   brand     #6d28d9   ~5.9:1   links and accents
  *   coin      #92400e   ~5.7:1   prices
  *   heat      #be123c   ~5.9:1   heavy hits and losses
- *   aqua      #0e7490   ~4.6:1   parry states
+ *   aqua      #0e7490   ~4.6:1   block and parry states
  * Solid brand buttons use near-white text (--color-brand-deep): 5.9:1.
  * Never put `text-ink` on `bg-brand`; that combination is 2.4:1 and fails.
  */

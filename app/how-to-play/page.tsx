@@ -6,26 +6,26 @@ import JsonLd from "@/components/JsonLd";
 export const metadata: Metadata = {
  title: "How to Play Kinetype: Typing Fighting Game Controls and Strategy",
  description:
- "How the Kinetype typing fighter works: typing a word to land a hit, reading damage, timing a parry, saving yourself off the edge, and picking a bot speed from 20 to 120 words per minute.",
+ "How the Kinetype typing fighter works: typing a sentence where every word is a move, blocking and parrying, reading damage, saving yourself off the edge, and picking a bot speed from 20 to 120 words per minute.",
  alternates: { canonical: "/how-to-play" },
 };
 
 const STEPS = [
  {
-   h: "Read the word in front of you",
-   p: "One word sits on screen at a time, and its length decides how hard it hits. A short word finishes in under a second and gives a small shove. A long word throws your opponent across the stage, and you spend longer open while you type it. When you are being pushed back, a short word steadies things. When they are near the edge, a long word finishes it.",
+   h: "Read the sentence, because it is your next few moves",
+   p: "You get one sentence at a time and you type it straight through. Every word in it is a move, decided by how difficult the word is: a small word blocks, an ordinary word punches, and a long word kicks. The kick is the one that ends rounds, the punch is the workhorse, and the block is what keeps you alive. You cannot skip a word, so the sentence you were handed is the hand you have to play. Read it before you start typing and you will know when your block lands.",
  },
  {
    h: "Type it, starting with the first letter",
-   p: "There is nothing to click and nothing to select. The word appears, you type it, and the hit lands on its last letter. Every keystroke counts from the first one, so a fast start is a real advantage.",
+   p: "There is nothing to click and nothing to select, and no spaces to type: the game moves you to the next word the moment you finish the last letter of this one. Every move fires on the final letter of its word, and every keystroke counts from the first press.",
  },
  {
- h: "Watch the damage colour",
- p: "There is no health bar, because damage does not knock you out on its own. It makes you easier to knock out. Your outline shifts from white to yellow to orange to red as it climbs, and the same hit throws you further at 100 percent than it did at 10. Once you are deep in the red, a single well placed long word ends the round.",
+ h: "Watch the damage colour, not a health bar",
+ p: "There is no health bar, because damage does not knock you out on its own. It makes you easier to knock out. Your outline shifts from white to yellow to orange to red as it climbs, and the same kick throws you further at 100 percent than it did at 10. Once you are deep in the red, one kick ends the round.",
  },
  {
- h: "Parry the heavy shots",
- p: "When your opponent starts committing to a long word, a HEAVY INCOMING warning appears and your word turns into a GUARD word. Finish the guard word before their hit connects and you take about a third of the knockback. You also get a counter window, which doubles the damage of your next completed word.",
+ h: "Block and parry the kicks",
+ p: "A block lasts about a second, and you raise it by finishing a small word. When your opponent commits to a kick you get a KICK INCOMING warning: if your block is up when that kick connects, you parry it and take about a third of the knockback, and you get a counter window that doubles your next hit. Blocking at the wrong moment is not free, because you spent the time typing a word that did no damage.",
  },
  {
  h: "Type the save word if you go off the edge",
@@ -36,15 +36,15 @@ const STEPS = [
 const FAQ = [
  {
  q: "Do I need to be fast to win?",
- a: "Speed helps, but parrying decides more fights than raw words per minute. A player who blocks the heavy shots beats a faster player who ignores them. The bot ladder lets you test that: try beating the 70 word per minute bot while you type at 45.",
+ a: "Speed helps, but blocking and damage decide more fights than raw words per minute. A player who reads the incoming kick and parries it beats a faster player who never blocks. The bot ladder lets you test that: try beating the 70 word per minute bot while you type at 45.",
  },
  {
  q: "What do I lose if I make a mistake?",
- a: "By default, only the bonus on that word. A wrong letter clears the precision bonus, and you carry on from where you were once you press the right key. You do not start the word again and you are not stunned. Turn on Strict mistakes if you want a wrong letter to cost you about half a second of movement, which is the harder version of the game.",
+ a: "By default, only the bonus on that one word. A wrong letter clears that word's precision bonus, and you carry on from where you were once you press the right key. You do not start the word again, you are not stunned, and the rest of the sentence still earns its own bonus. Turn on Strict mistakes if you want a wrong letter to cost you about half a second of movement.",
  },
  {
  q: "How do I choose the difficulty?",
- a: "You set the bot's typing speed directly, from 20 to 120 words per minute, rather than picking easy or normal. Typing speed and gaming skill are not the same thing, so a number tells you far more about what you are in for.",
+ a: "You set the bot's typing speed directly, from 20 to 120 words per minute, rather than picking easy or normal. Typing speed and gaming skill are not the same thing, so a number tells you far more about what you are in for. Your sentences also get longer as the speed goes up, so the slow bots hand you short sentences you can actually finish.",
  },
  {
  q: "How many rounds is a match?",
@@ -52,7 +52,7 @@ const FAQ = [
  },
  {
  q: "Why do words sometimes look different?",
- a: "Blue and bordered means GUARD, the parry prompt. Amber and large means SAVE, the recovery prompt. Everything else is an attack word, and the badge on top tells you whether it is light, mid or heavy.",
+ a: "Each word carries a coloured underline and the word you are typing is highlighted: teal blocks, purple punches, red kicks. So you can see the next few moves at a glance. A large amber SAVE word replaces your sentence when you are knocked off the edge.",
  },
 ];
 
@@ -91,9 +91,9 @@ export default function HowToPlayPage() {
  How to play Kinetype
  </h1>
  <p className="mt-4 text-sm leading-relaxed text-ink-faint sm:text-base">
- Kinetype looks like a fighting game and plays like a typing test with consequences. These
- five things decide almost every exchange, and they are worth two minutes before your first
- match.
+ Kinetype looks like a fighting game and plays like a typing test with consequences. One
+ sentence at a time, one move per word. These five things decide almost every exchange, and
+ they are worth two minutes before your first match.
  </p>
 
  <div className="mt-8 space-y-6">
@@ -123,8 +123,8 @@ export default function HowToPlayPage() {
  <tbody className="divide-y divide-line text-ink-soft">
  <tr>
    <td className="px-4 py-2 font-mono text-brand-bright">A to Z</td>
-   <td className="px-4 py-2">Types the word on screen</td>
- </tr>
+   <td className="px-4 py-2">Types the word in front of you. Every word is a move</td>
+</tr>
  <tr>
    <td className="px-4 py-2 font-mono text-brand-bright">Esc</td>
    <td className="px-4 py-2">Quits the match</td>
@@ -134,7 +134,8 @@ export default function HowToPlayPage() {
  </div>
  <p className="mt-3 text-xs text-ink-faint">
  That is the whole control scheme. There is no jump, no block button and no movement keys,
- because typing is the only verb in the game.
+ because typing is the only verb in the game: your block comes from finishing a small word,
+ not from pressing another key. You do not need to type spaces either.
  </p>
  </section>
 

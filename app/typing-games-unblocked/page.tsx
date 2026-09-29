@@ -139,12 +139,13 @@ export default function UnblockedPage() {
  accuracy, and a sloppy habit learned at speed is harder to unlearn than a slow one.
  </p>
  <p>
- Leave Strict mistakes off until you are finishing words cleanly. The forgiving default is
+ Leave Strict mistakes off until you are finishing sentences cleanly. The forgiving default is
  better for learning, and the penalty is there for when the game stops challenging you.
  </p>
  <p>
- Practise parrying on purpose. Winning by parry teaches you to read the screen before you
- type, which is the part that carries over to real typing.
+ Practise blocking on purpose. The small words in your sentence raise a guard, and timing one
+ to land on an incoming kick wins the exchange for a fraction of the effort. Reading the
+ screen before you type is the part that carries over to real typing.
  </p>
  <p>
  Check your numbers after each match. If accuracy is dropping while speed climbs, you have

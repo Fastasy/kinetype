@@ -4,18 +4,28 @@
 // Fixed timestep with an accumulator, so simulation is frame-rate independent and
 // a slow frame cannot change the outcome of a match. Rendering reads the result.
 
-import { STEP, TELEGRAPH_COMMIT_CHARS } from "./constants";
+import { STEP } from "./constants";
 import { AudioBus } from "./audio";
 import { Match } from "./match";
 import { computeViewport, drawScene } from "./render";
 import { themeById, type Theme } from "./themes";
-import type { GameEvent, MatchOptions, MatchResult, Prompt, Side } from "./types";
+import type { GameEvent, MatchOptions, MatchResult, MoveKind, Prompt, Side } from "./types";
+
+/** One word of a sentence prompt, flattened for the DOM. */
+export interface WordView {
+  text: string;
+  move: MoveKind;
+  typed: number;
+  flawed: boolean;
+}
 
 export interface PromptView {
   id: number;
   text: string;
   typed: number;
-  tier: Prompt["tier"];
+  words: WordView[];
+  /** Index of the live word; equals words.length once the sentence is done. */
+  index: number;
   kind: Prompt["kind"];
   flawed: boolean;
 }
@@ -26,13 +36,12 @@ export interface SideView {
   accuracy: number;
   state: string;
   counter: number;
+  guard: number;
   invuln: number;
   /** Seconds until this side can be hit again. */
   hitCooldown: number;
   recovering: boolean;
   prompts: PromptView[];
-  /** True when this side has been handed a guard word to parry with. */
-  guardOffered: boolean;
 }
 
 export interface Snapshot {
@@ -43,7 +52,7 @@ export interface Snapshot {
   countdown: number;
   left: SideView;
   right: SideView;
-  /** True when the opposing side has committed to a heavy word. */
+  /** True when the opposing side has committed to a kick. */
   telegraph: { left: boolean; right: boolean };
   sparkSide: Side | null;
   humanSide: Side;
@@ -67,10 +76,10 @@ export interface EngineCallbacks {
   onEvent?: (e: GameEvent) => void;
 }
 
-const TIER_SOUND = {
-  light: "commitLight",
-  mid: "commitMid",
-  heavy: "commitHeavy",
+const MOVE_SOUND = {
+  block: "block",
+  punch: "commitMid",
+  kick: "commitHeavy",
 } as const;
 
 export class GameEngine {
@@ -236,10 +245,16 @@ export class GameEngine {
         }
         break;
       case "commit":
-        this.audio.play(TIER_SOUND[e.tier], e.precision ? 0.01 : 0);
+        this.audio.play(MOVE_SOUND[e.move], e.precision ? 0.01 : 0);
         break;
       case "hit":
         this.audio.play("hit", Math.min(0.08, e.power / 3000));
+        // A smothered hit needs its own sound: "it landed" and "it was blocked" are
+        // very different pieces of information for the player who is not looking.
+        if (e.guarded) this.audio.play("block", 0.02);
+        break;
+      case "block":
+        this.audio.play("block");
         break;
       case "parry":
         this.audio.play("parry");
@@ -270,15 +285,21 @@ export class GameEngine {
       accuracy: t.accuracy(),
       state: f.state,
       counter: Math.max(0, f.counter),
+      guard: Math.max(0, f.guard),
       invuln: Math.max(0, f.invuln),
       hitCooldown: Math.max(0, f.hitCooldown),
       recovering: t.inRecovery,
-      guardOffered: t.hasGuard(),
       prompts: t.prompts.map<PromptView>((p) => ({
         id: p.id,
         text: p.text,
         typed: p.typed,
-        tier: p.tier,
+        words: p.words.map((w) => ({
+          text: w.text,
+          move: w.move,
+          typed: w.typed,
+          flawed: w.flawed,
+        })),
+        index: p.index,
         kind: p.kind,
         flawed: p.flawed,
       })),
@@ -286,11 +307,7 @@ export class GameEngine {
   }
 
   snapshot(): Snapshot {
-    const telegraphOf = (side: Side): boolean => {
-      const active = this.match.typing[side].activePrompt();
-      if (!active) return false;
-      return active.tier === "heavy" && active.typed >= TELEGRAPH_COMMIT_CHARS;
-    };
+    const telegraphOf = (side: Side): boolean => this.match.typing[side].telegraphing();
     return {
       phase: this.match.phase,
       round: this.match.round,

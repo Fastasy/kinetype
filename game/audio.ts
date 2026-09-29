@@ -5,7 +5,7 @@
 // mandatory sounds are correct key and wrong key, and they must be both audible
 // and visible, because the player is looking at their keyboard.
 
-type Voice = "correct" | "wrong" | "commitLight" | "commitMid" | "commitHeavy"
+type Voice = "correct" | "wrong" | "block" | "commitMid" | "commitHeavy"
   | "hit" | "parry" | "ko" | "spark" | "ui";
 
 interface Recipe {
@@ -20,7 +20,8 @@ interface Recipe {
 const RECIPES: Record<Voice, Recipe> = {
   correct: { freq: 880, type: "square", duration: 0.028, gain: 0.035 },
   wrong: { freq: 150, type: "sawtooth", duration: 0.09, gain: 0.05 },
-  commitLight: { freq: 420, type: "triangle", duration: 0.07, gain: 0.07, overtone: 1.5 },
+  // Block: a dull thud with a metallic edge, nothing like a hit landing.
+  block: { freq: 320, type: "square", duration: 0.09, gain: 0.055, overtone: 1.33 },
   commitMid: { freq: 300, type: "triangle", duration: 0.1, gain: 0.085, overtone: 1.5 },
   commitHeavy: { freq: 200, type: "sawtooth", duration: 0.16, gain: 0.1, overtone: 1.25 },
   hit: { freq: 110, type: "square", duration: 0.12, gain: 0.09, overtone: 0.5 },

@@ -176,19 +176,26 @@ export default function FightClient({ wide = false }: { wide?: boolean }) {
  // Keyboard is the whole game. Space and arrows are swallowed so the page cannot
  // scroll mid-match.
  useEffect(() => {
- const onKey = (e: KeyboardEvent) => {
- const engine = engineRef.current;
- if (!engine) return;
- if (e.metaKey || e.ctrlKey || e.altKey) return;
- if (e.key === " " || e.key === "Tab" || e.key.startsWith("Arrow")) {
- e.preventDefault();
- return;
- }
- if (engine.handleKey(e.key)) e.preventDefault();
+  const onKey = (e: KeyboardEvent) => {
+  const engine = engineRef.current;
+  if (!engine) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  // Escape quits the match, which is what /play and the strategy page promise. It is
+  // ignored while the fight section is fullscreen: there Escape belongs to the browser,
+  // and a player leaving fullscreen should not also lose their match.
+  if (e.key === "Escape") {
+    if (!document.fullscreenElement) stop();
+    return;
+  }
+  if (e.key === " " || e.key === "Tab" || e.key.startsWith("Arrow")) {
+  e.preventDefault();
+  return;
+  }
+  if (engine.handleKey(e.key)) e.preventDefault();
  };
- window.addEventListener("keydown", onKey);
- return () => window.removeEventListener("keydown", onKey);
- }, []);
+  window.addEventListener("keydown", onKey);
+  return () => window.removeEventListener("keydown", onKey);
+ }, [stop]);
 
  // A second listener purely to record that input is arriving.
  useEffect(() => {
@@ -374,14 +381,14 @@ export default function FightClient({ wide = false }: { wide?: boolean }) {
  {them.wpm} WPM
  </span>
  {snap?.telegraph[opponent] && (
- <span className="rounded border border-heat/50 px-1.5 py-0.5 font-mono text-[10px] font-bold text-heat">
- HEAVY INCOMING
- </span>
+   <span className="rounded border border-heat/50 px-1.5 py-0.5 font-mono text-[10px] font-bold text-heat">
+     KICK INCOMING
+   </span>
  )}
- {them.guardOffered && (
- <span className="rounded border border-aqua/50 px-1.5 py-0.5 font-mono text-[10px] font-bold text-aqua">
- BOT PARRYING
- </span>
+ {them.guard > 0 && (
+   <span className="rounded border border-aqua/50 px-1.5 py-0.5 font-mono text-[10px] font-bold text-aqua">
+     BOT BLOCKING
+   </span>
  )}
  {them.hitCooldown > 0 && (
  <span
@@ -404,7 +411,6 @@ export default function FightClient({ wide = false }: { wide?: boolean }) {
        prompt={p}
        theme={theme}
        compact
-       isGuard={p.kind === "guard"}
        isRecovery={p.kind === "recovery"}
      />
    ))}
@@ -417,7 +423,12 @@ export default function FightClient({ wide = false }: { wide?: boolean }) {
  {/* The vh cap keeps the bot panel, the arena and the player's prompts all inside
      one screenful. Without it the prompts fell below the fold and the game could
      not be played. Wide and fullscreen layouts get more room, because on those the
-     arena is the whole point of the page. */}
+     arena is the whole point of the page.
+
+     The cap is measured, not guessed: with a long sentence wrapped over two lines the
+     arena, the bot panel and the player panel come to about 900px at a 1000px viewport
+     and about 880px at 900px, which is why the prompt card carries its legend in its own
+     header instead of on a row of its own. scripts/probe-layout.mjs measures it. */}
  <div
    data-testid="arena"
    className="relative mx-auto aspect-[16/9] w-full"
@@ -457,22 +468,28 @@ export default function FightClient({ wide = false }: { wide?: boolean }) {
  Type to knock them off
  </h2>
  <p className="max-w-md text-sm text-ink-faint">
-   One word at a time. Type it to land a hit. Long words hit harder, and they
-   take longer to finish. Push the bot past the red line to win.
+     One sentence at a time, and every word in it is a move. Short words raise a
+     block, ordinary words punch, and the long words kick. Push the bot past the red
+     line to win.
  </p>
  <ul className="max-w-md space-y-1 text-left text-xs text-ink-faint">
    <li>
      Every keystroke counts, starting with the first letter
    </li>
- <li>
- <span className="font-mono text-heat">HEAVY INCOMING</span> means a big hit is
- coming: complete the <span className="font-mono text-aqua">GUARD</span> word to
- parry it
- </li>
- <li>
- pushed off the edge? You get one <span className="font-mono text-coin">SAVE</span>{" "}
- word to climb back
- </li>
+   <li>
+     Small words <span className="font-mono text-aqua">BLOCK</span>, ordinary words{" "}
+     <span className="font-mono text-brand-bright">PUNCH</span>, long words{" "}
+     <span className="font-mono text-heat">KICK</span>
+   </li>
+   <li>
+     <span className="font-mono text-heat">KICK INCOMING</span> means a big hit is on
+     the way: finish a <span className="font-mono text-aqua">BLOCK</span> word before
+     it lands to parry it and open a counter
+   </li>
+   <li>
+     pushed off the edge? You get one <span className="font-mono text-coin">SAVE</span>{" "}
+     word to climb back
+   </li>
  </ul>
  <button
  type="button"
@@ -537,10 +554,18 @@ export default function FightClient({ wide = false }: { wide?: boolean }) {
  {me.wpm} WPM
  </span>
  <span className="font-mono text-xs text-ink-faint">{me.accuracy.toFixed(1)}% acc</span>
+ {me.guard > 0 && (
+   <span
+     data-testid="player-guard"
+     className="rounded border border-aqua/60 px-1.5 py-0.5 font-mono text-[10px] font-bold text-aqua"
+   >
+     BLOCKING
+   </span>
+ )}
  {me.counter > 0 && (
- <span className="rounded border border-brand-bright/60 px-1.5 py-0.5 font-mono text-[10px] font-bold text-brand-soft">
- COUNTER READY
- </span>
+   <span className="rounded border border-brand-bright/60 px-1.5 py-0.5 font-mono text-[10px] font-bold text-brand-soft">
+     COUNTER READY
+   </span>
  )}
  {me.invuln > 0 && (
  <span className="rounded border border-ink-faint/60 px-1.5 py-0.5 font-mono text-[10px] text-ink-soft">
@@ -563,16 +588,15 @@ export default function FightClient({ wide = false }: { wide?: boolean }) {
  </div>
 
  <div className="mt-2.5">
-   {me.prompts.map((p) => (
-     <PromptCard
-       key={p.id}
-       prompt={p}
-       theme={theme}
-       isGuard={p.kind === "guard"}
-       isRecovery={p.kind === "recovery"}
-     />
-   ))}
- </div>
+  {me.prompts.map((p) => (
+    <PromptCard
+      key={p.id}
+      prompt={p}
+      theme={theme}
+      isRecovery={p.kind === "recovery"}
+    />
+  ))}
+</div>
  </div>
  )}
 
