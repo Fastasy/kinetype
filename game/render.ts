@@ -9,7 +9,7 @@
 //      stays hard. A blurred pixel sprite looks like a mistake.
 //
 // The prompt panels and HUD are DOM, not canvas: crisp text, selectable, and they
-// inherit the overlay theme. This file draws the world only.
+// inherit the equipped theme. This file draws the world only.
 
 import {
   SPRITE_H,
@@ -20,6 +20,7 @@ import {
 } from "./skins";
 import { HURTBOX, STAGE } from "./constants";
 import { damageColour } from "./knockback";
+import { themeById, type Theme } from "./themes";
 import type { Fighter, Side } from "./types";
 import type { Match } from "./match";
 
@@ -45,14 +46,12 @@ export function computeViewport(cssW: number, cssH: number): Viewport {
 // art, and it should read the same whatever the page chrome does.
 // ---------------------------------------------------------------------------
 
-const SKY_BANDS = ["#cfe9f7", "#bfe0f2", "#add4ea"];
-const FAR_HILL = "#9fc6a8";
-const GRASS_TOP = "#6fbf5f";
-const GRASS_LIP = "#4e9a44";
-const DIRT = "#b07a4e";
-const DIRT_DARK = "#8e5f3a";
-const BLAST = "rgba(190,60,80,0.55)";
-const INK = "#2a2118";
+// Arena colours come from the equipped theme (game/themes.ts). Nothing here hardcodes a
+// palette, so a new theme is data and never touches the renderer.
+//
+// DELIBERATELY NOT THEMED: the red lethal telegraph, the cyan parry bracket and the white
+// outline behind signal text. Those are signals, not decoration, and a player must never
+// have to relearn what they mean because they changed skin.
 
 const TILE = 20;
 
@@ -107,22 +106,22 @@ function spriteCanvas(skin: PixelSkin): HTMLCanvasElement | null {
 // World
 // ---------------------------------------------------------------------------
 
-function drawSky(ctx: CanvasRenderingContext2D): void {
-  const bandH = STAGE.height / SKY_BANDS.length;
-  SKY_BANDS.forEach((c, i) => {
+function drawSky(ctx: CanvasRenderingContext2D, theme: Theme): void {
+  const bandH = STAGE.height / theme.sky.length;
+  theme.sky.forEach((c, i) => {
     ctx.fillStyle = c;
     ctx.fillRect(0, Math.floor(i * bandH), STAGE.width, Math.ceil(bandH) + 1);
   });
 
   // Blocky distant hills, one tile tall, stepping down to the horizon.
-  ctx.fillStyle = FAR_HILL;
+  ctx.fillStyle = theme.hill;
   for (let x = 0; x < STAGE.width; x += TILE) {
     const h = TILE * (2 + ((x / TILE) % 3));
     ctx.fillRect(x, STAGE.height - 220 - h, TILE, h + 220);
   }
 }
 
-function drawPlatforms(ctx: CanvasRenderingContext2D): void {
+function drawPlatforms(ctx: CanvasRenderingContext2D, theme: Theme): void {
   for (const p of STAGE.platforms) {
     const cols = Math.ceil(p.w / TILE);
 
@@ -132,7 +131,7 @@ function drawPlatforms(ctx: CanvasRenderingContext2D): void {
         const x = p.x + c * TILE;
         const y = p.y + r * TILE;
         const m = tileShade(c, r);
-        ctx.fillStyle = shade(r === 1 ? DIRT : DIRT_DARK, m);
+        ctx.fillStyle = shade(r === 1 ? theme.dirt : theme.dirtDark, m);
         ctx.fillRect(x, y, TILE, TILE);
       }
     }
@@ -140,22 +139,22 @@ function drawPlatforms(ctx: CanvasRenderingContext2D): void {
     // Grass cap with a darker lip, so the surface reads as solid.
     for (let c = 0; c < cols; c++) {
       const x = p.x + c * TILE;
-      ctx.fillStyle = shade(GRASS_TOP, tileShade(c, 0));
+      ctx.fillStyle = shade(theme.grass, tileShade(c, 0));
       ctx.fillRect(x, p.y, TILE, TILE - 6);
-      ctx.fillStyle = GRASS_LIP;
+      ctx.fillStyle = theme.grassLip;
       ctx.fillRect(x, p.y + TILE - 6, TILE, 6);
     }
 
     // Hard block edges.
-    ctx.strokeStyle = INK;
+    ctx.strokeStyle = theme.ink;
     ctx.lineWidth = 2;
     ctx.strokeRect(p.x + 1, p.y + 1, p.w - 2, TILE * 4 - 2);
   }
 }
 
-function drawBlastLines(ctx: CanvasRenderingContext2D): void {
+function drawBlastLines(ctx: CanvasRenderingContext2D, theme: Theme): void {
   ctx.save();
-  ctx.strokeStyle = BLAST;
+  ctx.strokeStyle = theme.blast;
   ctx.lineWidth = 3;
   ctx.setLineDash([TILE, TILE]);
   for (const x of [STAGE.blast.left, STAGE.blast.right]) {
@@ -172,16 +171,21 @@ function drawDamageBar(
   f: Fighter,
   blocksX: number,
   y: number,
+  theme: Theme,
 ): void {
   const filled = Math.max(0, Math.min(blocksX, Math.round((f.damage / 180) * blocksX)));
   const cellW = 6;
   const cellH = 8;
   for (let i = 0; i < blocksX; i++) {
     const x = f.x - (blocksX * cellW) / 2 + i * cellW;
-    ctx.fillStyle = i < filled ? damageColour(f.damage) : "rgba(42,33,24,0.18)";
+    // Empty cells are the theme's ink at low alpha, so the track stays visible on a dark
+    // theme instead of disappearing into a dark platform.
+    ctx.globalAlpha = i < filled ? 1 : 0.18;
+    ctx.fillStyle = i < filled ? damageColour(f.damage) : theme.ink;
     ctx.fillRect(Math.round(x), Math.round(y), cellW - 1, cellH);
   }
-  ctx.strokeStyle = INK;
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = theme.ink;
   ctx.lineWidth = 2;
   ctx.strokeRect(
     Math.round(f.x - (blocksX * cellW) / 2) - 2,
@@ -196,6 +200,7 @@ function drawFighter(
   f: Fighter,
   skin: PixelSkin,
   time: number,
+  theme: Theme,
 ): void {
   const sc = spriteCanvas(skin);
   if (!sc) return;
@@ -271,7 +276,7 @@ function drawFighter(
   ctx.fillText(`${Math.round(f.damage)}%`, f.x, ly);
   ctx.restore();
 
-  drawDamageBar(ctx, f, 12, bottom + 10);
+  drawDamageBar(ctx, f, 12, bottom + 10, theme);
 }
 
 // ---------------------------------------------------------------------------
@@ -280,7 +285,7 @@ function drawFighter(
 
 export interface RenderOptions {
   humanSide: Side;
-  overlayId: string;
+  themeId: string;
 }
 
 export function drawScene(
@@ -290,6 +295,7 @@ export function drawScene(
   opts: RenderOptions,
   time: number,
 ): void {
+  const theme = themeById(opts.themeId);
   const fx = match.fx;
 
   ctx.save();
@@ -312,7 +318,7 @@ export function drawScene(
     ctx.translate(-victim.x, -victim.y);
   }
 
-  drawSky(ctx);
+  drawSky(ctx, theme);
 
   // Trails behind the fighters.
   ctx.save();
@@ -328,11 +334,11 @@ export function drawScene(
   ctx.globalAlpha = 1;
   ctx.restore();
 
-  drawBlastLines(ctx);
-  drawPlatforms(ctx);
+  drawBlastLines(ctx, theme);
+  drawPlatforms(ctx, theme);
 
   for (const f of [match.left, match.right]) {
-    drawFighter(ctx, f, match.skinFor(f.side), time);
+    drawFighter(ctx, f, match.skinFor(f.side), time, theme);
   }
 
   // Impact particles, square by design.
@@ -376,10 +382,11 @@ export function drawScene(
 
   ctx.restore();
 
-  // Letterbox bars outside the stage.
+  // Letterbox bars outside the stage are filled with the theme's page colour, so the arena
+  // sits inside the theme rather than inside a black box.
   ctx.save();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.fillStyle = "rgba(42,33,24,0.06)";
+  ctx.fillStyle = theme.page;
   if (vp.offsetX > 0.5) {
     ctx.fillRect(0, 0, vp.offsetX, ctx.canvas.height);
     ctx.fillRect(vp.offsetX + STAGE.width * vp.scale, 0, vp.offsetX + 2, ctx.canvas.height);

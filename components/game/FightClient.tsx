@@ -8,7 +8,8 @@ import { BOT_WPM_LADDER } from "@/game/constants";
 import { GameEngine, type Snapshot } from "@/game/engine";
 import { botConfigForTier } from "@/game/bot";
 import { freshSeed } from "@/game/rng";
-import { OPPONENT_SKIN_ID, overlayById, RARITY_LABEL, skinById } from "@/game/skins";
+import { OPPONENT_SKIN_ID, RARITY_LABEL, skinById } from "@/game/skins";
+import { themeById } from "@/game/themes";
 import { applyOutcome } from "@/game/storage";
 import { saveStore } from "@/game/store";
 import type { MatchResult, Side } from "@/game/types";
@@ -85,7 +86,7 @@ export default function FightClient({ wide = false }: { wide?: boolean }) {
  const [gotInput, setGotInput] = useState(false);
  const muted = save.muted;
 
- const overlay = useMemo(() => overlayById(save.equippedOverlay), [save.equippedOverlay]);
+ const theme = useMemo(() => themeById(save.equippedTheme), [save.equippedTheme]);
  const playerSkin = useMemo(() => skinById(save.equippedSkin), [save.equippedSkin]);
 
  // Draw the arena behind the intro rather than opening on an empty black box.
@@ -102,7 +103,7 @@ export default function FightClient({ wide = false }: { wide?: boolean }) {
  botWpm: save.botWpm,
  strictMode: save.strictMode,
  skins: { left: save.equippedSkin, right: opponentSkinFor(save.equippedSkin) },
- overlayId: save.equippedOverlay,
+ themeId: save.equippedTheme,
  muted: true,
  streakBefore: 0,
  humanSide: "left",
@@ -118,7 +119,7 @@ export default function FightClient({ wide = false }: { wide?: boolean }) {
  engine.destroy();
  if (previewRef.current === engine) previewRef.current = null;
  };
- }, [stage, save.botWpm, save.strictMode, save.equippedOverlay, save.equippedSkin]);
+ }, [stage, save.botWpm, save.strictMode, save.equippedTheme, save.equippedSkin]);
 
  const stop = useCallback(() => {
  engineRef.current?.destroy();
@@ -145,7 +146,7 @@ export default function FightClient({ wide = false }: { wide?: boolean }) {
  left: playerSide === "left" ? save.equippedSkin : botSkinId,
  right: playerSide === "right" ? save.equippedSkin : botSkinId,
  },
- overlayId: save.equippedOverlay,
+ themeId: save.equippedTheme,
  muted: save.muted,
  streakBefore: save.streak,
  humanSide: playerSide,
@@ -170,7 +171,7 @@ export default function FightClient({ wide = false }: { wide?: boolean }) {
  // Take keyboard focus explicitly. Clicking the start button does not leave focus
  // anywhere useful once that button unmounts.
  window.requestAnimationFrame(() => canvas.focus());
- }, [playerSide, save.botWpm, save.equippedOverlay, save.equippedSkin, save.muted, save.streak, save.strictMode]);
+ }, [playerSide, save.botWpm, save.equippedTheme, save.equippedSkin, save.muted, save.streak, save.strictMode]);
 
  // Keyboard is the whole game. Space and arrows are swallowed so the page cannot
  // scroll mid-match.
@@ -234,6 +235,28 @@ export default function FightClient({ wide = false }: { wide?: boolean }) {
  return (
  <section
    ref={sectionRef}
+   data-testid="fight-section"
+   style={
+     {
+       // Redefining Tailwind's colour variables here re-themes every `bg-page`, `text-ink`,
+       // `border-line` and `bg-brand` inside this section, without touching a single class
+       // name. The default values live in app/globals.css.
+       //
+       // NOT overridden: --color-heat, --color-coin and --color-aqua. Those carry meaning
+       // (heavy hits, prices, parry states) and must stay the same colour in every theme.
+       "--color-page": theme.page,
+       "--color-card": theme.surface,
+       "--color-line": theme.border,
+       "--color-line-strong": theme.promptBorder,
+       "--color-ink": theme.text,
+       "--color-ink-soft": theme.textMuted,
+       "--color-ink-faint": theme.textMuted,
+       "--color-brand": theme.accent,
+       "--color-brand-bright": theme.accent,
+       "--color-brand-soft": theme.accent,
+       "--color-brand-deep": theme.onAccent,
+     } as React.CSSProperties
+   }
    className={
      isFullscreen
        ? "mx-auto w-full max-w-6xl bg-page px-4 py-4"
@@ -330,7 +353,7 @@ export default function FightClient({ wide = false }: { wide?: boolean }) {
  <div
  data-testid="bot-panel"
  className="mt-3 rounded-2xl border border-line/80 px-3 py-2"
- style={{ background: overlay.panel }}
+ style={{ background: theme.surface }}
  >
  <div className="flex items-center justify-between gap-3">
  <div className="flex items-center gap-2">
@@ -379,7 +402,7 @@ export default function FightClient({ wide = false }: { wide?: boolean }) {
      <PromptCard
        key={p.id}
        prompt={p}
-       overlay={overlay}
+       theme={theme}
        compact
        isGuard={p.kind === "guard"}
        isRecovery={p.kind === "recovery"}
@@ -390,7 +413,7 @@ export default function FightClient({ wide = false }: { wide?: boolean }) {
  )}
 
  {/* ---------------------------------------------------------- the fight */}
- <div className="relative mt-3 overflow-hidden rounded-2xl border border-line bg-black">
+ <div className="relative mt-3 overflow-hidden border-2 border-line bg-page">
  {/* The vh cap keeps the bot panel, the arena and the player's prompts all inside
      one screenful. Without it the prompts fell below the fold and the game could
      not be played. Wide and fullscreen layouts get more room, because on those the
@@ -494,7 +517,7 @@ export default function FightClient({ wide = false }: { wide?: boolean }) {
  <div
  data-testid="player-panel"
  className="mt-3 rounded-2xl border border-brand-deep/40 px-3 py-3"
- style={{ background: overlay.panel }}
+ style={{ background: theme.surface }}
  >
  <div className="flex flex-wrap items-center justify-between gap-3">
  <div className="flex items-center gap-3">
@@ -544,7 +567,7 @@ export default function FightClient({ wide = false }: { wide?: boolean }) {
      <PromptCard
        key={p.id}
        prompt={p}
-       overlay={overlay}
+       theme={theme}
        isGuard={p.kind === "guard"}
        isRecovery={p.kind === "recovery"}
      />

@@ -8,7 +8,7 @@ import { STEP, TELEGRAPH_COMMIT_CHARS } from "./constants";
 import { AudioBus } from "./audio";
 import { Match } from "./match";
 import { computeViewport, drawScene } from "./render";
-import { overlayById } from "./skins";
+import { themeById, type Theme } from "./themes";
 import type { GameEvent, MatchOptions, MatchResult, Prompt, Side } from "./types";
 
 export interface PromptView {
@@ -54,7 +54,7 @@ export interface EngineConfig {
   botWpm: number;
   strictMode: boolean;
   skins: { left: string; right: string };
-  overlayId: string;
+  themeId: string;
   muted: boolean;
   streakBefore: number;
   humanSide: Side;
@@ -142,8 +142,8 @@ export class GameEngine {
     this.audio.setMuted(muted);
   }
 
-  get overlay() {
-    return overlayById(this.cfg.overlayId);
+  get theme(): Theme {
+    return themeById(this.cfg.themeId);
   }
 
   resize(): void {
@@ -216,7 +216,7 @@ export class GameEngine {
       this.ctx,
       this.match,
       vp,
-      { humanSide: this.cfg.humanSide, overlayId: this.cfg.overlayId },
+      { humanSide: this.cfg.humanSide, themeId: this.cfg.themeId },
       this.elapsed,
     );
   }

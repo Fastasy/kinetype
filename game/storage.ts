@@ -2,15 +2,27 @@
 // Every read is defensive: a corrupt or partial save must never break the game.
 
 import { BOT_WPM_LADDER, STORAGE_KEY } from "./constants";
-import { DEFAULT_OVERLAY_ID, DEFAULT_SKIN_ID } from "./skins";
+import { DEFAULT_SKIN_ID } from "./skins";
+import { DEFAULT_THEME_ID } from "./themes";
+
+/**
+ * v1 saves stored HUD overlays, which were prompt-panel restyles. Themes replaced them by
+ * recolouring the entire fight. Ownership is migrated rather than dropped, so nobody loses
+ * something they paid for.
+ */
+const LEGACY_OVERLAY_TO_THEME: Record<string, string> = {
+  terminal: "paper",
+  amber: "sunset",
+  cryo: "frost",
+};
 
 export interface SaveData {
   version: 1;
   coins: number;
   ownedSkins: string[];
-  ownedOverlays: string[];
+  ownedThemes: string[];
   equippedSkin: string;
-  equippedOverlay: string;
+  equippedTheme: string;
   bestWpm: number;
   bestAccuracy: number;
   wins: number;
@@ -27,9 +39,9 @@ export const DEFAULT_SAVE: SaveData = {
   version: 1,
   coins: 0,
   ownedSkins: [DEFAULT_SKIN_ID],
-  ownedOverlays: [DEFAULT_OVERLAY_ID],
+  ownedThemes: [DEFAULT_THEME_ID],
   equippedSkin: DEFAULT_SKIN_ID,
-  equippedOverlay: DEFAULT_OVERLAY_ID,
+  equippedTheme: DEFAULT_THEME_ID,
   bestWpm: 0,
   bestAccuracy: 0,
   wins: 0,
@@ -60,6 +72,19 @@ function str(v: unknown, fallback: string): string {
   return typeof v === "string" && v.length ? v : fallback;
 }
 
+/**
+ * Theme ownership for a save that predates themes: the default, plus whatever the old HUD
+ * overlays mapped onto. Deduped, because the default is also a legacy mapping target.
+ */
+function migratedThemes(p: Record<string, unknown>): string[] {
+  const legacy = Array.isArray(p.ownedOverlays) ? p.ownedOverlays : [];
+  const mapped = legacy
+    .filter((x): x is string => typeof x === "string")
+    .map((id) => LEGACY_OVERLAY_TO_THEME[id])
+    .filter((id): id is string => Boolean(id));
+  return [...new Set([...DEFAULT_SAVE.ownedThemes, ...mapped])];
+}
+
 export function loadSave(): SaveData {
   if (typeof window === "undefined") return { ...DEFAULT_SAVE };
   try {
@@ -74,9 +99,12 @@ export function loadSave(): SaveData {
       version: 1,
       coins: Math.max(0, Math.floor(num(p.coins, 0))),
       ownedSkins: strList(p.ownedSkins, DEFAULT_SAVE.ownedSkins),
-      ownedOverlays: strList(p.ownedOverlays, DEFAULT_SAVE.ownedOverlays),
+      ownedThemes: strList(p.ownedThemes, migratedThemes(p)),
       equippedSkin: str(p.equippedSkin, DEFAULT_SAVE.equippedSkin),
-      equippedOverlay: str(p.equippedOverlay, DEFAULT_SAVE.equippedOverlay),
+      equippedTheme: str(
+        p.equippedTheme ?? LEGACY_OVERLAY_TO_THEME[str(p.equippedOverlay, "")],
+        DEFAULT_SAVE.equippedTheme,
+      ),
       bestWpm: Math.max(0, num(p.bestWpm, 0)),
       bestAccuracy: Math.max(0, num(p.bestAccuracy, 0)),
       wins: Math.max(0, Math.floor(num(p.wins, 0))),

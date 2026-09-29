@@ -3,7 +3,9 @@
 import { useState, useSyncExternalStore } from "react";
 
 import { coinLabel, purchaseWithCoins, REAL_MONEY_DISABLED_REASON, type ItemKind } from "@/game/commerce";
-import { OVERLAYS, RARITY_LABEL, SKINS, SPRITE_H, type PixelSkin } from "@/game/skins";
+import { RARITY_LABEL, SKINS, SPRITE_H, type PixelSkin } from "@/game/skins";
+import { THEMES } from "@/game/themes";
+import ThemeSwatch from "./ThemeSwatch";
 import SkinSprite from "./SkinSprite";
 import { saveStore } from "@/game/store";
 import type { SaveData } from "@/game/storage";
@@ -51,7 +53,7 @@ export default function ShopClient() {
 
  function equip(kind: ItemKind, id: string, name: string) {
  const next: SaveData =
- kind === "skin" ? { ...save, equippedSkin: id } : { ...save, equippedOverlay: id };
+ kind === "skin" ? { ...save, equippedSkin: id } : { ...save, equippedTheme: id };
  commit(next, `${name} equipped.`);
  }
 
@@ -142,67 +144,69 @@ export default function ShopClient() {
  </ul>
  </section>
 
- <section aria-labelledby="overlays">
- <h2 id="overlays" className="font-mono text-lg font-bold text-ink">
- HUD overlays
- </h2>
- <p className="mt-1 text-sm text-ink-faint">
- Restyle the prompt panels and damage readout without changing how the fight plays.
- </p>
- <ul className="mt-4 grid gap-4 sm:grid-cols-3">
- {OVERLAYS.map((o) => {
- const owned = save.ownedOverlays.includes(o.id);
- const equipped = save.equippedOverlay === o.id;
- return (
- <li
- key={o.id}
- className={`rounded-2xl border p-4 ${
- equipped ? "border-brand/60 bg-brand-deep/10" : "border-line bg-card/40"
- }`}
- >
- <div className="font-semibold text-ink">{o.name}</div>
- <p className="mt-1 min-h-[32px] text-xs text-ink-faint">{o.blurb}</p>
- <div className="mt-3 flex gap-1.5">
- {[o.panel, o.border, o.promptActive].map((c, i) => (
- <span
- key={i}
- className="h-6 flex-1 rounded border border-line-strong"
- style={{ background: c }}
- aria-hidden="true"
- />
- ))}
- </div>
- <div className="mt-3 flex items-center justify-between gap-2">
- <span className="font-mono text-xs text-coin">
- {o.price === 0 ? "Free" : `${o.price} coins`}
- </span>
- {equipped ? (
- <span className="rounded-lg bg-brand/15 px-3 py-1.5 text-xs font-semibold text-brand-soft">
- Equipped
- </span>
- ) : owned ? (
- <button
- type="button"
- onClick={() => equip("overlay", o.id, o.name)}
- className="rounded-lg border border-line-strong px-3 py-1.5 text-xs font-semibold text-ink-soft transition hover:border-brand/60 hover:text-brand-bright"
- >
- Equip
- </button>
- ) : (
- <button
- type="button"
- onClick={() => buy("overlay", o.id, o.price, o.name)}
- disabled={save.coins < o.price}
- className="rounded-lg bg-brand px-3 py-1.5 text-xs font-bold text-page transition hover:bg-brand-bright disabled:cursor-not-allowed disabled:bg-line-strong disabled:text-ink-faint"
- >
- {save.coins < o.price ? `${o.price - save.coins} short` : "Unlock"}
- </button>
- )}
- </div>
- </li>
- );
- })}
- </ul>
+ <section aria-labelledby="themes">
+   <h2 id="themes" className="font-mono text-lg font-bold text-ink">
+     Themes
+   </h2>
+   <p className="mt-1 max-w-2xl text-sm text-ink-faint">
+     A theme repaints the whole fight: the sky, the hills, the stage, the prompt card and
+     the panels around it. Your fighter and the damage colours do not change, so nothing
+     you have learned about reading a hit has to be relearned.
+   </p>
+   <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+     {THEMES.map((t) => {
+       const owned = save.ownedThemes.includes(t.id);
+       const equipped = save.equippedTheme === t.id;
+       return (
+         <li
+           key={t.id}
+           data-testid="theme-card"
+           data-theme={t.id}
+           className={`border-2 ${equipped ? "border-brand" : "border-line"}`}
+         >
+           <ThemeSwatch theme={t} />
+           <div className="border-t-2 border-line p-4">
+             <div className="flex items-baseline justify-between gap-2">
+               <span className="font-semibold text-ink">{t.name}</span>
+               <span className="font-mono text-[10px] tracking-wider text-ink-faint">
+                 {RARITY_LABEL[t.rarity]}
+               </span>
+             </div>
+             <p className="mt-1 min-h-[32px] text-xs text-ink-faint">{t.blurb}</p>
+             <div className="mt-3 flex items-center justify-between gap-2">
+               <span className="font-mono text-xs text-coin">
+                 {t.price === 0 ? "Free" : `${t.price} coins`}
+               </span>
+               {equipped ? (
+                 <span className="border border-brand px-3 py-1.5 text-xs font-semibold text-brand">
+                   Equipped
+                 </span>
+               ) : owned ? (
+                 <button
+                   type="button"
+                   data-testid="equip-theme"
+                   onClick={() => equip("theme", t.id, t.name)}
+                   className="border border-line-strong px-3 py-1.5 text-xs font-semibold text-ink-soft transition hover:border-brand hover:text-brand"
+                 >
+                   Wear it
+                 </button>
+               ) : (
+                 <button
+                   type="button"
+                   data-testid="buy-theme"
+                   onClick={() => buy("theme", t.id, t.price, t.name)}
+                   disabled={save.coins < t.price}
+                   className="bg-brand px-3 py-1.5 text-xs font-bold text-brand-deep transition hover:bg-brand-bright disabled:cursor-not-allowed disabled:bg-line-strong disabled:text-ink-faint"
+                 >
+                   {save.coins < t.price ? `${t.price - save.coins} short` : "Unlock"}
+                 </button>
+               )}
+             </div>
+           </div>
+         </li>
+       );
+     })}
+   </ul>
  </section>
 
  <section

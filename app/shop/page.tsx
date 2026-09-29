@@ -5,9 +5,9 @@ import JsonLd from "@/components/JsonLd";
 import ShopClient from "@/components/game/ShopClient";
 
 export const metadata: Metadata = {
- title: "Skins and HUD Overlays",
+ title: "Skins and Themes",
  description:
- "Spend the coins you earn in Kinetype on fighter skins, launch trails and HUD overlays. Every cosmetic is drawn in code, so there is nothing to download and the game stays fast.",
+   "Spend the coins you earn in Kinetype on fighter skins, launch trails and full arena themes. Every cosmetic is drawn in code, so there is nothing to download and the game stays fast.",
  alternates: { canonical: "/shop" },
 };
 
@@ -27,10 +27,10 @@ export default function ShopPage() {
 
  <div className="mx-auto max-w-5xl px-4 sm:px-6">
  <h1 className="font-mono text-3xl font-black leading-tight text-ink sm:text-4xl">
- Skins and overlays
+ Skins and themes
  </h1>
  <p className="mt-4 max-w-2xl text-sm leading-relaxed text-ink-faint sm:text-base">
- Every fighter, trail and HUD theme in Kinetype is drawn from code at runtime. There are no
+ Every fighter, trail and theme in Kinetype is drawn from code at runtime. There are no
  image files to download, which is why the game loads in under a second and why a new skin
  costs the site nothing to serve. You unlock them with coins you earn by playing.
  </p>

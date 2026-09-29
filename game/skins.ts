@@ -323,69 +323,6 @@ export const OPPONENT_SKIN_ID = "ember";
 
 /** What a brand new save starts with. */
 export const DEFAULT_SKIN_ID = "spark";
-export const DEFAULT_OVERLAY_ID = "terminal";
-
-// ---------------------------------------------------------------------------
-// HUD overlays. These restyle the prompt panel only. They never change how the
-// fight plays, which is what keeps them honest as a purchase.
-// ---------------------------------------------------------------------------
-
-export interface Overlay {
-  id: string;
-  name: string;
-  blurb: string;
-  rarity: Rarity;
-  price: number;
-  /** Wrapper background behind the whole prompt area. */
-  panel: string;
-  /** Border on a resting prompt. */
-  border: string;
-  /** Background of a resting prompt. */
-  promptBg: string;
-  /** Highlight for the character being typed. */
-  promptActive: string;
-}
-
-export const OVERLAYS: Overlay[] = [
-  {
-    id: "terminal",
-    name: "Terminal",
-    blurb: "The standard HUD. High contrast, no decoration.",
-    rarity: "starter",
-    price: 0,
-    panel: "rgba(255,255,255,0.92)",
-    border: "#c9c3b4",
-    promptBg: "#f8f5ee",
-    promptActive: "#6d28d9",
-  },
-  {
-    id: "amber",
-    name: "Amber CRT",
-    blurb: "Warm phosphor glow on a paper screen.",
-    rarity: "common",
-    price: 180,
-    panel: "rgba(255,252,244,0.94)",
-    border: "#e0c9a6",
-    promptBg: "#fdf6ea",
-    promptActive: "#b45309",
-  },
-  {
-    id: "cryo",
-    name: "Cryo",
-    blurb: "Cold blue with a bright rim.",
-    rarity: "common",
-    price: 180,
-    panel: "rgba(248,252,254,0.94)",
-    border: "#bcd8e2",
-    promptBg: "#eff8fb",
-    promptActive: "#0e7490",
-  },
-];
-
-export function overlayById(id: string): Overlay {
-  return OVERLAYS.find((o) => o.id === id) ?? OVERLAYS[0];
-}
-
 export const RARITY_LABEL: Record<Rarity, string> = {
   starter: "STARTER",
   common: "COMMON",

@@ -119,7 +119,7 @@ export default function PlayPage() {
             href="/shop"
             className="border-2 border-line-strong bg-card px-4 py-2 font-semibold text-ink-soft transition hover:border-brand hover:text-brand"
           >
-            Skins and overlays
+            Skins and themes
           </Link>
           <Link
             href="/"

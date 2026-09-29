@@ -23,7 +23,17 @@
  * Solid brand buttons use near-white text (--color-brand-deep): 5.9:1.
  * Never put `text-ink` on `bg-brand`; that combination is 2.4:1 and fails.
  */
-@theme inline {
+/*
+ * NOT `@theme inline`. The inline form bakes each value into the generated utility
+ * (`.bg-page { background-color: #f2ede3 }`), which makes it impossible to override a token
+ * for one subtree. Plain `@theme` emits real custom properties and the utilities reference
+ * them, so the fight section can redefine these colours for the equipped theme and every
+ * `bg-page` / `text-ink` / `border-line` inside it follows automatically.
+ *
+ * These are the DEFAULT (Paper) values. They are also what the shop and the marketing pages
+ * use, which is deliberate: the site keeps one identity and the game wears the theme.
+ */
+@theme {
   --color-page: #f2ede3;
   --color-card: #fffdf7;
   --color-line: #d5ccb8;

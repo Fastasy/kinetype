@@ -172,8 +172,38 @@ Shop surfaces:
 | Surface | Content |
 |---|---|
 | Fighters | Full character skins, recolour and silhouette variants |
-| Trails | The launch trail particle style |
-| Overlays | HUD theme (prompt panel and damage meter styling) |
+| Themes | A full repaint of the fight (see below) |
+
+### Themes
+
+A theme repaints the **whole fight**, not one panel. The earlier design shipped "HUD overlays"
+that recoloured only the prompt card, which is not a theme and was replaced at Ruan's request.
+
+A theme carries the arena sky bands, the hills, the grass and dirt of the stage, the blast-line
+colour, the prompt card, the panels and everything the fight sits on. Six ship: Paper (free),
+Midnight, Sunset, Frost, Neon Grid, Volcano.
+
+Two implementation notes matter more than the list:
+
+**Theming is CSS variables, not a prop drill.** Tailwind v4 emits each colour token as a real
+custom property, so `FightClient` redefines `--color-page`, `--color-ink`, `--color-brand` and
+friends on the fight `<section>`. Every `bg-page`, `text-ink` and `border-line` inside follows
+automatically, and a new theme adds no class names. This requires `@theme` and NOT
+`@theme inline` in `globals.css`: the inline form bakes each value into the generated utility
+and makes a scoped override impossible.
+
+**Signals are not themed.** The damage ramp (white through yellow and orange to near-black),
+the red lethal telegraph, the cyan parry bracket, and the tier chips on the prompt card keep
+their colours in every theme. They tell the player what is happening, and relearning them
+because the arena changed colour would be a defect. The tier chips are drawn as filled blocks
+with their own background for exactly this reason, so a fixed colour stays readable on a dark
+theme as well as a light one.
+
+**Every theme is contrast-checked.** The test suite asserts WCAG AA (4.5:1) for text on
+surface, muted text on both surface and prompt background, accent on prompt background, and
+onAccent on accent. A theme that looks good and cannot be read is a broken product, so this is
+arithmetic in `game/themes.ts` rather than an eyeball judgement. One theme failed on the first
+pass at 4.47:1 and was corrected.
 
 **Currency.** Coins, earned only. Payout per match = base by rounds won + WPM bonus + accuracy bonus + streak bonus.
 

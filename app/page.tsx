@@ -148,7 +148,7 @@ export default function HomePage() {
         </h2>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-faint">
           Every match pays coins. Win rounds, type clean and hold a streak to earn more, then spend
-          them on fighters and HUD overlays in the{" "}
+          them on fighters and full arena themes in the{" "}
           <Link href="/shop" className="text-brand underline underline-offset-2">
             shop
           </Link>
@@ -188,8 +188,7 @@ export default function HomePage() {
             start where you actually are.
           </li>
           <li className="border-2 border-line bg-card/50 px-4 py-3">
-            Nine bots, six fighters, three HUD themes, and no purchase you can make with real money
-            yet.
+            Nine bots, six fighters, six themes, and no purchase you can make with real money yet.
           </li>
         </ul>
       </section>

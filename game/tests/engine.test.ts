@@ -40,7 +40,8 @@ import { TypingRun } from "../typing";
 import { createRng } from "../rng";
 import { applyOutcome, DEFAULT_SAVE, type SaveData } from "../storage";
 import { purchaseWithCoins } from "../commerce";
-import { OPPONENT_SKIN_ID, OVERLAYS, PIXEL_KEYS, SKINS, SPRITE_H, SPRITE_W } from "../skins";
+import { OPPONENT_SKIN_ID, PIXEL_KEYS, SKINS, SPRITE_H, SPRITE_W } from "../skins";
+import { contrast, THEMES, themeById, DEFAULT_THEME_ID } from "../themes";
 import type { MatchOptions, Side, WordTier } from "../types";
 
 let passed = 0;
@@ -861,15 +862,55 @@ test("the opponent skin is real and differs from the starter", () => {
   assert.notEqual(OPPONENT_SKIN_ID, SKINS.find((s) => s.rarity === "starter")?.id);
 });
 
-test("there is a free overlay and paid ones cost coins", () => {
-  const free = OVERLAYS.filter((o) => o.rarity === "starter");
-  assert.equal(free.length, 1, "exactly one overlay should be free");
+test("there is a free theme and paid ones cost coins", () => {
+  const free = THEMES.filter((t) => t.rarity === "starter");
+  assert.equal(free.length, 1, "exactly one theme should be free");
   assert.equal(free[0].price, 0);
-  for (const o of OVERLAYS) {
-    if (o.rarity === "starter") continue;
-    assert.ok(o.price > 0, `${o.id} must cost coins`);
+  for (const t of THEMES) {
+    if (t.rarity === "starter") continue;
+    assert.ok(t.price > 0, `${t.id} must cost coins`);
   }
-  assert.equal(new Set(OVERLAYS.map((o) => o.id)).size, OVERLAYS.length);
+  assert.equal(new Set(THEMES.map((t) => t.id)).size, THEMES.length, "theme ids unique");
+  assert.ok(THEMES.length >= 5, `expected a real spread of themes, got ${THEMES.length}`);
+});
+
+// ---------------------------------------------------------------- theme contrast
+// A cool-looking theme with unreadable prompts is a broken product. This is Ruan's standing
+// AA rule applied to the themes, checked by arithmetic rather than by eye.
+
+test("every theme passes WCAG AA on the text that sits on it", () => {
+  for (const t of THEMES) {
+    const pairs: [string, number | null, string][] = [
+      ["text on surface", contrast(t.text, t.surface), `${t.text} on ${t.surface}`],
+      ["muted on surface", contrast(t.textMuted, t.surface), `${t.textMuted} on ${t.surface}`],
+      ["text on page", contrast(t.text, t.page), `${t.text} on ${t.page}`],
+      ["onAccent on accent", contrast(t.onAccent, t.accent), `${t.onAccent} on ${t.accent}`],
+      ["muted on promptBg", contrast(t.textMuted, t.promptBg), `${t.textMuted} on ${t.promptBg}`],
+      ["accent on promptBg", contrast(t.accent, t.promptBg), `${t.accent} on ${t.promptBg}`],
+      ["text on promptBg", contrast(t.text, t.promptBg), `${t.text} on ${t.promptBg}`],
+    ];
+    for (const [label, ratio, detail] of pairs) {
+      assert.ok(ratio !== null, `${t.id}: ${label} uses a non-hex colour (${detail})`);
+      assert.ok(
+        (ratio as number) >= 4.5,
+        `${t.id}: ${label} is ${(ratio as number).toFixed(2)}:1, needs 4.5:1 (${detail})`,
+      );
+    }
+  }
+});
+
+test("every theme defines a full arena palette", () => {
+  for (const t of THEMES) {
+    assert.equal(t.sky.length, 3, `${t.id} needs three sky bands`);
+    for (const c of [...t.sky, t.hill, t.grass, t.grassLip, t.dirt, t.dirtDark, t.ink]) {
+      assert.ok(/^#[0-9a-f]{6}$/i.test(c), `${t.id}: "${c}" is not a hex colour`);
+    }
+  }
+});
+
+test("themeById never returns nothing", () => {
+  assert.equal(themeById(DEFAULT_THEME_ID).id, DEFAULT_THEME_ID);
+  assert.equal(themeById("nope-does-not-exist").id, THEMES[0].id);
 });
 
 // ================================================================ report

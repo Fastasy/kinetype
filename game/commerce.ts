@@ -40,10 +40,10 @@ export interface PurchaseResult {
   save?: SaveData;
 }
 
-export type ItemKind = "skin" | "overlay";
+export type ItemKind = "skin" | "theme";
 
 export function isOwned(save: SaveData, kind: ItemKind, id: string): boolean {
-  return (kind === "skin" ? save.ownedSkins : save.ownedOverlays).includes(id);
+  return (kind === "skin" ? save.ownedSkins : save.ownedThemes).includes(id);
 }
 
 export function canAfford(save: SaveData, price: number): boolean {
@@ -70,10 +70,10 @@ export function purchaseWithCoins(
     ...save,
     coins: save.coins - price,
     ownedSkins: kind === "skin" ? [...save.ownedSkins, id] : save.ownedSkins,
-    ownedOverlays: kind === "overlay" ? [...save.ownedOverlays, id] : save.ownedOverlays,
+    ownedThemes: kind === "theme" ? [...save.ownedThemes, id] : save.ownedThemes,
   };
   if (kind === "skin") next.equippedSkin = id;
-  else next.equippedOverlay = id;
+  else next.equippedTheme = id;
   return { ok: true, method: "coins", save: next };
 }
 

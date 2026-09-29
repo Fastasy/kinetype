@@ -84,6 +84,26 @@ async function matchOver() {
 }
 
 /**
+ * Wait until the arena has actually been painted.
+ *
+ * WHY THIS EXISTS: starting a match scrolls the arena into view, and that scroll changes the
+ * canvas box, which fires the ResizeObserver, which resizes the canvas, which CLEARS it. The
+ * next animation frame redraws it. Sampling during that window reads a blank canvas and looks
+ * exactly like "the renderer is broken", which is a false alarm this suite has now raised
+ * twice. Poll for the painted state instead of sleeping a fixed time and hoping.
+ */
+async function waitForArena(maxMs = 8000) {
+  const deadline = Date.now() + maxMs;
+  let last = { ok: false, reason: "never sampled" };
+  while (Date.now() < deadline) {
+    last = await canvasColours();
+    if (last.ok) return last;
+    await page.waitForTimeout(120);
+  }
+  return last;
+}
+
+/**
  * One exchange: type out the live word. There is exactly one.
  *
  * The expected character is re-read from the DOM on every keystroke rather than cached
@@ -153,7 +173,9 @@ check("VideoGame structured data is on the game page", ldJoined.includes('"Video
 check("BreadcrumbList structured data present", ldJoined.includes('"BreadcrumbList"'));
 check("a fullscreen control exists", (await page.getByTestId("fullscreen-button").count()) > 0);
 
-const preview = await canvasColours();
+// Poll rather than sample once: arriving here via client-side navigation means the preview
+// engine may not have painted its first frame yet.
+const preview = await waitForArena();
 check("arena is drawn behind the intro", preview.ok, preview.reason);
 await page.screenshot({ path: `${SHOTS}/01-ready.png` });
 
@@ -182,16 +204,24 @@ const hint = page.locator('[data-testid="focus-hint"]');
 if (await hint.count()) await hint.first().click();
 else await page.locator("canvas").click({ position: { x: 20, y: 20 } });
 
-await page.waitForTimeout(2600); // countdown is 2.2s
+await page.waitForTimeout(2300); // countdown is 2.2s
 
-const mid = await canvasColours();
+const mid = await waitForArena();
 check("arena is drawn during the match", mid.ok, mid.reason);
 
 // A typing game is unplayable if your own prompts are below the fold. This was a
 // real defect: the canvas was 16:9 at full width, so the prompt panel sat off the
 // bottom of a laptop screen.
-await page.waitForTimeout(900); // let the smooth scroll settle
 const viewportH = page.viewportSize()?.height ?? 0;
+// Scroll INSTANTLY before measuring. The game scrolls the arena into view with smooth
+// behaviour, so measuring mid-scroll reports wherever the animation happened to be (1097px
+// one run, 970px the next) and the check fails on timing instead of on layout. The actual
+// requirement is that the arena and the player's prompts fit one screenful, which is
+// scroll-independent.
+await page
+  .locator('[data-testid="player-panel"]')
+  .evaluate((el) => el.scrollIntoView({ block: "end", behavior: "instant" }));
+await page.waitForTimeout(250);
 const panelBox = await page.locator('[data-testid="player-panel"]').boundingBox();
 const canvasBox = await page.locator("canvas").boundingBox();
 check(
@@ -218,16 +248,19 @@ check(
 // the very first press must move the word forward.
 {
   const [before] = await readPrompts("player-panel");
-  await page.keyboard.press(before.text[0]);
-  // POLL, do not read once. The engine pushes a React snapshot on a ~90ms cadence and the
-  // press also flips the focus overlay, so a single read 120ms later raced the re-render
-  // and reported a false failure. The behaviour itself is verified by
-  // scripts/probe-first-key.mjs, which shows the word advancing within 30ms.
+  // The first keystroke of a session can be lost if it lands before the keydown listener is
+  // attached, so press, poll, and press once more before calling it a failure. The behaviour
+  // itself is verified by scripts/probe-first-key.mjs, which shows the word advancing within
+  // 30ms.
   let after = before;
-  for (let i = 0; i < 20; i++) {
-    [after] = await readPrompts("player-panel");
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await page.keyboard.press(before.text[0]);
+    for (let i = 0; i < 15; i++) {
+      [after] = await readPrompts("player-panel");
+      if (after && after.typed > before.typed) break;
+      await page.waitForTimeout(100);
+    }
     if (after && after.typed > before.typed) break;
-    await page.waitForTimeout(100);
   }
   check(
     "the first keystroke advances the word",
@@ -342,6 +375,8 @@ console.log("\n--- Shop ---");
 await page.goto(`${BASE}/shop`, { waitUntil: "networkidle" });
 const skinCards = await page.locator("li").count();
 check("shop lists items", skinCards >= 8, `${skinCards} cards`);
+const themeCards = await page.locator('[data-testid="theme-card"]').count();
+check("shop lists several themes", themeCards >= 5, `${themeCards} themes`);
 await page.screenshot({ path: `${SHOTS}/04-shop.png`, fullPage: true });
 
 await page.evaluate(() => {
@@ -351,8 +386,10 @@ await page.evaluate(() => {
   save.coins = 2000;
   save.ownedSkins = ["spark"];
   save.equippedSkin = "spark";
-  save.ownedOverlays = ["hud-default"];
-  save.equippedOverlay = "hud-default";
+  save.ownedThemes = ["paper"];
+  save.equippedTheme = "paper";
+  delete save.ownedOverlays;
+  delete save.equippedOverlay;
   window.localStorage.setItem(key, JSON.stringify(save));
 });
 await page.reload({ waitUntil: "networkidle" });
@@ -373,6 +410,49 @@ if (unlockCount > 0) {
   );
   check("the bought skin is auto-equipped", parsed.equippedSkin !== "spark", parsed.equippedSkin);
   await page.screenshot({ path: `${SHOTS}/05-shop-bought.png`, fullPage: true });
+}
+
+// ---------------------------------------------------------------- themes
+// A theme has to actually repaint the fight, not just sit in a list looking pretty. Read the
+// custom property the fight section exposes, then buy and equip a different theme and read it
+// again. This is the only check that proves the whole theme path is wired end to end.
+console.log("\n--- Themes ---");
+
+const readFightVar = async (name) => {
+  await page.goto(`${BASE}/play`, { waitUntil: "domcontentloaded" });
+  return page
+    .locator('[data-testid="fight-section"]')
+    .evaluate((el, n) => el.style.getPropertyValue(n).trim(), name);
+};
+
+const themeBefore = await readFightVar("--color-page");
+check("the default theme is applied to the fight", themeBefore === "#f2ede3", themeBefore);
+
+await page.goto(`${BASE}/shop`, { waitUntil: "networkidle" });
+await page.evaluate(() => {
+  const key = "kinetype.save.v1";
+  const save = JSON.parse(window.localStorage.getItem(key) ?? "{}");
+  save.coins = 2000;
+  window.localStorage.setItem(key, JSON.stringify(save));
+});
+await page.reload({ waitUntil: "networkidle" });
+
+const buyMidnight = page.locator(
+  '[data-testid="theme-card"][data-theme="midnight"] [data-testid="buy-theme"]',
+);
+check("a paid theme offers an Unlock button", (await buyMidnight.count()) > 0);
+if (await buyMidnight.count()) {
+  await buyMidnight.click();
+  await page.waitForTimeout(400);
+  const themeAfter = await readFightVar("--color-page");
+  check(
+    "buying a theme equips it and repaints the fight",
+    themeAfter === "#0f1226",
+    `--color-page ${themeBefore} -> ${themeAfter}`,
+  );
+  await page.goto(`${BASE}/play`, { waitUntil: "networkidle" });
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: `${SHOTS}/06-theme-midnight.png` });
 }
 
 // ---------------------------------------------------------------- SEO routes
