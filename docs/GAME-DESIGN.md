@@ -41,7 +41,13 @@ Typing speed is a near-linear skill. A pure speed race is tic-tac-toe with a key
 | Movement | Horizontal drift only. No jump input exists; recovery is word-driven | Typing is the only input |
 | Spawn | **Centre of the main platform**, 88px apart (x 596 and x 684, stage centre 640) | Ruan's call: 1.1 |
 
-Both fighters spawn in the middle of the stage, 88px apart, which clears the 84px-wide sprite and the 62px hurtbox, so neither starts already overlapping the other. The positions are still symmetric about the stage centre, so neither side starts at an advantage and the spawn is still equidistant from each own blast line. A round that starts in the middle gets to the exchange faster than one that starts at wide marks, and after a KO the next round should restart there rather than out at the edges.
+Both fighters spawn in the middle of the stage, 88px apart, which clears the 84px-wide sprite and the 62px hurtbox, so neither starts already overlapping the other. The positions are still symmetric about the stage centre, so neither side starts at an advantage and the spawn is still equidistant from each own blast line.
+
+**Both paths that return a fighter to the stage use this spawn: a round restart and a successful save.** For a long time only the round restart did. The save path still used the old wide marks (`platforms[0].x ± 50`, x 390 / 890), so a ring-out ended with the fight shoved into a corner: the player who had just been launched came back out at the edge while their opponent stayed wherever they happened to be. Ruan caught it by playing: *"the players still dont spawn in the middle after one is knocked off."* It survived a design read and every test, because the constants were correct and only the round path was exercised.
+
+The fix was structural rather than local. Fighter position had drifted into three sites, which is why one of them could keep an obsolete coordinate. Spawn positioning now lives in a single private method, `placeAtSpawn`, and `resetRound` and `recoverSuccess` both call it. The mid-fall clamp in `beginRecovery` deliberately does NOT, and carries a comment saying so, because that one holds a falling fighter at the edge so the player can see what they are saving.
+
+**A save moves BOTH fighters.** Resetting only the saved player would leave the opponent wherever they stood, so a ring-out could still hand either side a positional gift. Returning both to centre makes a save positionally neutral.
 
 **Damage colour gradient** (cheapest legible damage meter, Brawlhalla model, needs no numbers):
 

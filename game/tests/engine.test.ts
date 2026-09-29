@@ -792,6 +792,57 @@ test("the granted window actually shrinks after a save in the same round", () =>
   );
 });
 
+test("a save puts BOTH fighters back in the middle of the stage", () => {
+  // Ruan's bug report: "the players still dont spawn in the middle after one is knocked off".
+  //
+  // Round restarts already used the centre spawn, which is why this looked correct in the
+  // design doc and passed every other test. The path that was wrong is the SAVE: completing the
+  // recovery word landed the player at platforms[0].x +- 50 (x 390 / 890), the wide marks, so a
+  // ring-out ended with the fight shoved into a corner.
+  const m = sandbox();
+  toLive(m);
+
+  const victim = m.fighter("right");
+  victim.damage = 120;
+  victim.hitCooldown = 0;
+  victim.invuln = 0;
+  victim.state = "idle";
+  victim.x = SPAWN.right.x;
+  victim.y = SPAWN.right.y;
+  strike(m, "left", "kick");
+  stepWhileRunning(m, 400);
+  assert.equal(m.phase, "recovery", "the launch should open a recovery prompt");
+
+  // Park the attacker out in a corner first. Without this the test could pass by accident,
+  // because an attacker who never left the middle is trivially "in the middle" afterwards.
+  const attacker = m.fighter("left");
+  attacker.x = STAGE.platforms[0].x + 50;
+  attacker.y = STAGE.platforms[0].y - 100;
+  assert.ok(Math.abs(attacker.x - SPAWN.left.x) > 100, "the attacker must start far from spawn");
+
+  for (const ch of m.typing.right.prompts[0].text) m.type("right", ch);
+  assert.equal(m.phase, "live", "completing the save word should resume the fight");
+
+  assert.equal(victim.x, SPAWN.right.x, "the saved fighter must come back to the middle");
+  assert.equal(victim.y, SPAWN.right.y, "on the spawn line, not on the platform lip");
+  assert.equal(
+    attacker.x,
+    SPAWN.left.x,
+    "the opponent must be reset to the middle with them, not left in the corner",
+  );
+
+  // Regression guards. Both of these are positions that were used before the spawn moved.
+  const wideMark = STAGE.platforms[0].x + 50;
+  assert.ok(
+    Math.abs(victim.x - wideMark) > 1,
+    `the saved fighter must no longer return to the wide mark (x ${wideMark})`,
+  );
+  assert.ok(
+    Math.abs(victim.x - (STAGE.blast.right - 56)) > 1,
+    "and must not be left clamped at the blast line",
+  );
+});
+
 // ================================================================ match structure
 
 section("Match structure");

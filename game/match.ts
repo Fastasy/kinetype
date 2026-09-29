@@ -551,6 +551,9 @@ export class Match {
     f.vx = 0;
     f.vy = 0;
     // Clamp so the falling fighter stays on screen while they type.
+    // Deliberately NOT the centre spawn: this is the fighter mid-fall, held at the edge so the
+    // player can see what they are saving. The centre spawn applies when the save SUCCEEDS
+    // (recoverSuccess) or when a round restarts (resetRound). Do not "fix" this line to SPAWN.
     f.x = side === "left" ? STAGE.blast.left + 56 : STAGE.blast.right - 56;
     f.y = Math.min(f.y, STAGE.blast.bottom - 90);
     this.typing[side].enterRecovery();
@@ -591,11 +594,16 @@ export class Match {
 
   private recoverSuccess(side: Side): void {
     const f = this.fighter(side);
-    f.x = STAGE.platforms[0].x + (side === "left" ? 50 : STAGE.platforms[0].w - 50);
-    f.y = STAGE.platforms[0].y - HH;
-    f.vx = 0;
-    f.vy = 0;
-    f.onGround = true;
+    // Ruan's call, and it was a real bug: a save returns BOTH fighters to the middle of the
+    // stage, not just the one who was knocked off.
+    //
+    // This used to land the recovering player at platforms[0].x +- 50 (x 390 / 890), the wide
+    // marks. A ring-out therefore ended with the fight shoved into a corner: the player who had
+    // just been launched came back out at the edge while their opponent stayed wherever they
+    // happened to be. Resetting both to centre keeps a save positionally neutral, because the
+    // distance to each fighter's own blast line is then the same for both.
+    this.placeAtSpawn(side);
+    this.placeAtSpawn(other(side));
     f.state = "idle";
     f.stateTimer = 0;
     f.invuln = RECOVERY_INVULN;
@@ -605,6 +613,28 @@ export class Match {
     this.fx.addFlash(0.2);
     this.fx.emitGuard(f.x, f.y, this.skins[side].palette.t);
     this.publish({ type: "recover", side, ok: true });
+  }
+
+  /**
+   * Put a fighter back on the centre spawn, still and upright.
+   *
+   * THIS IS THE ONLY PLACE THAT POSITIONS A FIGHTER AT SPAWN, and it exists because it was not
+   * always the only place. Position logic had drifted into three sites (round restart, save
+   * success, and the mid-fall clamp) and one of them still used the old wide marks after the
+   * spawn moved to the centre, so saves came back in the corner while rounds started in the
+   * middle. Anything that wants a fighter at spawn calls this.
+   *
+   * The trail is cleared because the renderer strokes a line between trail points, so a
+   * teleport with the old trail intact draws a streak right across the stage.
+   */
+  private placeAtSpawn(side: Side): void {
+    const f = this.fighter(side);
+    f.x = SPAWN[side].x;
+    f.y = SPAWN[side].y;
+    f.vx = 0;
+    f.vy = 0;
+    f.onGround = false; // they settle onto the platform rather than snapping to it
+    f.trail = [];
   }
 
   private recoverFail(side: Side): void {
@@ -653,21 +683,16 @@ export class Match {
   private resetRound(): void {
     for (const side of ["left", "right"] as Side[]) {
       const f = this.fighter(side);
-      f.x = SPAWN[side].x;
-      f.y = SPAWN[side].y;
-      f.vx = 0;
-      f.vy = 0;
+      this.placeAtSpawn(side);
       f.damage = 0;
       f.state = "idle";
       f.stateTimer = 0;
-      f.onGround = false;
       f.invuln = 0;
       f.counter = 0;
       f.guard = 0;
       f.hitCooldown = 0;
       f.squash = 0;
       f.vibrate = 0;
-      f.trail = [];
       f.sinceCommit = 0;
       this.typing[side].exitRecovery();
       f.prompts = this.typing[side].prompts;
