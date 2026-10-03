@@ -108,11 +108,12 @@ It also improves the game on its own terms: hits become scarce, so timing a kick
 |---|---|
 | Unit of input | **One sentence.** Every word inside it is a move, fired when that word is completed. |
 | Commit point | **The whole word.** A move fires on the last correct character of its word only. No sub-word timing window exists, so the documented "hold the last letter for the right moment" exploit has nothing to exploit. |
-| Spaces | **Never typed.** The cursor jumps from the last letter of a word to the first letter of the next, so every keystroke counts and a stray space cannot register as an error or scroll the page. |
+| Spaces | **A real key, and required.** The space between two words is the next required keypress, and nothing advances until it lands. Not optional: if the last letter also moved the cursor, pressing space would be a strictly worse choice than typing straight through and the key would be decoration. It cannot be ignored when wrong either — a stray space mid-word is a mistake like any other. There is no trailing separator, because the space lives BESIDE the words: the last word ends the sentence on its own final letter. |
 | Prompts on screen | **1 per fighter, always.** The next sentence arrives the instant the current one ends, with no gap and nothing to select. |
 | Mistype default | **Bonus lost, not progress lost.** A wrong character clears *that word's* precision bonus. Progress stands and the rest of the sentence still earns its own bonus, so a typo early in a long sentence costs one word's damage rather than the sentence. |
 | Strict mode (opt-in) | A player setting. Mistype adds 0.4s of stagger. For players who want the risk dial turned up. |
 | Input while the player cannot act | **Held, not dropped.** Up to `INPUT_BUFFER_MAX` (3) keystrokes are queued and delivered in the order they were pressed, on the frame the fighter can act again. Applies to hitstun, strict-mode stagger, the 2.2s countdown and a recovery cut. The HUD shows the count, so a wait is never silent. |
+| Combo | **A chain of flawlessly typed words.** Every `COMBO_STEP` (3) clean words in a row adds `COMBO_BONUS_PER_STEP` (15%) to the damage of every move, capped at `COMBO_MAX_STEPS` (4) rungs, so a chain of 12 is worth ×1.60 and no more. ANY mistake breaks it — a wrong letter, a missed separator, a stray space. Stacks on top of the per-word precision bonus. Cleared at the start of each round (a fresh climb) but the match best is kept. |
 | Precision bonus | Completing a word with zero errors increases that move's damage by 25% and shows a distinct flash. |
 | Accuracy | Tracked per round and per match. Feeds the coin payout. |
 | WPM | Live, computed on committed characters over a rolling window of **real time**. The typing clock is advanced by `tick(dt)` and by nothing else. |
@@ -294,20 +295,22 @@ The MVP is done when all of these are true.
 
 1. A match against a bot runs end to end: rounds, KO, best-of-3, result screen.
 2. One sentence is live per fighter at all times and the next one arrives with no gap; every word in it carries a move, and every sentence can both block and punch.
-3. A move only fires on the final correct character of its word, and spaces are never typed.
+3. A move only fires on the final correct character of its word, and the separator between two words is a required keypress.
 4. Mistyping clears that word's bonus and applies no stun in default mode, while the rest of the sentence keeps its own bonus.
-5. A kick pushes materially harder than a punch at equal damage.
-6. Damage percent visibly drives an escalating knockback curve.
-7. A completed block word raises a guard, a punch into it is smothered, and a kick into it is parried for a counter window.
-8. A fighter pushed past the blast line gets a recovery prompt with a working success and failure path.
-9. The kill spark and Finish Zoom fire from distance to the blast line.
-10. Coins are awarded, persisted, and spendable in the shop.
-11. Owned skins can be equipped and visibly change the fighter.
-12. WPM and accuracy are live and correct, and survive a refresh as a personal best.
-13. A hit cannot land inside the hit cooldown, and the cooldown always exceeds max hitstun.
-14. Repeated saves in one round grant progressively tighter windows.
-15. Both fighters spawn in the middle of the stage, apart, and symmetric about their own blast lines.
-16. `npm run build`, `npm run lint` and `tsc --noEmit` all pass clean.
-17. The engine's pure logic has unit tests that pass under plain Node.
-18. `node scripts/verify-browser.mjs` plays a real match in Chromium, confirms damage lands both ways, and confirms a typed block word raises a visible guard.
-19. Keyboard input reaches the game when it is embedded, and a player who cannot type is told to click the arena instead of assuming the game is broken.
+5. A chain of flawlessly typed words raises a damage multiplier that escalates the screen shake, hitstop and particle count, is broken by any mistake including a missed separator, and resets each round.
+6. A kick pushes materially harder than a punch at equal damage.
+7. Damage percent visibly drives an escalating knockback curve.
+8. A completed block word raises a guard, a punch into it is smothered, and a kick into it is parried for a counter window.
+9. A fighter pushed past the blast line gets a recovery prompt with a working success and failure path.
+10. The kill spark and Finish Zoom fire from distance to the blast line.
+11. Coins are awarded, persisted, and spendable in the shop.
+12. Owned skins can be equipped and visibly change the fighter.
+13. WPM and accuracy are live and correct, and survive a refresh as a personal best.
+14. A hit cannot land inside the hit cooldown, and the cooldown always exceeds max hitstun.
+15. Repeated saves in one round grant progressively tighter windows.
+16. Both fighters spawn in the middle of the stage, apart, and symmetric about their own blast lines.
+17. A keystroke the player presses while they cannot act is held and delivered, never dropped, and the HUD says so.
+18. `npm run build`, `npm run lint` and `tsc --noEmit` all pass clean.
+19. The engine's pure logic has unit tests that pass under plain Node.
+20. `node scripts/verify-browser.mjs` plays a real match in Chromium, confirms damage lands both ways, and confirms a typed block word raises a visible guard.
+21. Keyboard input reaches the game when it is embedded, and a player who cannot type is told to click the arena instead of assuming the game is broken.

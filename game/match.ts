@@ -42,6 +42,7 @@ import {
   STRICT_STAGGER,
 } from "./constants";
 import { Fx } from "./fx";
+import { comboIntensity, comboMultiplier } from "./combo";
 import { MOVE, launchFrom } from "./knockback";
 import { BotController, botConfigForTier } from "./bot";
 import { createRng, type Rng } from "./rng";
@@ -243,8 +244,9 @@ export class Match {
 
   /** Feed one character from a human player. Returns true if it was consumed. */
   type(side: Side, ch: string): boolean {
-    // Validated before anything else, so junk can never enter the buffer.
-    if (!/^[a-z]$/.test(ch)) return false;
+    // Validated before anything else, so junk can never enter the buffer. Space is a real
+    // key now — the separator between words — so it is accepted here like any letter.
+    if (!/^[a-z ]$/.test(ch)) return false;
     if (!this.canAcceptInput(side)) {
       // Consumed, not ignored: the keystroke is held and will land. Returning false here
       // would also tell the caller the press was worthless, which is exactly the
@@ -532,7 +534,14 @@ export class Match {
 
     if (def.invuln > 0 || def.hitCooldown > 0) return;
 
-    let damage = prof.damage * (precision ? 1 + PRECISION_DAMAGE_BONUS : 1);
+    // The combo is applied HERE and nowhere else, so every move that lands — the player's and
+    // the bot's — is scaled by the same single rule. The chain has already counted the word
+    // that is committing right now, so a player's third clean word is the one that hits harder.
+    const chain = this.typing[side].combo;
+    const combo = comboMultiplier(chain);
+    const heat = comboIntensity(chain);
+
+    let damage = prof.damage * (precision ? 1 + PRECISION_DAMAGE_BONUS : 1) * combo;
 
     // Situational multiplier, in the order the fight actually resolves: a raised guard
     // smothers what is coming, a parried kick turns it back, and a counter cashes in.
@@ -589,16 +598,21 @@ export class Match {
       this.publish({ type: "parry", side: other(side), x: def.x, y: def.y });
     }
 
-    const stop = Math.min(HITSTOP_MAX, Math.max(HITSTOP_MIN, launch.kb * 0.0005));
+    // Impact escalates with the chain. A player on a run gets a heavier, louder, longer
+    // hit — same move, more of it. This is the whole point of the combo: the fight should
+    // LOOK like it is going better, not just have a bigger number in the corner.
+    const stop = Math.min(HITSTOP_MAX, Math.max(HITSTOP_MIN, launch.kb * 0.0005) * (1 + heat * 0.6));
     this.fx.addHitstop(stop);
-    this.fx.addShake(Math.min(26, 3 + launch.kb * 0.07));
-    this.fx.emitImpact(def.x, def.y, launch.kb, colour, 1 + launch.kb / 500);
+    this.fx.addShake(Math.min(26, (3 + launch.kb * 0.07) * (1 + heat * 0.7)));
+    if (heat > 0) this.fx.addFlash(0.09 * heat);
+    this.fx.emitImpact(def.x, def.y, launch.kb, colour, (1 + launch.kb / 500) * (1 + heat * 0.9));
     this.publish({
       type: "hit",
       side: other(side),
       power: launch.kb,
       move,
       guarded,
+      combo: chain,
       x: def.x,
       y: def.y,
     });
@@ -765,6 +779,8 @@ export class Match {
       f.vibrate = 0;
       f.sinceCommit = 0;
       this.typing[side].exitRecovery();
+      // Fresh round, fresh climb: see TypingRun.resetCombo. bestCombo deliberately survives.
+      this.typing[side].resetCombo();
       f.prompts = this.typing[side].prompts;
       this.bots[side]?.reset();
     }
@@ -801,6 +817,7 @@ export class Match {
       wpm,
       accuracy,
       bestWpm: human.bestWpm,
+      bestCombo: human.bestCombo,
       coins,
       streak,
     };

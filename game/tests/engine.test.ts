@@ -24,6 +24,10 @@ import {
   BLOCK_KB_MULTIPLIER,
   BLOCK_MAX_CHARS,
   COUNTER_MULTIPLIER,
+  COMBO_BONUS_PER_STEP,
+  COMBO_FIRE_CHAIN,
+  COMBO_MAX_STEPS,
+  COMBO_STEP,
   HIT_COOLDOWN,
   HITSTUN_MAX,
   HITSTUN_MIN,
@@ -41,8 +45,9 @@ import {
   TELEGRAPH_COMMIT_CHARS,
 } from "../constants";
 import { MOVE, hitstunSeconds, knockbackUnits } from "../knockback";
+import { comboIntensity, comboMultiplier, comboSteps } from "../combo";
 import { Match } from "../match";
-import { TypingRun } from "../typing";
+import { TypingRun, type CharOutcome } from "../typing";
 import { createRng } from "../rng";
 import { applyOutcome, DEFAULT_SAVE, type SaveData } from "../storage";
 import { purchaseWithCoins } from "../commerce";
@@ -125,10 +130,51 @@ function promptFor(text: string, kind: PromptKind = "attack"): Prompt {
     words,
     kind,
     index: 0,
+    pendingSpace: false,
     typed: 0,
     flawed: false,
     age: 0,
   };
+}
+
+/**
+ * Press the key the run says is next. Asserts one is actually due, so a test that has
+ * stalled on a separator fails loudly instead of quietly typing the same letters forever.
+ */
+function pressNext(run: TypingRun): CharOutcome {
+  const key = run.nextKey();
+  assert.ok(key !== null, "a sentence is live, so a key must be due");
+  return run.handleChar(key as string);
+}
+
+/**
+ * Type `count` words out in full, separators included — the whole keyboard path a player
+ * walks. Tests that only type letters stall on the first separator now that the space is a
+ * real key, and a stalled test that still "passes" would be worse than no test at all.
+ */
+function typeWords(run: TypingRun, count: number): void {
+  for (let i = 0; i < count; i++) {
+    const word = run.activeWord();
+    if (!word) return;
+    for (let j = 0; j < word.text.length; j++) pressNext(run);
+    const prompt = run.activePrompt();
+    if (prompt?.pendingSpace) pressNext(run);
+  }
+}
+
+/** Type the live sentence out end to end. Returns true if it finished. */
+function typeSentence(run: TypingRun): boolean {
+  const id = run.activePrompt()?.id;
+  let guard = 0;
+  while (guard++ < 600) {
+    const prompt = run.activePrompt();
+    if (!prompt || prompt.id !== id) return true;
+    const key = run.nextKey();
+    if (key === null) return true;
+    const out = run.handleChar(key);
+    if (out.kind === "commit" && out.commit?.sentenceDone) return true;
+  }
+  return false;
 }
 
 /**
@@ -262,11 +308,17 @@ test("splitSentence produces the whole sentence back", () => {
   assert.equal(words[4].move, "block");
 });
 
-test("charOffset skips the space after each word", () => {
+test("charOffset returns the index of a word's first letter", () => {
   const words = splitSentence("the cat naps");
   assert.equal(charOffset(words, 0), 0);
   assert.equal(charOffset(words, 1), 4, "after 'the ' the cursor is on 'c'");
   assert.equal(charOffset(words, 2), 8, "after 'cat ' the cursor is on 'n'");
+  // The offset lands on the LETTER, and the separator it skipped over sits at offset - 1.
+  // That is exactly the character the player must type to get here, which is what makes the
+  // separator's own position recoverable without a second index.
+  for (let i = 1; i < words.length; i++) {
+    assert.equal(sentenceText(words)[charOffset(words, i) - 1], " ", `separator before word ${i}`);
+  }
 });
 
 // ================================================================ typed input
@@ -295,15 +347,75 @@ test("the final correct character is what fires the move", () => {
   assert.equal(run.words, 1);
 });
 
-test("spaces are never typed: the cursor jumps to the next word's first letter", () => {
+test("the separator is required: a finished word does not advance the cursor until space lands", () => {
   const run = new TypingRun(createRng(19), { strictMode: false, tier: 4 });
   const prompt = run.prompts[0];
   const first = prompt.words[0];
   for (const ch of first.text) run.handleChar(ch);
-  assert.ok(prompt.index === 1, "the live word should have advanced");
+
+  // The MOVE has fired — the commit point is unchanged — but the SENTENCE has not advanced.
+  assert.equal(run.words, 1, "the word itself committed and its move fired");
+  assert.equal(prompt.index, 0, "the cursor must not have moved to the next word");
+  assert.equal(prompt.pendingSpace, true, "the separator is now the required keypress");
+  assert.equal(run.nextKey(), " ", "and the game says so");
+  assert.equal(prompt.text[prompt.typed], " ", "the cursor sits on the separator itself");
+
+  // Skipping it is a mistake, not a free pass. This is the whole reason the separator is
+  // mandatory: if typing straight through worked, pressing space would be a worse choice
+  // than not pressing it and the key would be decoration.
+  const errorsBefore = run.errors;
+  const skipped = run.handleChar(prompt.words[1].text[0]);
+  assert.equal(skipped.kind, "wrong", "the next word's first letter is NOT the next key");
+  assert.equal(prompt.index, 0, "nothing advances");
+  assert.equal(prompt.pendingSpace, true, "the separator is still due");
+  assert.equal(run.errors, errorsBefore + 1, "it costs accuracy");
+  assert.equal(prompt.words[1].flawed, false, "a separator miss must not flaw the coming word");
+  assert.equal(prompt.words[1].typed, 0, "which has not been typed yet");
+
+  // The space is what advances, and then the next letter is what is due.
+  const ok = run.handleChar(" ");
+  assert.equal(ok.kind, "correct");
+  assert.equal(prompt.pendingSpace, false);
+  assert.equal(prompt.index, 1, "the cursor reaches the next word only via the separator");
   assert.equal(prompt.typed, charOffset(prompt.words, 1));
-  assert.notEqual(prompt.text[prompt.typed], " ", "the cursor must not land on a space");
-  assert.equal(prompt.text[prompt.typed], prompt.words[1].text[0]);
+  assert.equal(run.nextKey(), prompt.words[1].text[0]);
+});
+
+test("a stray space mid-word is a mistake, because space is a real key", () => {
+  const run = new TypingRun(createRng(3), { strictMode: false, tier: 4 });
+  const word = run.activeWord()!;
+  run.handleChar(word.text[0]);
+  const out = run.handleChar(" ");
+  assert.equal(out.kind, "wrong", "space can be wrong now, which it never used to be");
+  assert.equal(word.typed, 1, "progress is kept");
+  assert.ok(word.flawed, "and it costs this word its precision bonus");
+});
+
+test("the last word needs no trailing separator: the sentence ends on its own last letter", () => {
+  const run = new TypingRun(createRng(23), { strictMode: false, tier: 4 });
+  run.prompts[0] = promptFor("the cat naps");
+  const first = run.prompts[0].text;
+
+  typeWords(run, 2); // 'the', separator, 'cat', separator
+  assert.equal(run.prompts[0].index, 2, "two words consumed");
+  assert.equal(run.prompts[0].pendingSpace, false, "and the gap before the last word is behind us");
+
+  for (let i = 0; i < run.prompts[0].words[2].text.length; i++) pressNext(run);
+  assert.notEqual(run.prompts[0].text, first, "the sentence handed over on the final letter");
+  assert.equal(run.prompts[0].typed, 0, "and the next sentence starts clean");
+});
+
+test("a whole sentence goes down, separators and all", () => {
+  const run = new TypingRun(createRng(23), { strictMode: false, tier: 4 });
+  run.prompts[0] = promptFor("the cat naps on the mat");
+  const text = run.prompts[0].text;
+
+  assert.ok(typeSentence(run), "six words plus five separators should complete");
+  assert.equal(run.sentences, 1);
+  assert.equal(run.errors, 0, "typing it correctly must produce no errors at all");
+  assert.equal(run.chars, text.length, "every character counts, separators included");
+  assert.equal(run.correct, text.length);
+  assert.equal(run.accuracy(), 100);
 });
 
 test("a mistype costs that word's bonus but keeps the player's progress", () => {
@@ -327,6 +439,9 @@ test("a mistake on one word does not write off the next one", () => {
   run.handleChar(first.text[0]);
   run.handleChar(first.text[1] === "z" ? "q" : "z");
   for (let i = 1; i < first.text.length; i++) run.handleChar(first.text[i]);
+  // The separator now stands between the words, so it has to be pressed to reach word two.
+  assert.equal(prompt.pendingSpace, true);
+  pressNext(run);
   const second = prompt.words[1];
   let precision: boolean | null = null;
   for (const ch of second.text) {
@@ -367,12 +482,8 @@ test("one prompt is live at a time and the next sentence arrives with no gap", (
   const first = run.prompts[0].text;
   let sentences = 0;
   while (run.prompts[0].text === first && sentences < 200) {
-    const word = run.activeWord();
-    if (!word) break;
-    for (const ch of word.text) {
-      const out = run.handleChar(ch);
-      if (out.kind === "commit" && out.commit?.sentenceDone) sentences++;
-    }
+    if (typeSentence(run)) sentences++;
+    else break;
   }
   assert.equal(sentences, 1, "the sentence should finish exactly once");
   assert.equal(run.prompts.length, 1, "handing over the next sentence changes nothing");
@@ -398,10 +509,16 @@ test("the telegraph fires only on a kick, and only once it has been committed to
   const kickAt = words.findIndex((w) => w.move === "kick");
   assert.ok(kickAt >= 0, "this seed should offer a kick");
   const kick = words[kickAt];
-  for (let i = 0; i < kickAt; i++) for (const ch of words[i].text) run.handleChar(ch);
+  // Type the words ahead of the kick out in full, separators included.
+  typeWords(run, kickAt);
   assert.equal(run.telegraphing(), false, "an untouched kick is not a telegraph");
   for (let i = 0; i < TELEGRAPH_COMMIT_CHARS; i++) run.handleChar(kick.text[i]);
   assert.equal(run.telegraphing(), true, "two characters in, the kick is legible");
+
+  // And it must go quiet the moment the word is spent. A KICK INCOMING that lingers over a
+  // word waiting for its separator is telling the defender to block something already thrown.
+  for (let i = TELEGRAPH_COMMIT_CHARS; i < kick.text.length; i++) run.handleChar(kick.text[i]);
+  assert.equal(run.telegraphing(), false, "a committed kick stops telegraphing");
 });
 
 // ================================================================ the defensive verb
@@ -869,8 +986,11 @@ test("junk is refused outright and never enters the buffer", () => {
   toLive(m);
   m.typing.left.prompts[0] = promptFor("planet");
   strike(m, "right", "punch"); // stun the player so everything gets buffered
-  for (const ch of ["A", "1", " ", "-", "!", "é"]) m.type("left", ch);
-  assert.equal(m.queuedFor("left"), 0, "only a-z may be held");
+  for (const ch of ["A", "1", "-", "!", "é"]) m.type("left", ch);
+  assert.equal(m.queuedFor("left"), 0, "only a-z and the separator may be held");
+  // And the separator itself IS a legal key now, so it must be held like any other.
+  m.type("left", " ");
+  assert.equal(m.queuedFor("left"), 1, "a space is a real key and gets buffered like one");
 });
 
 // ================================================================ WPM honesty
@@ -922,6 +1042,9 @@ test("a steady typist's meter matches the speed they actually typed", () => {
   // 120 WPM is 10 correct characters per second, i.e. one every 6 frames. This is the
   // speed at which the old hard-coded 16ms-per-keystroke clock was worst: it made the
   // meter under-read by 8.3%, punishing the player for getting faster.
+  //
+  // The next key is read from the run rather than from the word, because a separator is a
+  // real keypress and therefore a real character in the WPM count.
   const framesPerChar = 6;
   let realTime = 0;
   let typed = 0;
@@ -929,9 +1052,9 @@ test("a steady typist's meter matches the speed they actually typed", () => {
     m.step(STEP);
     realTime += STEP;
     if (frame % framesPerChar === 0) {
-      const word = m.typing.left.activeWord();
-      if (!word) break;
-      m.type("left", word.text[word.typed]);
+      const key = m.typing.left.nextKey();
+      if (key === null) break;
+      m.type("left", key);
       typed++;
     }
   }
@@ -943,6 +1066,179 @@ test("a steady typist's meter matches the speed they actually typed", () => {
     error < 0.12,
     `meter reported ${reported} WPM for a true ${trueWpm.toFixed(1)} WPM (${(error * 100).toFixed(1)}% off)`,
   );
+});
+
+// ================================================================ combo
+
+section("Combo (a chain of flawless words escalates the damage)");
+
+test("the ladder pays nothing until the first rung, then steps, then caps", () => {
+  // Two clean words in a row is a coincidence, not a streak. Silence at x1 is what makes the
+  // meter's appearance mean something.
+  assert.equal(comboMultiplier(0), 1);
+  assert.equal(comboMultiplier(COMBO_STEP - 1), 1, "below the first rung there is no bonus");
+  assert.equal(comboSteps(COMBO_STEP - 1), 0);
+  assert.ok(Math.abs(comboMultiplier(COMBO_STEP) - (1 + COMBO_BONUS_PER_STEP)) < 1e-9);
+  assert.equal(comboSteps(COMBO_STEP), 1);
+
+  // Each rung pays the same, and the top rung is the last one — a chain across several
+  // rounds must not compound until one punch ends the match.
+  for (let step = 1; step <= COMBO_MAX_STEPS; step++) {
+    const chain = COMBO_STEP * step;
+    assert.equal(comboSteps(chain), step);
+    assert.ok(Math.abs(comboMultiplier(chain) - (1 + COMBO_BONUS_PER_STEP * step)) < 1e-9);
+  }
+  const capped = comboMultiplier(COMBO_STEP * COMBO_MAX_STEPS);
+  assert.equal(comboMultiplier(500), capped, "the ladder stops at the top rung");
+  assert.equal(comboIntensity(500), 1, "intensity saturates with it");
+  assert.equal(comboIntensity(COMBO_STEP * COMBO_MAX_STEPS), 1);
+  assert.equal(comboIntensity(COMBO_STEP), 1 / COMBO_MAX_STEPS);
+});
+
+test("the multiplier never decreases as the chain grows", () => {
+  // Monotone by construction, but the HUD promises it and a future retune must not break it.
+  let previous = -Infinity;
+  for (let chain = -5; chain <= COMBO_STEP * (COMBO_MAX_STEPS + 3); chain++) {
+    const m = comboMultiplier(chain);
+    assert.ok(m >= previous, `the multiplier dropped at chain ${chain}`);
+    assert.ok(m >= 1, `bonus below 1 at chain ${chain}`);
+    assert.ok(
+      m <= 1 + COMBO_BONUS_PER_STEP * COMBO_MAX_STEPS + 1e-9,
+      `bonus above the cap at chain ${chain}`,
+    );
+    previous = m;
+  }
+  assert.equal(comboMultiplier(-3), 1, "a nonsense chain must not pay");
+});
+
+test("flawless words build the chain, one per word, across the separators", () => {
+  const run = new TypingRun(createRng(23), { strictMode: false, tier: 4 });
+  run.prompts[0] = promptFor("the cat naps on the mat");
+  typeSentence(run);
+  assert.equal(run.combo, 6, "six clean words is a chain of six");
+  assert.equal(run.bestCombo, 6);
+  // The separators are part of the sentence but NOT part of the chain: the chain counts
+  // moves, and a separator is not a move.
+  assert.equal(run.words, 6);
+});
+
+test("any mistake breaks the chain, including a missed separator", () => {
+  const run = new TypingRun(createRng(23), { strictMode: false, tier: 4 });
+  run.prompts[0] = promptFor("the cat naps on the mat");
+  typeWords(run, 3);
+  assert.equal(run.combo, 3, "three clean words in a row");
+
+  // Complete a fourth word without its separator, so the separator is genuinely next.
+  const fourth = run.activeWord();
+  assert.ok(fourth, "a fourth word should be live");
+  for (let i = 0; i < fourth.text.length; i++) pressNext(run);
+  assert.equal(run.combo, 4);
+  assert.equal(run.nextKey(), " ", "the very next required key is a separator");
+
+  // Press a letter where the separator is due: the classic miss.
+  const out = run.handleChar("q");
+  assert.equal(out.kind, "wrong");
+  assert.equal(run.combo, 0, "one slip and it is gone, whichever key slipped");
+  assert.equal(run.bestCombo, 4, "the best chain is remembered");
+});
+
+test("repairing a flawed word does not restore the chain", () => {
+  const run = new TypingRun(createRng(23), { strictMode: false, tier: 4 });
+  run.prompts[0] = promptFor("the cat naps on the mat");
+
+  for (let i = 0; i < run.prompts[0].words[0].text.length; i++) pressNext(run);
+  pressNext(run); // the separator
+  assert.equal(run.combo, 1);
+
+  const word = run.prompts[0].words[1];
+  run.handleChar(word.text[0] === "z" ? "y" : "z"); // fumble
+  assert.equal(run.combo, 0, "the chain breaks the instant the mistake is made");
+  for (let i = 0; i < word.text.length; i++) pressNext(run); // then type it properly
+  assert.equal(run.combo, 0, "finishing it cleanly does not give the chain back");
+  assert.equal(run.bestCombo, 1);
+});
+
+test("resetCombo clears the chain for a new round but never the match best", () => {
+  const run = new TypingRun(createRng(23), { strictMode: false, tier: 4 });
+  run.prompts[0] = promptFor("the cat naps on the mat");
+  typeSentence(run);
+  assert.equal(run.combo, 6);
+  run.resetCombo();
+  assert.equal(run.combo, 0, "a new round starts a fresh climb");
+  assert.equal(run.bestCombo, 6, "the best chain is a match record, not a round one");
+});
+
+test("the chain actually multiplies the damage a move deals", () => {
+  /** Damage a clean punch deals when the chain stood at `chainBefore` as the word landed. */
+  const damageAt = (chainBefore: number): number => {
+    const m = sandbox();
+    toLive(m);
+    m.fighter("right").damage = 30;
+    m.typing.left.combo = chainBefore;
+    strike(m, "left", "punch");
+    return m.fighter("right").damage - 30;
+  };
+
+  const cold = damageAt(0); // the word makes the chain 1, below the first rung
+  const warm = damageAt(COMBO_STEP - 1); // makes it COMBO_STEP: the first rung pays
+  const hot = damageAt(COMBO_STEP * 2 - 1); // makes it two rungs up
+
+  assert.ok(warm > cold, `clearing the first rung must hit harder (${warm} vs ${cold})`);
+  assert.ok(hot > warm, `the ladder must keep paying (${hot} vs ${warm})`);
+  // Same move, same precision, same target damage — so the ONLY difference is the chain and
+  // the ratio must be exactly the designed multiplier.
+  assert.ok(
+    Math.abs(warm / cold - comboMultiplier(COMBO_STEP)) < 1e-6,
+    `expected x${comboMultiplier(COMBO_STEP)}, got x${(warm / cold).toFixed(4)}`,
+  );
+  assert.ok(
+    Math.abs(hot / cold - comboMultiplier(COMBO_STEP * 2)) < 1e-6,
+    `expected x${comboMultiplier(COMBO_STEP * 2)}, got x${(hot / cold).toFixed(4)}`,
+  );
+});
+
+test("the combo stacks on top of the precision bonus rather than replacing it", () => {
+  const damageAt = (chainBefore: number, flawedWord: boolean): number => {
+    const m = sandbox();
+    toLive(m);
+    m.fighter("right").damage = 30;
+    m.typing.left.combo = chainBefore;
+    m.typing.left.prompts[0] = promptFor("planet");
+    // Make the word flawed first, so it commits without precision.
+    if (flawedWord) m.typing.left.handleChar("z");
+    for (let i = 0; i < "planet".length; i++) {
+      const w = m.typing.left.activeWord();
+      if (!w) break;
+      m.type("left", w.text[w.typed]);
+    }
+    return m.fighter("right").damage - 30;
+  };
+
+  const clean = damageAt(COMBO_STEP - 1, false);
+  const flawed = damageAt(COMBO_STEP - 1, true);
+  // Both land the same number of moves; the clean one keeps precision, so it must be bigger.
+  assert.ok(clean > flawed, `precision must survive the combo (${clean} vs ${flawed})`);
+});
+
+test("the fire threshold is reachable and sits at the top of the ladder", () => {
+  assert.equal(COMBO_FIRE_CHAIN, COMBO_STEP * COMBO_MAX_STEPS);
+  assert.equal(comboSteps(COMBO_FIRE_CHAIN), COMBO_MAX_STEPS, "fire means a maxed ladder");
+  assert.equal(comboSteps(COMBO_FIRE_CHAIN - 1), COMBO_MAX_STEPS - 1, "and not one word sooner");
+});
+
+test("a bot builds a chain exactly like the player does", () => {
+  // The bot goes through TypingRun, so it earns (and loses) the combo on the same terms.
+  // If the bot were handed a separate path its multiplier would drift from the player's.
+  // The human is on the right here, so the BOT is `typing.left` and never receives input.
+  const m = new Match({ ...OPTS, botWpm: 40 }, 77, {}, "right");
+  let guard = 0;
+  while (!m.result && guard++ < 60 * 60 * 6) m.step(STEP);
+  assert.ok(m.result, "the match should finish");
+  assert.ok(
+    m.typing.left.bestCombo > 0,
+    "the bot should have strung clean words together through the shared typing layer",
+  );
+  assert.ok(m.result.bestCombo >= 0, "the result should carry the human best chain");
 });
 
 // ================================================================ recovery
@@ -1132,7 +1428,7 @@ test("winning pays more than losing", () => {
         budget -= 1;
         const live = t.activePrompt();
         if (!live || live.typed >= live.text.length) break;
-        // Spaces are skipped by the typing layer, so text[typed] is always a letter.
+        // `typed` counts separators, so text[typed] is the exact next key — space included.
         m.type(side, live.text[live.typed]);
       }
     };

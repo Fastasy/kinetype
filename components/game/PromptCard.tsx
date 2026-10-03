@@ -1,5 +1,7 @@
 "use client";
 
+import { Fragment } from "react";
+
 import type { PromptView } from "@/game/engine";
 import type { Theme } from "@/game/themes";
 import type { MoveKind } from "@/game/types";
@@ -59,6 +61,8 @@ export default function PromptCard({
       data-move={live?.move ?? ""}
       data-index={prompt.index}
       data-flawed={prompt.flawed ? "1" : "0"}
+      data-pending-space={prompt.pendingSpace ? "1" : "0"}
+      data-next-key={prompt.nextKey ?? ""}
       className={`relative border-2 transition ${compact ? "px-2 py-1.5" : "px-4 py-3"} ${
         isRecovery ? "ring-2" : ""
       }`}
@@ -70,11 +74,24 @@ export default function PromptCard({
     >
       {!compact && (
         <div className="mb-1.5 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+          {/*
+            The header follows `nextKey`, not the live word's move, because the live word can
+            already be FINISHED while its separator is still outstanding. Announcing "PUNCH —
+            TYPE THE HIGHLIGHTED WORD" over a word that is already typed out is how a player
+            ends up stuck on a space they were never told about.
+          */}
           <span
             className="px-2 py-0.5 font-mono text-[11px] font-bold tracking-wider"
-            style={{ background: chip.bg, color: chip.ink }}
+            style={{
+              background: prompt.pendingSpace ? theme.accent : chip.bg,
+              color: prompt.pendingSpace ? theme.onAccent : chip.ink,
+            }}
           >
-            {isRecovery ? "SAVE — TYPE IT NOW" : `${chip.label} — TYPE THE HIGHLIGHTED WORD`}
+            {isRecovery
+              ? "SAVE — TYPE IT NOW"
+              : prompt.pendingSpace
+                ? "HIT SPACE FOR THE NEXT WORD"
+                : `${chip.label} — TYPE THE HIGHLIGHTED WORD`}
           </span>
           {/* The legend rides on the card header rather than a row of its own: the arena,
               the bot panel and the prompts all have to fit one screenful, and a separate
@@ -117,9 +134,11 @@ export default function PromptCard({
           const isLive = i === prompt.index;
           const finished = word.typed >= word.text.length;
           const chipStyle = MOVE_CHIP[word.move];
+          // The live word is DONE while its separator is outstanding, so it reads as done.
+          const spent = finished && (!isLive || prompt.pendingSpace);
           return (
+            <Fragment key={`${prompt.id}-${i}`}>
             <span
-              key={`${prompt.id}-${i}`}
               data-word={word.text}
               data-move={word.move}
               data-typed={word.typed}
@@ -128,8 +147,8 @@ export default function PromptCard({
               style={{
                 // The underline IS the move: teal blocks, purple punches, red kicks.
                 borderBottom: `3px solid ${chipStyle.bg}`,
-                opacity: finished && !isLive ? 0.55 : 1,
-                ...(isLive && !compact
+                opacity: spent ? 0.55 : 1,
+                ...(isLive && !compact && !prompt.pendingSpace
                   ? { background: `${theme.accent}1f`, padding: "0 0.25rem", margin: "0 -0.25rem" }
                   : {}),
               }}
@@ -163,6 +182,23 @@ export default function PromptCard({
                 );
               })}
             </span>
+            {/*
+              THE SEPARATOR, MADE VISIBLE. Typing a sentence has an invisible key in it — the
+              space — and a player who does not know one is due simply stops, because the
+              sentence has gone quiet with no cursor anywhere. This pill IS the cursor while a
+              separator is pending, and it pulses so the eye finds it after a glance at the
+              keyboard. It sits in the flex row at exactly the word gap it replaces.
+            */}
+            {prompt.pendingSpace && isLive ? (
+              <span
+                data-testid="space-cursor"
+                className="animate-pulse px-1.5 py-0.5 font-mono text-[10px] font-bold tracking-wider"
+                style={{ background: theme.accent, color: theme.onAccent }}
+              >
+                SPACE
+              </span>
+            ) : null}
+            </Fragment>
           );
         })}
       </div>

@@ -17,7 +17,11 @@ const STEPS = [
  },
  {
    h: "Type it, starting with the first letter",
-   p: "There is nothing to click and nothing to select, and no spaces to type: the game moves you to the next word the moment you finish the last letter of this one. Every move fires on the final letter of its word, and every keystroke counts from the first press.",
+   p: "There is nothing to click and nothing to select. Type the sentence straight through, including the space between each pair of words — the space is a real key here and the game will not move on to the next word until you press it. Every move fires on the final letter of its word, and every keystroke counts from the first press. There is no space needed after the last word; the sentence ends there and the next one is already on screen.",
+ },
+ {
+   h: "Build a chain for extra damage",
+   p: "Every word you type without a single mistake builds your chain. Three clean words in a row and every move you land hits 15 percent harder, up to 60 percent at a chain of twelve. The screen gets louder as it climbs, so you can feel it without looking. One slip and the chain is gone: a wrong letter, a missed space, anything. It resets each round, so every round is a fresh climb.",
  },
  {
  h: "Watch the damage colour, not a health bar",

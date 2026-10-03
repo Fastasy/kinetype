@@ -76,6 +76,10 @@ async function readPrompts(panelTestId) {
       kind: n.getAttribute("data-kind") ?? "attack",
       move: n.getAttribute("data-move") ?? "",
       index: Number(n.getAttribute("data-index") ?? "0"),
+      // The separator is a real key, so the harness has to know one is due or it parks on a
+      // finished word and never advances.
+      pendingSpace: n.getAttribute("data-pending-space") === "1",
+      nextKey: n.getAttribute("data-next-key") ?? "",
       // Every word in the sentence carries its own move, which is the mechanic: a small
       // word blocks, an ordinary word punches, a difficult word kicks.
       words: Array.from(n.querySelectorAll("[data-word]")).map((w) => ({
@@ -130,11 +134,19 @@ async function playOneWord() {
   const live = start.words.find((w) => w.live);
   if (!live) return { typed: false, move: "" };
 
-  for (let i = 0; i < 24; i++) {
+  for (let i = 0; i < 30; i++) {
     const [now] = await readPrompts("player-panel");
     const word = now?.words.find((w) => w.live);
     // The sentence moved on without us, or it rolled over: either way this word is done.
-    if (!word || word.text !== live.text || word.typed >= word.text.length) {
+    if (!word || word.text !== live.text) return { typed: true, move: live.move };
+    // The word is fully typed but its SEPARATOR is outstanding. The sentence will not advance
+    // until it lands, so press it — without this the harness parks on the same finished word
+    // forever and the match times out looking like a game bug.
+    if (word.typed >= word.text.length) {
+      if (now.pendingSpace) {
+        await page.keyboard.press("Space");
+        await page.waitForTimeout(CHAR_MS);
+      }
       return { typed: true, move: live.move };
     }
     const ch = word.text[word.typed];

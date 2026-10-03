@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import Link from "next/link";
 
 import PromptCard from "./PromptCard";
-import { BOT_WPM_LADDER } from "@/game/constants";
+import { BOT_WPM_LADDER, COMBO_FIRE_CHAIN, COMBO_MAX_STEPS, COMBO_STEP } from "@/game/constants";
+import { comboSteps } from "@/game/combo";
 import { GameEngine, type Snapshot } from "@/game/engine";
 import { botConfigForTier } from "@/game/bot";
 import { freshSeed } from "@/game/rng";
@@ -35,6 +36,14 @@ const SKIN_CLASH_FALLBACK = "voidwing";
 function opponentSkinFor(playerSkin: string): string {
  return playerSkin === OPPONENT_SKIN_ID ? SKIN_CLASH_FALLBACK : OPPONENT_SKIN_ID;
 }
+
+/**
+ * The "on fire" colour for a maxed chain. FIXED, like the move chips in PromptCard: it means
+ * one specific thing and must not be restyled by a theme, or a player who switches theme has
+ * to relearn what the hottest state looks like. Gold, because the coin chips already taught
+ * the eye that gold means "this is worth something".
+ */
+const COMBO_FIRE = "#facc15";
 
 /**
  * `wide` is used on the dedicated /play page, where the arena IS the page and can
@@ -187,12 +196,16 @@ export default function FightClient({ wide = false }: { wide?: boolean }) {
     if (!document.fullscreenElement) stop();
     return;
   }
-  if (e.key === " " || e.key === "Tab" || e.key.startsWith("Arrow")) {
+  if (e.key === "Tab" || e.key.startsWith("Arrow")) {
   e.preventDefault();
   return;
   }
+  // SPACE IS A GAME KEY, not a page-scroll key. It used to be swallowed here with the
+  // arrows, back when the typing layer skipped separators entirely. It is now the key
+  // between every pair of words, so it must reach the engine — preventDefault still
+  // fires, because a stray space must never scroll the page mid-fight.
   if (engine.handleKey(e.key)) e.preventDefault();
- };
+};
   window.addEventListener("keydown", onKey);
   return () => window.removeEventListener("keydown", onKey);
  }, [stop]);
@@ -238,6 +251,9 @@ export default function FightClient({ wide = false }: { wide?: boolean }) {
  const opponent: Side = playerSide === "left" ? "right" : "left";
  const me = snap ? snap[playerSide] : null;
  const them = snap ? snap[opponent] : null;
+ /** Colour of the chain: the theme accent while it climbs, gold once it is maxed. */
+ const comboColour = me && me.combo >= COMBO_FIRE_CHAIN ? COMBO_FIRE : theme.accent;
+ const onFire = !!me && me.combo >= COMBO_FIRE_CHAIN;
 
  return (
  <section
@@ -493,7 +509,12 @@ export default function FightClient({ wide = false }: { wide?: boolean }) {
  </p>
  <ul className="max-w-md space-y-1 text-left text-xs text-ink-faint">
    <li>
-     Every keystroke counts, starting with the first letter
+     Every keystroke counts, starting with the first letter — and the space between two
+     words is a real key you have to press
+   </li>
+   <li>
+     Type without a mistake and your <span className="font-mono text-coin">CHAIN</span>{" "}
+     builds: every three clean words and your hits land harder, until one slip takes it all
    </li>
    <li>
      Small words <span className="font-mono text-aqua">BLOCK</span>, ordinary words{" "}
@@ -558,6 +579,52 @@ export default function FightClient({ wide = false }: { wide?: boolean }) {
  <div className="flex flex-wrap items-center justify-between gap-3">
  <div className="flex items-center gap-3">
  <span className="font-mono text-sm font-bold text-brand-bright">YOU</span>
+ {/*
+   THE COMBO METER. Sits first in the row because it is the thing the player is actually
+   chasing: the damage number only tells them how it is going, the chain tells them what to
+   do next. Pips rather than a number for the progress, because "two more clean words" is
+   something you can feel at a glance and "combo 7 of 9" is something you have to read.
+   Deliberately invisible until the first rung pays, so it never occupies space with a
+   multiplier of x1 — the meter appearing IS the reward.
+ */}
+ {me.combo >= COMBO_STEP && (
+   <div
+     data-testid="combo-meter"
+     data-value={me.combo}
+     data-multiplier={me.comboMultiplier.toFixed(2)}
+     data-intensity={me.comboIntensity.toFixed(2)}
+     data-on-fire={me.combo >= COMBO_FIRE_CHAIN ? "1" : "0"}
+     title={`${me.combo} flawless words in a row. Every mistake breaks the chain. Damage is multiplied by ${me.comboMultiplier.toFixed(2)}x.`}
+     className={`flex items-center gap-1.5 rounded-lg border-2 px-2 py-0.5 ${onFire ? "animate-pulse" : ""}`}
+     style={{
+       borderColor: comboColour,
+       background: `${comboColour}22`,
+       boxShadow: `0 0 ${Math.round(4 + me.comboIntensity * 14)}px ${comboColour}66`,
+     }}
+   >
+     <span className="font-mono text-[10px] font-bold uppercase tracking-wider" style={{ color: comboColour }}>
+       {onFire ? "on fire" : "chain"}
+     </span>
+     <span className="font-mono text-base font-black leading-none" style={{ color: comboColour }}>
+       {me.combo}
+     </span>
+     {/* One pip per rung of the ladder: filled to where the chain has climbed. */}
+     <span className="flex items-center gap-[3px]">
+       {Array.from({ length: COMBO_MAX_STEPS }, (_, i) => (
+         <span
+           key={i}
+           className="block h-2.5 w-1.5 rounded-sm"
+           style={{
+             background: i < comboSteps(me.combo) ? comboColour : "rgba(120,120,130,0.3)",
+           }}
+         />
+       ))}
+     </span>
+     <span className="font-mono text-xs font-black" style={{ color: comboColour }}>
+       ×{me.comboMultiplier.toFixed(2)}
+     </span>
+   </div>
+ )}
  <span
  data-testid="player-damage"
  data-value={me.damage}
@@ -656,11 +723,12 @@ export default function FightClient({ wide = false }: { wide?: boolean }) {
  rounds {result.roundsWon}-{result.roundsLost}
  </span>
  </div>
- <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+ <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
  {[
  { k: "Coins", v: `+${result.coins}` },
  { k: "WPM", v: `${result.wpm}` },
  { k: "Accuracy", v: `${result.accuracy.toFixed(1)}%` },
+ { k: "Best chain", v: `${result.bestCombo}` },
  { k: streakLabel(result.streak), v: `${save.bestWpm}` },
  ].map((s) => (
  <div key={s.k} className="rounded-xl border border-line bg-page/60 px-3 py-2">

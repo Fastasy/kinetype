@@ -5,9 +5,12 @@
 //      one word at a time, and a word fires on its final correct character only. There
 //      is no sub-word timing window anywhere in this file, so the documented "hold the
 //      last letter until the right moment" exploit has nothing to exploit.
-//   2. SPACES ARE NEVER TYPED. The cursor jumps from the last letter of a word to the
-//      first letter of the next one, so every keystroke counts and a stray space
-//      press cannot register as an error or scroll the page.
+//   2. THE SEPARATOR IS A REAL KEY. The word fires its move on its final letter, and then
+//      the space between it and the next word is the next required keypress. Nothing
+//      advances until it lands. The separator cannot be optional: if the last letter also
+//      moved the cursor, pressing space would be strictly worse than typing straight
+//      through and the key would be decoration. Because space is a real key it can also be
+//      WRONG — a stray space mid-word registers as a mistake rather than being ignored.
 //   3. THE PLAYER IS GIVEN A SENTENCE, NOT A MENU. Exactly one prompt is live at any
 //      moment, and the sentence decides the move sequence: small words block, normal
 //      words punch, difficult words kick. There is nothing to choose, so every
@@ -76,6 +79,14 @@ export class TypingRun {
   sentences = 0;
   /** Block words completed, i.e. guards raised. */
   blocks = 0;
+  /**
+   * Consecutive flawlessly typed words. Broken by ANY mistake, reset never otherwise.
+   * Read by the match layer for the damage multiplier, by the renderer for screen
+   * intensity and by the HUD for the meter.
+   */
+  combo = 0;
+  /** Longest chain reached this match, for the result screen. */
+  bestCombo = 0;
   bestWpm = 0;
 
   constructor(rng: Rng, opts: TypingOptions) {
@@ -94,6 +105,7 @@ export class TypingRun {
       words,
       kind,
       index: 0,
+      pendingSpace: false,
       typed: 0,
       flawed: false,
       age: 0,
@@ -170,17 +182,53 @@ export class TypingRun {
   }
 
   /**
+   * Consecutive flawlessly typed words. Broken by ANY mistake, and cleared at the start of
+   * every round so each one is a fresh climb: carrying a full chain across a round boundary
+   * would open round two already at maximum multiplier, which is the escalation handing
+   * itself to the player instead of making them earn it again.
+   */
+  resetCombo(): void {
+    this.combo = 0;
+  }
+
+  /**
+   * The single key the player must press next, or null once the sentence is done.
+   *
+   * THE ONE SOURCE OF TRUTH for "what am I supposed to type". The input handler, the bot
+   * and the HUD all read it, so they can never disagree about whether a space is due — which
+   * is exactly the bug that would ship if the separator rule lived in three places.
+   */
+  nextKey(): string | null {
+    const p = this.prompts[0];
+    if (!p) return null;
+    if (p.pendingSpace) return " ";
+    const w = p.words[p.index];
+    if (!w) return null;
+    return w.text[w.typed] ?? " ";
+  }
+
+  /**
    * The telegraph: this fighter has committed to a kick. Two characters in is enough
    * to see it coming, and the defender can see the whole sentence anyway, so this only
    * makes the timing legible.
    */
   telegraphing(): boolean {
-    const w = this.activeWord();
+    const p = this.prompts[0];
+    // Not while a separator is pending: that word has already fired its move, so a lingering
+    // KICK INCOMING would be telling the defender to block something that already landed.
+    if (!p || p.pendingSpace) return false;
+    const w = p.words[p.index];
     return !!w && w.move === "kick" && w.typed >= TELEGRAPH_COMMIT_CHARS;
   }
 
+  /** Any mistake breaks the chain. One sentence of rule, and it is the whole rule. */
+  private breakCombo(): void {
+    this.combo = 0;
+  }
+
   handleChar(ch: string): CharOutcome {
-    if (!/^[a-z]$/.test(ch)) return { kind: "none" };
+    // A separator is a real key now, so it is a legal press. Nothing else is.
+    if (!/^[a-z ]$/.test(ch)) return { kind: "none" };
     // NO CLOCK ADVANCE HERE, deliberately. This used to add a hard-coded 16ms per
     // keystroke ON TOP of the real dt that tick() already delivers, so the rolling WPM
     // window's time span ran ahead of the wall clock. Measured cost: the meter under-read
@@ -190,6 +238,28 @@ export class TypingRun {
 
     const prompt = this.prompts[0];
     if (!prompt) return { kind: "none" };
+
+    // ---- the separator: the word is done and the space is what advances the cursor
+    if (prompt.pendingSpace) {
+      if (ch !== " ") {
+        // A key pressed where the separator is due costs accuracy and breaks the chain,
+        // but it does NOT flaw the coming word. That word has not been typed yet, so
+        // robbing it of its precision bonus would punish a mistake the player has not
+        // made in it. Failing to advance is punishment enough.
+        this.errors++;
+        this.recent.push({ t: this.clock, correct: false });
+        this.breakCombo();
+        return { kind: "wrong", penalise: this.opts.strictMode };
+      }
+      prompt.pendingSpace = false;
+      prompt.index++;
+      prompt.typed = charOffset(prompt.words, prompt.index);
+      this.chars++;
+      this.correct++;
+      this.recent.push({ t: this.clock, correct: true });
+      return { kind: "correct" };
+    }
+
     const word = prompt.words[prompt.index];
     if (!word) return { kind: "none" };
 
@@ -197,11 +267,13 @@ export class TypingRun {
     if (ch !== expected) {
       // Rule 4: mark it flawed, but do NOT wipe the player's progress. A typo costs
       // that word's precision bonus and an accuracy point; it does not send the whole
-      // sentence back to the start.
+      // sentence back to the start. A stray SPACE mid-word lands here too, because the
+      // separator is a real key and can therefore be wrong.
       word.flawed = true;
       prompt.flawed = true;
       this.errors++;
       this.recent.push({ t: this.clock, correct: false });
+      this.breakCombo();
       return { kind: "wrong", penalise: this.opts.strictMode };
     }
 
@@ -217,6 +289,15 @@ export class TypingRun {
     this.words++;
     const precision = !word.flawed;
     if (word.move === "block") this.blocks++;
+    // The chain counts the word that just landed, so the third clean word in a row is the
+    // one that already carries the extra damage. Rewarding the NEXT word instead would put
+    // a beat between the achievement and the payoff.
+    if (precision) {
+      this.combo++;
+      if (this.combo > this.bestCombo) this.bestCombo = this.combo;
+    } else {
+      this.breakCombo();
+    }
     const committed: SentenceWord = { ...word };
 
     const wpm = this.wpm();
@@ -224,10 +305,10 @@ export class TypingRun {
 
     const last = prompt.index >= prompt.words.length - 1;
     if (!last) {
-      // Nudge the cursor to the first letter of the next word: the space between them
-      // is never something the player has to type.
-      prompt.index++;
-      prompt.typed = charOffset(prompt.words, prompt.index);
+      // The move has fired, but the sentence does NOT advance. The separator is the next
+      // required keypress and the cursor waits on it. `typed` already points at it, because
+      // it counts the characters consumed including separators.
+      prompt.pendingSpace = true;
       return {
         kind: "commit",
         commit: { prompt, word: committed, precision, sentenceDone: false },
@@ -248,7 +329,9 @@ export class TypingRun {
       // The match layer calls exitRecovery() itself.
       return { kind: "commit", commit: result };
     }
-    // Immediately hand the player the next sentence. There is no gap and no menu.
+    // Immediately hand the player the next sentence. There is no gap and no menu, and no
+    // trailing separator: the space lives BETWEEN the words, so the last word ends the
+    // sentence on its own final letter.
     this.prompts[0] = this.spawnSentence();
     return { kind: "commit", commit: result };
   }

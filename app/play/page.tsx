@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 const PLAY_FAQ = [
   {
     q: "How do I control the fight?",
-    a: "Just type. One sentence is on screen and you type it straight through, one word at a time, with no spaces to type and nothing to select. Every word is a move: small words block, ordinary words punch, long words kick. Escape leaves the match.",
+    a: "Just type. One sentence is on screen and you type it straight through, one word at a time, spaces included — the space is a real key and the next word will not open up until you press it. Every word is a move: small words block, ordinary words punch, long words kick. Type without a single mistake and your chain builds, and every move lands harder as it climbs. Escape leaves the match.",
   },
   {
     q: "Which difficulty should I start on?",

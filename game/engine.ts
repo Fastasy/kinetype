@@ -6,6 +6,7 @@
 
 import { STEP } from "./constants";
 import { AudioBus } from "./audio";
+import { comboIntensity, comboMultiplier } from "./combo";
 import { Match } from "./match";
 import { computeViewport, drawScene } from "./render";
 import { themeById, type Theme } from "./themes";
@@ -27,6 +28,10 @@ export interface PromptView {
   /** Index of the live word; equals words.length once the sentence is done. */
   index: number;
   kind: Prompt["kind"];
+  /** True when the separator after the previous word is the next required keypress. */
+  pendingSpace: boolean;
+  /** The exact key the player must press next. " " when the separator is due. */
+  nextKey: string | null;
   flawed: boolean;
 }
 
@@ -42,6 +47,12 @@ export interface SideView {
   hitCooldown: number;
   /** Keystrokes held because this side cannot act yet. Shown so a wait is not silent. */
   queued: number;
+  /** Consecutive flawlessly typed words. */
+  combo: number;
+  /** Damage multiplier the chain has earned. 1 while the chain is short. */
+  comboMultiplier: number;
+  /** 0..1 escalation, for driving the HUD's intensity. */
+  comboIntensity: number;
   recovering: boolean;
   prompts: PromptView[];
 }
@@ -180,7 +191,9 @@ export class GameEngine {
   handleKey(key: string): boolean {
     if (this.paused) return false;
     const k = key.toLowerCase();
-    if (!/^[a-z]$/.test(k)) return false;
+    // Space is a real key: it is the separator between words. Everything else the game
+    // reads is a letter.
+    if (k !== " " && !/^[a-z]$/.test(k)) return false;
     const used = this.match.type(this.cfg.humanSide, k);
     this.dirty = true;
     return used;
@@ -250,7 +263,9 @@ export class GameEngine {
         this.audio.play(MOVE_SOUND[e.move], e.precision ? 0.01 : 0);
         break;
       case "hit":
-        this.audio.play("hit", Math.min(0.08, e.power / 3000));
+        // The pitch climbs with the attacker's chain, so a player on a run HEARS the
+        // escalation. Capped so a long chain cannot push the hit into a squeal.
+        this.audio.play("hit", Math.min(0.08, e.power / 3000) + Math.min(0.2, e.combo * 0.015));
         // A smothered hit needs its own sound: "it landed" and "it was blocked" are
         // very different pieces of information for the player who is not looking.
         if (e.guarded) this.audio.play("block", 0.02);
@@ -291,6 +306,9 @@ export class GameEngine {
       invuln: Math.max(0, f.invuln),
       hitCooldown: Math.max(0, f.hitCooldown),
       queued: this.match.queuedFor(side),
+      combo: t.combo,
+      comboMultiplier: comboMultiplier(t.combo),
+      comboIntensity: comboIntensity(t.combo),
       recovering: t.inRecovery,
       prompts: t.prompts.map<PromptView>((p) => ({
         id: p.id,
@@ -304,6 +322,10 @@ export class GameEngine {
         })),
         index: p.index,
         kind: p.kind,
+        pendingSpace: p.pendingSpace,
+        // Read from the same source the input handler uses, so the cursor the player sees and
+        // the key the game will accept can never disagree.
+        nextKey: t.nextKey(),
         flawed: p.flawed,
       })),
     };

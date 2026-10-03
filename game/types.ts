@@ -36,10 +36,20 @@ export interface Prompt {
   kind: PromptKind;
   /** Index of the live word. Equals words.length once the sentence is finished. */
   index: number;
-  /** Characters committed, as an index into `text`. Spaces are skipped, never typed. */
-  typed: number;
+  /**
+   * True when the word at `index - 1` is complete and the cursor is sitting on the
+   * separator that follows it. The word's move has ALREADY fired at this point; the
+   * space is the player's next required keypress and nothing advances until it lands.
+   *
+   * This is why the separator cannot be optional. If the last letter also advanced the
+   * cursor, the space would be a strictly worse choice than typing straight through and
+   * the key would be decoration — the optimum would be to never press it.
+   */
+  pendingSpace: boolean;
   /** Some word in this sentence was mistyped, for the HUD's flawed chip. */
   flawed: boolean;
+  /** Characters consumed, as an index into `text`, separators included. */
+  typed: number;
   /** Ms the prompt has been live, for the bot's decision delay. */
   age: number;
 }
@@ -124,7 +134,11 @@ export interface Stage {
 export type GameEvent =
   | { type: "key"; side: Side; correct: boolean }
   | { type: "commit"; side: Side; move: MoveKind; precision: boolean; x: number; y: number }
-  | { type: "hit"; side: Side; power: number; move: AttackMove; guarded: boolean; x: number; y: number }
+  /**
+   * `combo` is the attacker's chain length at the moment the move landed. The audio bus
+   * raises its pitch with it, so a player on a run HEARS the escalation as well as seeing it.
+   */
+  | { type: "hit"; side: Side; power: number; move: AttackMove; guarded: boolean; combo: number; x: number; y: number }
   | { type: "block"; side: Side; x: number; y: number }
   | { type: "parry"; side: Side; x: number; y: number }
   | { type: "recoverPrompt"; side: Side }
@@ -144,6 +158,8 @@ export interface MatchResult {
   wpm: number;
   accuracy: number;
   bestWpm: number;
+  /** Longest chain of flawlessly typed words in the match. */
+  bestCombo: number;
   coins: number;
   /** Set when the player is on a winning streak after this match. */
   streak: number;

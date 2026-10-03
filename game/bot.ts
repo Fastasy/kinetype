@@ -172,8 +172,12 @@ export class BotController {
       // The sentence changed under us (a new one, or recovery), or it is finished.
       if (!current || current.id !== this.targetId) break;
       const active = typing.activeWord();
-      if (!active || active.typed >= active.text.length) break;
-      const expected = active.text[active.typed];
+      if (!active) break;
+      // The next required key, SEPARATOR INCLUDED. The bot must press space exactly like the
+      // player does or it parks on the word it just finished and never fires another move —
+      // a bot that stalls at every boundary is not an opponent.
+      const expected = typing.nextKey();
+      if (expected === null) break;
       const ok = this.rng.next() < this.effective("accuracy");
       const ch = ok ? expected : this.wrongFor(expected);
       const outcome = typing.handleChar(ch);

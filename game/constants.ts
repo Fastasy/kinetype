@@ -180,6 +180,28 @@ export const WPM_MIN_SPAN = 1;
  */
 export const INPUT_BUFFER_MAX = 3;
 
+// ---------------------------------------------------------------- combo
+/**
+ * Flawless words per rung of the combo ladder.
+ *
+ * Three is the smallest chain that reads as intentional rather than lucky. It is also
+ * comfortably reachable inside ONE sentence: the pool's sentences run 4 to 11 words, so a
+ * clean short sentence clears the first rung and a clean long one peaks the ladder. A player
+ * who cannot feel the combo build inside a single sentence never learns it exists.
+ */
+export const COMBO_STEP = 3;
+/** Damage added per rung. At the cap that is +60% — big enough to want, small enough that
+ *  a clean player still has to land the hit, and it stacks ON TOP of the precision bonus. */
+export const COMBO_BONUS_PER_STEP = 0.15;
+/**
+ * The rung the ladder stops at, i.e. a chain of COMBO_STEP * COMBO_MAX_STEPS (12) flawless
+ * words. Capping matters: without it, a chain across several rounds would compound until one
+ * punch ended the match and the escalation would eat its own tension.
+ */
+export const COMBO_MAX_STEPS = 4;
+/** Chains at or above this show as "ON FIRE" in the HUD. Purely presentational. */
+export const COMBO_FIRE_CHAIN = COMBO_STEP * COMBO_MAX_STEPS;
+
 // ---------------------------------------------------------------- economy
 export const COIN_BASE_WIN = 40;
 export const COIN_BASE_LOSS = 12;
