@@ -40,6 +40,8 @@ export interface SideView {
   invuln: number;
   /** Seconds until this side can be hit again. */
   hitCooldown: number;
+  /** Keystrokes held because this side cannot act yet. Shown so a wait is not silent. */
+  queued: number;
   recovering: boolean;
   prompts: PromptView[];
 }
@@ -288,6 +290,7 @@ export class GameEngine {
       guard: Math.max(0, f.guard),
       invuln: Math.max(0, f.invuln),
       hitCooldown: Math.max(0, f.hitCooldown),
+      queued: this.match.queuedFor(side),
       recovering: t.inRecovery,
       prompts: t.prompts.map<PromptView>((p) => ({
         id: p.id,

@@ -600,6 +600,22 @@ export default function FightClient({ wide = false }: { wide?: boolean }) {
  BRIEFLY SAFE
  </span>
  )}
+ {/*
+   The input buffer made visible. Without this chip a player who taps a key while
+   stunned sees the sentence not move and concludes the game ate their keystroke —
+   which is what the buffer was built to fix, so it must not be hidden. It reports
+   the real count, so the player learns that being hit costs them TIME, not letters.
+ */}
+ {me.queued > 0 && (
+ <span
+ data-testid="player-queued"
+ data-value={me.queued}
+ title="You cannot act right now, so these keystrokes are being held. They land the moment you can move again."
+ className="rounded border border-coin/70 bg-coin/15 px-1.5 py-0.5 font-mono text-[10px] font-bold text-coin"
+ >
+ {me.queued} KEY{me.queued > 1 ? "S" : ""} HELD
+ </span>
+ )}
  </div>
  <span className="font-mono text-xs text-ink-faint">
  {Math.ceil(snap?.roundTimer ?? 0)}s left in round

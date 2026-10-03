@@ -26,6 +26,7 @@ import {
   HITSTOP_MAX,
   HITSTOP_MIN,
   HURTBOX,
+  INPUT_BUFFER_MAX,
   LAUNCH_DECAY,
   PARRY_MULTIPLIER,
   PRECISION_DAMAGE_BONUS,
@@ -179,18 +180,79 @@ export class Match {
 
   // ---------------------------------------------------------------- input
 
-  /** Feed one character from a human player. Returns true if it was consumed. */
-  type(side: Side, ch: string): boolean {
+  /**
+   * Whether a keystroke from `side` can be applied right now.
+   *
+   * Split out of `type()` because the input buffer needs the IDENTICAL test: one rule
+   * decides both whether a keystroke lands and whether it is held for later. Two copies
+   * of this condition would drift and a keystroke would fall down the gap between them.
+   */
+  private canAcceptInput(side: Side): boolean {
     if (this.phase !== "live" && this.phase !== "finish" && this.phase !== "recovery") {
       return false;
     }
     if (this.phase === "recovery" && side !== this.recoveryVictim) return false;
     const f = this.fighter(side);
-    if (f.state === "hitstun" || f.state === "staggered" || f.state === "ko") {
-      // Input is blocked during hitstun but progress is preserved: forgiving by
-      // design, in keeping with "bonus lost, not malus applied".
-      return false;
+    return f.state !== "hitstun" && f.state !== "staggered" && f.state !== "ko";
+  }
+
+  /** Keystrokes pressed while input was blocked, oldest first. */
+  private pending: Record<Side, string[]> = { left: [], right: [] };
+
+  /** How many keystrokes are waiting. The HUD shows this, so a wait is never silent. */
+  queuedFor(side: Side): number {
+    return this.pending[side].length;
+  }
+
+  private clearPending(): void {
+    this.pending.left.length = 0;
+    this.pending.right.length = 0;
+  }
+
+  /**
+   * Hold a keystroke that cannot be applied yet.
+   *
+   * FIRST IN, FIRST KEPT, not last: the characters the player pressed first are the ones
+   * they meant next, so the queue preserves the order their fingers were already in.
+   * Past INPUT_BUFFER_MAX the excess is dropped — a fighter must not be able to bank a
+   * whole word while stunned.
+   */
+  private bufferInput(side: Side, ch: string): void {
+    const q = this.pending[side];
+    if (q.length < INPUT_BUFFER_MAX) q.push(ch);
+  }
+
+  /**
+   * Deliver held keystrokes, in order, as soon as they are legal.
+   *
+   * Runs once per step, so a keystroke pressed on the frame a hit lands is applied within
+   * one frame of the hitstun ending. This is the fix for Ruan's report: "when he hits me
+   * and I type a letter at the same time, it does not register." Being hit still costs the
+   * player time, which is the point of hitstun, but it no longer costs them keystrokes.
+   */
+  private flushPending(): void {
+    for (const side of ["left", "right"] as Side[]) {
+      const q = this.pending[side];
+      // Re-tested every iteration: applying a character can commit a word, which can end
+      // the sentence, the round or the match and make the next queued character illegal.
+      while (q.length > 0 && this.canAcceptInput(side)) {
+        this.type(side, q.shift() as string);
+      }
     }
+  }
+
+  /** Feed one character from a human player. Returns true if it was consumed. */
+  type(side: Side, ch: string): boolean {
+    // Validated before anything else, so junk can never enter the buffer.
+    if (!/^[a-z]$/.test(ch)) return false;
+    if (!this.canAcceptInput(side)) {
+      // Consumed, not ignored: the keystroke is held and will land. Returning false here
+      // would also tell the caller the press was worthless, which is exactly the
+      // impression this buffer exists to remove.
+      this.bufferInput(side, ch);
+      return true;
+    }
+    const f = this.fighter(side);
     const t = this.typing[side];
     if (t.inRecovery !== (this.phase === "recovery")) {
       if (this.phase === "recovery" && !t.inRecovery) t.enterRecovery();
@@ -242,6 +304,11 @@ export class Match {
       case "matchOver":
         break;
     }
+
+    // Last, so it sees the STATES THIS STEP PRODUCED rather than the ones it started
+    // with: the frame hitstun expires is the frame the held keystrokes land, and a
+    // round that just went live accepts the characters typed during the countdown.
+    this.flushPending();
   }
 
   private simulate(dt: number): void {
@@ -658,6 +725,9 @@ export class Match {
 
   private endRound(winner: Side): void {
     if (this.phase === "roundOver" || this.phase === "matchOver") return;
+    // Keystrokes held from the round that just ended belong to that round. Carrying them
+    // into the next one would hand the player a head start they did not type.
+    this.clearPending();
     this.wins[winner]++;
     this.publish({ type: "roundEnd", winner, round: this.round });
     const needed = Math.ceil((this.opts.bestOf + 1) / 2);

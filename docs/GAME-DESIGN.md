@@ -100,6 +100,8 @@ This was not in the first design and it is not a nicety. A player landing a word
 
 It also improves the game on its own terms: hits become scarce, so timing a kick matters more than typing volume.
 
+**Hitstun costs time, never keystrokes** (added 2026-10-03). A hit landing mid-word used to delete whatever the player typed during the stun, and the same was true of the countdown and of a recovery cut. For a typing game that is the worst possible feel bug, because the player is mid-flow and their hands keep moving: the sentence simply stops responding and the game reads as broken. Keystrokes that cannot be applied are now held (up to `INPUT_BUFFER_MAX`) and delivered in order the frame the fighter can act again. The cap is what keeps this a courtesy rather than an exploit — see `game/constants.ts`.
+
 ## 6. Typing
 
 | Element | Decision |
@@ -110,9 +112,10 @@ It also improves the game on its own terms: hits become scarce, so timing a kick
 | Prompts on screen | **1 per fighter, always.** The next sentence arrives the instant the current one ends, with no gap and nothing to select. |
 | Mistype default | **Bonus lost, not progress lost.** A wrong character clears *that word's* precision bonus. Progress stands and the rest of the sentence still earns its own bonus, so a typo early in a long sentence costs one word's damage rather than the sentence. |
 | Strict mode (opt-in) | A player setting. Mistype adds 0.4s of stagger. For players who want the risk dial turned up. |
+| Input while the player cannot act | **Held, not dropped.** Up to `INPUT_BUFFER_MAX` (3) keystrokes are queued and delivered in the order they were pressed, on the frame the fighter can act again. Applies to hitstun, strict-mode stagger, the 2.2s countdown and a recovery cut. The HUD shows the count, so a wait is never silent. |
 | Precision bonus | Completing a word with zero errors increases that move's damage by 25% and shows a distinct flash. |
 | Accuracy | Tracked per round and per match. Feeds the coin payout. |
-| WPM | Live, computed on committed characters over a rolling window. |
+| WPM | Live, computed on committed characters over a rolling window of **real time**. The typing clock is advanced by `tick(dt)` and by nothing else. |
 | Sentence load | Scales with the chosen bot speed. See below. |
 
 **The sentence pool is hand-written, 305 sentences, and generated into `game/sentences.ts` by `scripts/build-sentences.py`.** Grammar and classroom safety cannot be supplied by a frequency list, so the source lines live in `scripts/sentences.txt` and the build script validates and sorts them. Rules, all asserted both by the script and by `game/tests/engine.test.ts`:

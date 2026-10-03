@@ -27,6 +27,7 @@ import {
   HIT_COOLDOWN,
   HITSTUN_MAX,
   HITSTUN_MIN,
+  INPUT_BUFFER_MAX,
   KICK_MIN_CHARS,
   PARRY_MULTIPLIER,
   PRECISION_DAMAGE_BONUS,
@@ -690,6 +691,258 @@ test("after the cooldown expires the victim can be hit again", () => {
   for (let i = 0; i < Math.ceil(HIT_COOLDOWN * 60) + 2; i++) m.step(STEP);
   strike(m, "left", "punch");
   assert.ok(m.fighter("right").damage > first, "the next hit should land once the window opens");
+});
+
+// ================================================================ input buffer
+
+section("Input buffering (a hit must not eat the player's keystrokes)");
+
+test("the buffer is small enough that a stun cannot bank a word", () => {
+  // The invariant that keeps the buffer a courtesy rather than an exploit. A one-word
+  // sentence is at least a single block word, so a cap below the shortest word length
+  // means no fighter can ever queue up a whole move while stunned. Hitstun is meant to
+  // cost the player TIME; it must not cost them keystrokes, and it must not hand them one.
+  assert.ok(INPUT_BUFFER_MAX >= 1, "a cap of zero is the bug this buffer exists to fix");
+  assert.ok(
+    INPUT_BUFFER_MAX <= 4,
+    `INPUT_BUFFER_MAX (${INPUT_BUFFER_MAX}) is large enough to bank a whole word`,
+  );
+});
+
+test("a keystroke pressed while being hit is held, not dropped", () => {
+  const m = sandbox();
+  toLive(m);
+  m.typing.left.prompts[0] = promptFor("planet");
+
+  // A genuine punch, through the same door the player's own moves use.
+  strike(m, "right", "punch");
+  assert.equal(m.left.state, "hitstun", "the punch should stun the player");
+
+  const word = m.typing.left.activeWord();
+  assert.ok(word, "the player should still have a live word");
+  const before = m.typing.left.chars;
+
+  // Ruan's report: "when he hits me and I type a letter at the same time, it does not
+  // register." It must register. It may be DELAYED, but it must not vanish.
+  const consumed = m.type("left", word.text[0]);
+  assert.equal(consumed, true, "the keystroke must be accepted, not discarded");
+  assert.equal(m.typing.left.chars, before, "it cannot be applied while stunned");
+  assert.equal(m.queuedFor("left"), 1, "it should be waiting in the buffer");
+});
+
+test("held keystrokes land the moment hitstun ends, in the order they were pressed", () => {
+  const m = sandbox();
+  toLive(m);
+  m.typing.left.prompts[0] = promptFor("planet");
+  strike(m, "right", "punch");
+
+  const word = m.typing.left.activeWord();
+  assert.ok(word, "the player should still have a live word");
+  m.type("left", word.text[0]);
+  m.type("left", word.text[1]);
+  assert.equal(m.typing.left.chars, 0, "nothing lands while stunned");
+  assert.equal(m.queuedFor("left"), 2);
+
+  let guard = 0;
+  while (m.left.state === "hitstun" && guard++ < 300) m.step(STEP);
+
+  assert.equal(m.typing.left.chars, 2, "both held keystrokes should have landed");
+  assert.equal(
+    m.typing.left.activeWord()?.typed,
+    2,
+    "they must land in order, from where the player left off",
+  );
+  assert.equal(m.queuedFor("left"), 0, "the buffer should be empty again");
+});
+
+test("the cap drops the overflow, and the first keys pressed are the ones kept", () => {
+  const m = sandbox();
+  toLive(m);
+  m.typing.left.prompts[0] = promptFor("planet");
+  strike(m, "right", "punch");
+
+  const word = m.typing.left.activeWord();
+  assert.ok(word, "the player should still have a live word");
+  // Mash the entire word while stunned. First in, first kept: the player's fingers were
+  // already at the start of the word, so the leading characters are the meaningful ones.
+  for (const ch of word.text) m.type("left", ch);
+
+  assert.equal(m.queuedFor("left"), INPUT_BUFFER_MAX, "the queue must stop at the cap");
+  let guard = 0;
+  while (m.left.state === "hitstun" && guard++ < 300) m.step(STEP);
+
+  assert.equal(m.typing.left.chars, INPUT_BUFFER_MAX, "only the cap may land");
+  assert.ok(
+    m.typing.left.chars < word.text.length,
+    "a whole word must never be banked through a stun",
+  );
+});
+
+test("held keystrokes can still commit the word and fire its move", () => {
+  const m = sandbox();
+  toLive(m);
+  // A three-character block word: exactly the size of the buffer, so the save word
+  // completes the instant the player can act again.
+  m.typing.left.prompts[0] = promptFor("the");
+  strike(m, "right", "punch");
+
+  for (const ch of "the") m.type("left", ch);
+  assert.equal(m.typing.left.blocks, 0, "nothing may fire while the player is stunned");
+
+  let guard = 0;
+  while (m.left.state === "hitstun" && guard++ < 300) m.step(STEP);
+
+  assert.equal(m.typing.left.blocks, 1, "the block should fire as soon as the stun clears");
+});
+
+test("strict mode's stagger holds keystrokes rather than eating them", () => {
+  const m = sandbox(42, { strictMode: true });
+  toLive(m);
+  m.typing.left.prompts[0] = promptFor("planet");
+
+  const word = m.typing.left.activeWord();
+  assert.ok(word, "the player should have a live word");
+  m.type("left", word.text[0] === "z" ? "y" : "z"); // deliberate mistake
+  assert.equal(m.left.state, "staggered", "strict mode should stagger on a mistake");
+
+  m.type("left", word.text[0]);
+  assert.equal(m.typing.left.chars, 0, "the good keystroke waits out the stagger");
+  assert.equal(m.queuedFor("left"), 1);
+
+  let guard = 0;
+  while (m.left.state === "staggered" && guard++ < 300) m.step(STEP);
+  assert.equal(m.typing.left.chars, 1, "the key the player meant should land afterwards");
+});
+
+test("keystrokes typed during the countdown land when the round goes live", () => {
+  const m = sandbox(); // starts in the countdown
+  m.typing.left.prompts[0] = promptFor("planet");
+
+  const word = m.typing.left.activeWord();
+  assert.ok(word, "the player should have a live word");
+  m.type("left", word.text[0]);
+  m.type("left", word.text[1]);
+  assert.equal(m.typing.left.chars, 0, "the round has not started");
+  assert.equal(m.queuedFor("left"), 2, "they should be held, not swallowed");
+
+  toLive(m);
+  assert.equal(m.typing.left.chars, 2, "both should land on the frame the round goes live");
+});
+
+test("a decided round discards its held keystrokes instead of carrying them over", () => {
+  const m = sandbox();
+  toLive(m);
+  m.fighter("right").damage = 110;
+  strike(m, "left", "kick");
+
+  // The right fighter has no bot controller in a sandbox, so it cannot save itself and
+  // the round ends in a KO. Drive until the recovery cut is open.
+  let guard = 0;
+  while (!m.recoveryVictim && guard++ < 400) m.step(STEP);
+  // Declared as `string`: the point of this test is the round transition, and TS 5.5
+  // narrows `m.phase` through the assertion below, which then rejects the loop guard.
+  const cutPhase: string = m.phase;
+  assert.ok(cutPhase === "recovery", "the kick should have opened a recovery window");
+  assert.equal(m.recoveryVictim, "right", "the right fighter is the one falling");
+
+  // Mash while the round is being decided: the player cannot act during the cut, so all
+  // of this is held in the buffer.
+  const charsBeforeMash = m.typing.left.chars;
+  for (const ch of "wasd") m.type("left", ch);
+  assert.ok(m.queuedFor("left") > 0, "the mashing should be held while the cut runs");
+
+  // Drive on until round two is actually live and accepting input.
+  let guard2 = 0;
+  while (m.phase !== "live" && guard2++ < 4000) m.step(STEP);
+  assert.equal(m.phase, "live", "the next round should have started");
+
+  assert.equal(m.queuedFor("left"), 0, "nothing may be banked into the next round");
+  assert.equal(
+    m.typing.left.chars,
+    charsBeforeMash,
+    "and nothing may be applied in the next round",
+  );
+});
+
+test("junk is refused outright and never enters the buffer", () => {
+  const m = sandbox();
+  toLive(m);
+  m.typing.left.prompts[0] = promptFor("planet");
+  strike(m, "right", "punch"); // stun the player so everything gets buffered
+  for (const ch of ["A", "1", " ", "-", "!", "é"]) m.type("left", ch);
+  assert.equal(m.queuedFor("left"), 0, "only a-z may be held");
+});
+
+// ================================================================ WPM honesty
+
+section("The WPM meter (the scoreboard has to be true)");
+
+test("the typing clock is real time: a keystroke does not advance it", () => {
+  const m = sandbox();
+  toLive(m);
+  const t = m.typing.left;
+  m.typing.left.prompts[0] = promptFor("planet");
+
+  const before = t.clockSeconds;
+  const word = t.activeWord();
+  assert.ok(word, "the player should have a live word");
+  t.handleChar(word.text[0]);
+  t.handleChar(word.text[1]);
+  assert.ok(
+    Math.abs(t.clockSeconds - before) < 1e-9,
+    "handleChar must not move the clock: time comes from tick() alone",
+  );
+
+  t.tick(0.5);
+  assert.ok(
+    Math.abs(t.clockSeconds - (before + 0.5)) < 1e-9,
+    "tick is the only thing that may advance the clock",
+  );
+});
+
+test("the meter waits for a real interval before it reports a speed", () => {
+  const m = sandbox();
+  toLive(m);
+  const t = m.typing.left;
+  m.typing.left.prompts[0] = promptFor("planet");
+
+  const word = t.activeWord();
+  assert.ok(word, "the player should have a live word");
+  t.handleChar(word.text[0]);
+  t.handleChar(word.text[1]);
+  // Two keystrokes in the same instant is not a speed. Dividing by that span produced a
+  // number that swung wildly at the start of every round.
+  assert.equal(t.wpm(), 0, "a sub-second span must not be reported as WPM");
+});
+
+test("a steady typist's meter matches the speed they actually typed", () => {
+  const m = sandbox();
+  toLive(m);
+
+  // 120 WPM is 10 correct characters per second, i.e. one every 6 frames. This is the
+  // speed at which the old hard-coded 16ms-per-keystroke clock was worst: it made the
+  // meter under-read by 8.3%, punishing the player for getting faster.
+  const framesPerChar = 6;
+  let realTime = 0;
+  let typed = 0;
+  for (let frame = 0; frame < 60 * 20 && typed < 100; frame++) {
+    m.step(STEP);
+    realTime += STEP;
+    if (frame % framesPerChar === 0) {
+      const word = m.typing.left.activeWord();
+      if (!word) break;
+      m.type("left", word.text[word.typed]);
+      typed++;
+    }
+  }
+
+  const trueWpm = (typed / 5) * (60 / realTime);
+  const reported = m.typing.left.wpm();
+  const error = Math.abs(reported - trueWpm) / trueWpm;
+  assert.ok(
+    error < 0.12,
+    `meter reported ${reported} WPM for a true ${trueWpm.toFixed(1)} WPM (${(error * 100).toFixed(1)}% off)`,
+  );
 });
 
 // ================================================================ recovery

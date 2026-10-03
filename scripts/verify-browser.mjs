@@ -117,9 +117,10 @@ async function waitForArena(maxMs = 8000) {
  * this is one move.
  *
  * The expected character is re-read from the DOM on every keystroke rather than cached
- * up front: hitstun blocks input, a sentence rolls over to the next one, and (while
- * falling) a save word replaces everything. A cached copy would keep typing into a
- * prompt that no longer exists and rack up errors.
+ * up front: a hit landing on the player HOLDS the keystroke and delivers it a frame or
+ * two later, a sentence rolls over to the next one, and (while falling) a save word
+ * replaces everything. A cached copy would keep typing into a prompt that no longer
+ * exists and rack up errors.
  *
  * Returns the move of the word that was completed, which is what the game acted on.
  */

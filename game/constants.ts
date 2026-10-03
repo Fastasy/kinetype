@@ -153,6 +153,32 @@ export const PRECISION_DAMAGE_BONUS = 0.25;
 export const STRICT_STAGGER = 0.4; // seconds, opt-in only
 /** Rolling window for live WPM, seconds. */
 export const WPM_WINDOW = 8;
+/**
+ * Shortest span a WPM reading may be measured over, seconds.
+ *
+ * A rate needs a denominator worth dividing by. Two keystrokes 30ms apart is not a
+ * speed, it is the start of a sentence, and reporting a number from it swung the HUD
+ * from 0 to 200 in the first moments of every round. Below this span the meter reports
+ * 0 and waits for enough keystrokes to mean something.
+ */
+export const WPM_MIN_SPAN = 1;
+
+// ---------------------------------------------------------------- input buffer
+/**
+ * How many keystrokes are held while the player cannot act.
+ *
+ * A hit landing mid-word used to DELETE the keystrokes pressed during the stun: the
+ * input path returned false and the character was gone. Ruan hit it directly — "when he
+ * hits me and I type a letter at the same time, it does not register" — and it is the
+ * single worst feel bug a typing game can have, because the player is mid-flow and their
+ * hands keep moving. The identical thing happened during the 2.2s countdown.
+ *
+ * So input that cannot be applied now is held instead of dropped, and delivered in order
+ * the moment it becomes legal. Three is the cap: it is enough to cover the keystrokes a
+ * player fires off while being knocked back, and far too few to bank a whole word during
+ * a long stun. Past the cap the excess is discarded rather than queued forever.
+ */
+export const INPUT_BUFFER_MAX = 3;
 
 // ---------------------------------------------------------------- economy
 export const COIN_BASE_WIN = 40;
