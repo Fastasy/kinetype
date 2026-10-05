@@ -1,9 +1,12 @@
 # Kinetype — Game Design Spec
 
-**Version** 1.1 · **Date** 2026-09-29 · **Status** MVP implementation
+**Version** 1.2 · **Date** 2026-10-05 · **Status** MVP implementation
 **Companion research** vault `Kinetype/Research/2026-09-28-design-evidence-knockback-and-typing.md`
+**Companion balance note** vault `Kinetype/Research/2026-10-05-balance-recovery-ladder-and-match-length.md`
 
 This document is the build contract. Every number here is either sourced from the design research or an explicit tuning constant that lives in `game/constants.ts`. If the code and this document disagree, the code is wrong.
+
+**1.2 changelog (2026-10-05).** The recovery window moved from SECONDS to CHARACTERS. It was a flat seconds figure (1.8s, -0.25s per save, floor 0.8s) and that made surviving a ring-out a pure function of absolute WPM, which measured as a step rather than a curve: nothing below 33 WPM could ever save, nothing at or above 75 WPM could ever fail to, and the 70 WPM bot Ruan reported on saved four times out of five. Also fixed in the same session, on Ruan's call: the bot now banks typing progress through a stun under the player's own `INPUT_BUFFER_MAX` cap (§9), removing a ~1-rung edge the human held for free. Match length was measured, and Ruan decided to accept short arcade rounds rather than pad them (§13.5). §3, §7, §9, §11 and §13.5 changed.
 
 **1.1 changelog.** The unit of input moved from one word to one **sentence**, and the words inside a sentence became moves: small words block, ordinary words punch, difficult words kick. Both fighters now spawn in the middle of the stage. Sections 1, 2, 4, 5, 6, 7, 9 and 13 changed; the rest stands.
 
@@ -26,7 +29,7 @@ Typing speed is a near-linear skill. A pure speed race is tic-tac-toe with a key
 | Element | Decision |
 |---|---|
 | Players | 1 human vs 1 bot (MVP). Architecture keeps the second fighter controller-swappable for later netplay. |
-| Rounds | Best of 3. Session shape is bounded against typing fatigue at 3-4 minutes. |
+| Rounds | Best of 3. A round measures ~28-40s and a match ~60-105s — see §13.5. A **SESSION** is 10+ min, i.e. several matches, which is where the fatigue bound actually lives. |
 | Win condition | Knock the opponent past their blast line. No health bar. |
 | Stage | Side-view. One main platform plus two floating platforms. Blast lines at both horizontal edges and below. |
 | Match timer | 90s per round. On timeout, the fighter with the lower damage percent wins the round. |
@@ -158,7 +161,22 @@ Blocked knockback and chip damage compound, because knockback is itself a functi
 
 **Recovery.** A fighter pushed past the blast line is not instantly dead. They get one recovery prompt (a 5-character word, oversize and centred, replacing their sentence). Completing it restores them to the platform edge with 0.6s of invulnerability and hands them a fresh sentence. Failing ends the round. This is the genre's core tension, made typing-native.
 
-**Escalating recovery** (added 2026-09-28). The window starts at 1.8s and loses 0.25s for every save already made in that round, flooring at 0.8s. Without this, a bot that types well saved itself every single time and a round could only ever end on the clock, so a KO never actually landed. It is also the platform-fighter convention: recovering gets harder the more you have already been hit.
+**The save window is measured in CHARACTERS, not seconds** (changed 2026-10-05). The window answers one question: *can this fighter type N characters' worth in the time it takes them to type N characters?* N starts at `RECOVERY_SLACK_CHARS` (8) and drops by `RECOVERY_STEP_CHARS` (1.25) for every save already made this round, so the save budget runs out after three saves and the fourth ring-out in a round kills. The budget is converted to seconds using the difficulty RUNG's WPM (`secondsPerChar`), never the fighter's own — which is what makes the mechanic a question about a player's margin over the rung rather than about their absolute speed.
+
+It used to be a flat seconds figure: 1.8s, minus 0.25s per prior save, flooring at 0.8s. Both sides of `5 / (wpm/12) <= 1.8 - 0.25n` are linear in different units, so it collapses to a single threshold, and it measured as a step:
+
+| Rung | Old behaviour |
+|---|---|
+| 20 / 30 WPM | **never saved at all** — a 5-char word takes 2.0s+ against a 1.8s window |
+| 40 WPM | saved twice |
+| 70 WPM | saved four times out of five — Ruan's report |
+| 85 / 100 / 120 WPM | **effectively never failed** — 0.71s needed against a 0.8s floor. Measured, 6 matches per cell: at 85 WPM it still made 89% of saves from the eighth attempt on; the bot's rate was 143/143 at 120v120, 154/155 at 100v100, 207/209 at 120v100 |
+
+Two consequences, both fatal and both measured. First, the top of the ladder could not be KO'd, so rounds there ended on the clock — the exact failure the escalating window was introduced to prevent. Second, and worse, it double-dipped on the game's single axis: WPM decided both who LANDS hits and who SURVIVES them, so there was nothing else to be good at. A player at exactly the bot's WPM won 100% against the 70 bot and 0% against the 120 bot — the same relative skill, opposite outcomes, and nothing on screen to explain it.
+
+The escalating-window idea (added 2026-09-28) is kept, and it is now legible: 8 → 6.75 → 5.5 → out. It was always the right idea — without it a bot that types well saves every time — it was just denominated in the wrong unit. The platform-fighter convention stands: recovering gets harder the more you have already been hit.
+
+**Why the life count is the number to watch, not the difficulty.** A higher budget does not make the game harder; it makes the opponent *save more often before it finally dies*, which is precisely what reads as unbeatable. Measured at 70v70, 8 matches per cell: slack 8 → 3 lives and a 74% save rate; slack 9 → 4 lives and 81%; slack 12 → 6 lives and 86%; slack 16 → 9 lives and 93%. The length response is also far flatter than intuition suggests — four extra lives buy 4 seconds — because lives do not buy match length at all: a ring-out costs only ~7s of clean hitting, so a 3-4 minute match is a damage-ramp question, not a recovery one (§13.5).
 
 ## 8. Juice
 
@@ -194,6 +212,10 @@ The bot types sentences through the same `TypingRun` as the player, and its comm
 The reflex is where parry skill lives now: the bot cannot skip words in its sentence, so what `parrySkill` buys is hurrying the block word it is already typing. A bot that fails the roll keeps typing at its own pace and eats the kick it saw coming, which is what a missed read should look like.
 
 The bot is deliberately **not** hidden about its difficulty. The player picks the WPM. Adaptive correction never moves the effective WPM by more than 12% and never inside a round, so it cannot be felt as cheating.
+
+**Known asymmetry — FIXED 2026-10-05.** A hit landing mid-word no longer drops the human's keystrokes; they are held (up to `INPUT_BUFFER_MAX`) and delivered when the stun ends, which is deliberate and is what stops the typing flow breaking. The bot used to have no equivalent: `BotController.update` returned early on hitstun, so the stun paused its clock outright, and being hit cost the bot its whole stun while costing the player nothing *net*. That measured at roughly **one rung of edge** on the diagonal, so Ruan called it: bank it. `bankWhileStunned()` accrues the bot's progress through a stun under the **same `INPUT_BUFFER_MAX` cap** — the same rule on both sides of the arena, which is what makes a ladder WPM mean the same thing for both fighters. The cap is the anti-exploit half and is asserted directly in the test suite: a larger cap would let a 120 WPM bot (10 chars/s) store a whole word behind one 0.75s stun. A stun still costs the bot time — it just no longer costs it progress.
+
+**The ladder's measured shape is in §13.5.** Every rung is now KO-able and the win rate ramps smoothly with the rung instead of flipping between 100% and 0%, which is what makes the picker usable by a slow and a fast typist alike.
 
 ## 10. Cosmetics and shop
 
@@ -238,7 +260,7 @@ Hard constraints, from CrazyGames' published launch metrics.
 | Load to playable | **< 10 s** | Platform requirement. No assets to download, so the cost is only JS parse. |
 | Frame budget | 60 fps on a mid laptop | Fixed timestep 1/60 with accumulator; render interpolation between steps. |
 | Start conversion | 80%+ reach 60s of play | The game must be playable without reading anything. |
-| Session target | 10+ min average | Best-of-3 plus a visible personal best and streak. |
+| Session target | 10+ min average | Several best-of-three matches (a match measures ~60-105s, §13.5), plus a visible personal best and streak. |
 | Mobile | Playable, touch keyboard prompts | Desktop is the real target; mobile must not be broken. |
 
 ## 11.5 Palette
@@ -314,3 +336,44 @@ The MVP is done when all of these are true.
 19. The engine's pure logic has unit tests that pass under plain Node.
 20. `node scripts/verify-browser.mjs` plays a real match in Chromium, confirms damage lands both ways, and confirms a typed block word raises a visible guard.
 21. Keyboard input reaches the game when it is embedded, and a player who cannot type is told to click the arena instead of assuming the game is broken.
+
+## 13.5 The measured ladder (added 2026-10-05)
+
+`scripts/probe-balance.ts` drives the framework-free core with no browser: a scripted human (its own WPM, accuracy, per-sentence read delay and parry roll, typing through the real `Match.type()` input path) against each bot rung, 8 matches per cell. Raw matrices live in the balance note.
+
+**Saves, per rung, after the 1.2 change** — the point of the change is that this is now flat:
+
+| Rung | save #1 | save #2 | save #3 | save #4+ | lives |
+|---|---|---|---|---|---|
+| 20 WPM | 99% | 87% | 55% | 0% | 2 (its 0.90 accuracy costs it the third) |
+| 40 WPM | 100% | 96% | 76% | 0% | 3 |
+| 70 WPM | 100% | 99% | 87% | 0% | 3 |
+| 120 WPM | 100% | 100% | 95% | 0% | 3 |
+
+**Rounds now end in KOs.** KO/timeout across the whole ladder, 8 matches per cell: 16-22 KOs and 0-1 timeouts. Before the change the top of the ladder read **1 KO / 13 timeouts** and **0 KO / 12 timeouts** — a KO was arithmetically impossible there.
+
+**The win rate ramps instead of flipping.** Representative columns, player WPM down the side and bot rung across. (Measured with the stun-parity fix in, §9.)
+
+| Player | 20 | 30 | 40 | 50 | 60 | 70 | 85 | 100 | 120 |
+|---|---|---|---|---|---|---|---|---|---|
+| 20 | 88% | 25% | 0% | 0% | 0% | 0% | 0% | 0% | 0% |
+| 40 | 100% | 100% | 63% | 13% | 0% | 0% | 0% | 0% | 0% |
+| 60 | 100% | 100% | 100% | 100% | 50% | 25% | 0% | 13% | 0% |
+| 70 | 100% | 100% | 100% | 88% | 75% | 38% | 25% | 13% | 0% |
+| 85 | 100% | 100% | 100% | 88% | 63% | 38% | 0% | 0% | 13% |
+| 100 | 100% | 100% | 100% | 88% | 88% | 100% | 13% | 0% | 25% |
+| 120 | 100% | 100% | 100% | 100% | 100% | 75% | 63% | — | — |
+
+**The diagonal**, both fighters at the same WPM — which is what "the rung label means what it says" would demand — now reads 88% / 88% / 63% / 50% / 50% / 38% / 0% / 0% / 0% from 20 up to 120, with **zero timeouts at every one of those cells**.
+
+Read off three things:
+
+1. **A break-even rung exists at every player speed**, so sliding the picker genuinely finds your level instead of flipping between a walkover and a wall. Break-even sits at roughly **0.75-0.95x the player's own WPM**.
+2. **The ladder is not pure speed, and the slope is visible.** The bot's accuracy climbs 0.90 → 0.99 and its parry skill 0.05 → 0.90 as the rung rises, while a human's do not, so a high rung is relatively harder than its number suggests: at 40 WPM parity is a 63% win, at 120 WPM parity is 0%. "80 WPM" means *difficulty 80*, not *a bot that types 80 WPM* — which is the stated design position (§6), but it does mean the top rungs are worth ~one notch more than they read. Shifting the ladder's labels, or flattening the accuracy/parry curve so the rung is closer to a pure speed axis, is an open call for the designer; nothing is broken either way.
+3. **Timeouts are gone across the board** — 16-23 KOs against 0-1 timeouts per cell, over the entire ladder. The old top of the ladder was 1 KO / 13 and 0 KO / 12.
+
+**Match length is a damage-ramp problem, not a recovery one.** A ring-out costs about **7 seconds of clean hitting** (7 landed hits at `HIT_COOLDOWN`), so a round is roughly `(lives + 1) x 7s` plus the opening. At the shipped 3 lives that is a ~28s round and a ~63s best-of-three. Raising lives is the wrong lever, and measured it is a weak one: slack 9 (4 lives) buys 4 seconds; slack 12 (6 lives) reaches 107s; slack 16 (9 lives) reaches 145s — a ~56s round — but by then the opponent saves 93% of everything and the slow rungs are timing out (9-10 timeouts per 8 matches). That is length bought by re-creating the original complaint. **A 3-4 minute match is not reachable from this constant.** Reaching it means slowing the damage ramp (`HIT_COOLDOWN`, per-move damage, or the blast-line distance) — a separate, larger change to the moment-to-moment feel.
+
+**DECIDED (Ruan, 2026-10-05): accept the short round.** Rounds run ~28-40s and a match ~60-105s. The shape is arcade — several matches inside the 10-minute session target — and the 3-4 minute figure in earlier versions of §3/§11 was written before anyone had measured that a KO needs only ~7s of clean hitting, so it described a match nobody had played. Do NOT "fix" match length by inflating `RECOVERY_SLACK_CHARS`; that trades the KO back for the clock. If a longer match is ever wanted, slow the damage ramp deliberately and re-run the probe.
+
+**Consequence for the round timer.** At 3 lives the 90s timer never binds — 0-1 timeouts per cell across the whole ladder — so the "on timeout the lower-damage fighter wins" rule is now close to dead code. It stays as a safety net (a stuck match must still resolve), but it is no longer doing balance work and should not be relied on as a round-length governor.

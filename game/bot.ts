@@ -21,6 +21,7 @@ import {
   BOT_DECISION_DELAY,
   BOT_PARRY_SKILL,
   BOT_WPM_LADDER,
+  INPUT_BUFFER_MAX,
 } from "./constants";
 import type { Rng } from "./rng";
 import type { Fighter, Prompt } from "./types";
@@ -57,6 +58,30 @@ export function tierForWpm(wpm: number): number {
     }
   });
   return best;
+}
+
+/**
+ * Typing progress banked while a bot CANNOT act (hitstun or strict-mode stagger).
+ *
+ * A hit landing mid-word does not drop the HUMAN's keystrokes — they are held and
+ * delivered the moment the stun ends, up to `INPUT_BUFFER_MAX`, which is the whole point
+ * of the input buffer ("being hit costs time, never keystrokes"). The bot had no
+ * equivalent: `update` returned early on hitstun, so the stun paused its clock outright.
+ * A stun therefore cost the bot its entire duration and cost the player nothing net, which
+ * measured at roughly one rung of edge on the diagonal (both fighters at the same WPM the
+ * player still won ~2 of 3).
+ *
+ * The ceiling is the PLAYER'S OWN CAP, deliberately — the same rule on both sides of the
+ * arena, which is what makes a ladder WPM mean the same thing for both fighters. Banking
+ * more would be the opposite failure: a 120 WPM bot would store a whole word (10 chars/s x
+ * 0.75s) behind a single stun and hand itself a head start the player cannot match.
+ *
+ * Exported as a pure function so the capacity rule can be asserted directly, rather than
+ * inferred from a bot's behaviour over a whole match.
+ */
+export function bankWhileStunned(budget: number, dt: number, wpm: number): number {
+  const cps = (wpm * 5) / 60;
+  return Math.min(INPUT_BUFFER_MAX, budget + cps * dt);
 }
 
 export class BotController {
@@ -127,7 +152,12 @@ export class BotController {
     /** The opponent has committed to a kick: a read is available. */
     threat = false,
   ): CommitResult | null {
-    if (self.state === "ko" || self.state === "hitstun" || self.state === "staggered") {
+    if (self.state === "ko") return null;
+
+    // Stunned: bank the time rather than losing it, under the player's own cap. See
+    // bankWhileStunned. Being hit costs the bot TIME (the stun still runs), not progress.
+    if (self.state === "hitstun" || self.state === "staggered") {
+      this.budget = bankWhileStunned(this.budget, dt, this.effective("wpm"));
       return null;
     }
 

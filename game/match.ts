@@ -31,9 +31,7 @@ import {
   PARRY_MULTIPLIER,
   PRECISION_DAMAGE_BONUS,
   RECOVERY_INVULN,
-  RECOVERY_WINDOW,
-  RECOVERY_WINDOW_MIN,
-  RECOVERY_WINDOW_STEP,
+  recoveryWindowSeconds,
   ROUND_END_HOLD,
   ROUND_TIME,
   SPARK_DISTANCE,
@@ -620,13 +618,23 @@ export class Match {
 
   // ---------------------------------------------------------------- recovery
 
+  /**
+   * The save window for a given side, in seconds.
+   *
+   * The rung — not the fighter's own WPM — sets the yardstick, because the window is a
+   * character budget converted to seconds (see constants.recoveryWindowSeconds). The
+   * player's number comes from `playerWpmHint`, so a future build that measures the
+   * player's real speed instead of echoing the difficulty needs no change here.
+   */
+  private recoveryWindowFor(side: Side): number {
+    const rungWpm = side === this.humanSide ? this.opts.playerWpmHint : this.opts.botWpm;
+    return recoveryWindowSeconds(rungWpm, this.recoveries);
+  }
+
   private beginRecovery(side: Side): void {
     const f = this.fighter(side);
     this.recoveryVictim = side;
-    this.recoveryTimer = Math.max(
-      RECOVERY_WINDOW_MIN,
-      RECOVERY_WINDOW - this.recoveries * RECOVERY_WINDOW_STEP,
-    );
+    this.recoveryTimer = this.recoveryWindowFor(side);
     this.recoveries++;
     f.state = "recovering";
     f.vx = 0;

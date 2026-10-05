@@ -23,6 +23,7 @@ import {
   BLOCK_HOLD,
   BLOCK_KB_MULTIPLIER,
   BLOCK_MAX_CHARS,
+  BOT_WPM_LADDER,
   COUNTER_MULTIPLIER,
   COMBO_BONUS_PER_STEP,
   COMBO_FIRE_CHAIN,
@@ -36,15 +37,18 @@ import {
   PARRY_MULTIPLIER,
   PRECISION_DAMAGE_BONUS,
   PROMPT_COUNT,
-  RECOVERY_WINDOW,
-  RECOVERY_WINDOW_MIN,
-  RECOVERY_WINDOW_STEP,
+  RECOVERY_SLACK_CHARS,
+  RECOVERY_STEP_CHARS,
+  RECOVERY_WORD_LENGTH,
+  recoveryWindowSeconds,
+  secondsPerChar,
   SPAWN,
   STAGE,
   STEP,
   TELEGRAPH_COMMIT_CHARS,
 } from "../constants";
 import { MOVE, hitstunSeconds, knockbackUnits } from "../knockback";
+import { bankWhileStunned } from "../bot";
 import { comboIntensity, comboMultiplier, comboSteps } from "../combo";
 import { Match } from "../match";
 import { TypingRun, type CharOutcome } from "../typing";
@@ -1299,13 +1303,72 @@ test("failing to recover ends the round", () => {
 });
 
 test("each save in a round shortens the next recovery window", () => {
-  const window = (recoveries: number) =>
-    Math.max(RECOVERY_WINDOW_MIN, RECOVERY_WINDOW - recoveries * RECOVERY_WINDOW_STEP);
-  assert.equal(window(0), RECOVERY_WINDOW);
+  const wpm = BOT_WPM_LADDER[5]; // 70 — the rung Ruan reported on
+  const window = (recoveries: number) => recoveryWindowSeconds(wpm, recoveries);
+  assert.equal(window(0), RECOVERY_SLACK_CHARS * secondsPerChar(wpm), "a fresh round opens on the full slack");
+  assert.equal(
+    window(1),
+    (RECOVERY_SLACK_CHARS - RECOVERY_STEP_CHARS) * secondsPerChar(wpm),
+    "one prior save costs exactly RECOVERY_STEP_CHARS of budget",
+  );
   assert.ok(window(1) < window(0), "the second save should be tighter");
   assert.ok(window(4) < window(1), "the fifth save should be tighter still");
-  assert.equal(window(99), RECOVERY_WINDOW_MIN, "the window must floor, never reach zero");
-  assert.ok(RECOVERY_WINDOW_MIN >= 0.7, "the floor must still be humanly possible");
+  assert.equal(window(99), 0, "the budget must run out, never floor above zero");
+});
+
+test("every rung can be KO'd: the save budget is finite and identical in CHARACTERS", () => {
+  // The bug this exists to prevent. The window used to be a flat seconds figure, so the save
+  // collapsed to `5 / (wpm/12) <= 1.8 - 0.25n` and the ladder became a step function:
+  // <=30 WPM could never save at all, and >=85 WPM could never FAIL to (0.71s needed against a
+  // 0.8s floor). A 120 WPM bot saved 143/143 and rounds at the top of the ladder ended on the
+  // clock because a KO was arithmetically impossible. Both ends of that are asserted here.
+  const wordTime = (wpm: number) => RECOVERY_WORD_LENGTH * secondsPerChar(wpm);
+  for (const wpm of BOT_WPM_LADDER) {
+    // 1. A rung is never immortal: the budget must fall below the word before too long.
+    let lives = 0;
+    while (recoveryWindowSeconds(wpm, lives) >= wordTime(wpm)) {
+      lives++;
+      assert.ok(lives < 20, `${wpm} WPM never loses the ability to save — that rung cannot be KO'd`);
+    }
+    assert.ok(lives >= 2, `${wpm} WPM gets ${lives} save(s) — a KO would be trivially cheap`);
+    assert.ok(lives <= 5, `${wpm} WPM gets ${lives} lives — the fight would outlast the round`);
+
+    // 2. A slow rung is never locked out: the FIRST save must always be reachable, or a slow
+    //    player never sees the mechanic at all.
+    assert.ok(
+      recoveryWindowSeconds(wpm, 0) > wordTime(wpm),
+      `${wpm} WPM cannot make even its first save`,
+    );
+
+    // 3. The life count is a property of the RUNG, not of the clock, so it is flat across the
+    //    ladder. This is what stops speed deciding survival as well as damage.
+    const atZero = recoveryWindowSeconds(wpm, 0) / secondsPerChar(wpm);
+    assert.equal(atZero, RECOVERY_SLACK_CHARS, "the first-save budget must be flat across rungs");
+  }
+});
+
+test("a stunned bot banks at most the player's buffer, at every rung", () => {
+  // Parity rule, added 2026-10-05 with the fix. A hit used to pause the bot's clock outright
+  // while the human's keystrokes were held and delivered — so a stun cost the bot its whole
+  // duration and cost the player nothing net. Ruan's call: bank it, capped at the player's
+  // own cap. Both halves of that matter, and the second is the anti-exploit half: a larger
+  // cap would let a fast bot store most of a word behind one stun.
+  for (const wpm of BOT_WPM_LADDER) {
+    // Two full seconds of stun is longer than any stun in the game (HITSTUN_MAX x2), so the
+    // ceiling MUST be reached — asserting the cap exists, not merely that accrual is bounded.
+    const banked = bankWhileStunned(0, 2, wpm);
+    assert.equal(banked, INPUT_BUFFER_MAX, `${wpm} WPM must bank exactly the player's cap`);
+
+    // Never more than the player, at any rung or any stun length.
+    for (const dt of [1 / 60, 0.25, 0.75, 1.5]) {
+      assert.ok(
+        bankWhileStunned(0, dt, wpm) <= INPUT_BUFFER_MAX,
+        `${wpm} WPM banked past the player's cap over ${dt}s`,
+      );
+    }
+    // And it is a CEILING, not a floor: a short stun banks less than the cap.
+    assert.ok(bankWhileStunned(0, 1 / 60, wpm) < INPUT_BUFFER_MAX, `${wpm} WPM should not start full`);
+  }
 });
 
 test("the granted window actually shrinks after a save in the same round", () => {
@@ -1765,3 +1828,4 @@ if (failures.length) {
 console.log(`${"-".repeat(56)}`);
 
 if (failed > 0) process.exit(1);
+

@@ -134,16 +134,112 @@ export const SPARK_DISTANCE = 240;
 export const PROMPT_COUNT = 1;
 /** The recovery word replaces the live sentence entirely, while falling. */
 export const RECOVERY_WORD_LENGTH = 5;
-export const RECOVERY_WINDOW = 1.8; // seconds
-export const RECOVERY_INVULN = 0.6; // seconds
+
 /**
- * Each successful save in a round shortens the next window. Without this, a bot
- * that types well saves itself every single time and the round can only ever end on
- * the clock, so the KO fantasy never lands. Escalating difficulty is also the
- * platform-fighter convention: recovering gets harder the more you have been hit.
+ * THE SAVE IS MEASURED IN CHARACTERS, NOT SECONDS (changed 2026-10-05).
+ *
+ * It used to be a flat seconds window (1.8s, -0.25s per prior save, floor 0.8s). That
+ * made the difficulty of surviving a ring-out a pure function of the fighter's WPM,
+ * because the test collapsed to one comparison:
+ *
+ *     (fixed 5-char word) / (WPM x cps)  <=  (fixed seconds)
+ *
+ * Both sides of that are linear in DIFFERENT units, so it is not a curve, it is a
+ * single threshold — and it measured as a step, not a ramp:
+ *
+ *     <=30 WPM   never saves   (a 5-char word takes 2.0s+, window is 1.8s)
+ *     40 WPM     saves twice
+ *     70 WPM     saves four times      <- Ruan: "the bot gets almost every rescue word right"
+ *     >=85 WPM   NEVER FAILS   (needs 0.71s, the 0.8s floor guarantees it)
+ *
+ * Measured, 6 matches per cell: the BOT's save rate at the top of the ladder was
+ * 143/143 at 120v120, 154/155 at 100v100 and 207/209 at 120v100 — and at 85 WPM it still
+ * made 89% of its saves from the eighth attempt onward. Rounds up there ended on the
+ * clock because a KO was arithmetically impossible, which is the exact failure the
+ * escalating window had been added to prevent. The bottom is the same failure mirrored:
+ * a 20 or 30 WPM fighter — bot OR player — could never save at all, so the recovery
+ * fantasy, the genre's core tension, never happened for a slow typist either.
+ *
+ * Worse, it double-dipped on the single axis the game has: speed decided both who
+ * LANDS hits and who SURVIVES them, so there was nothing else to be good at. A player
+ * at exactly the bot's WPM won 100% against the 70 bot and 0% against the 120 bot.
+ *
+ * The window is therefore now denominated in CHARACTERS and converted to seconds using
+ * the DIFFICULTY RUNG the match is being played at, not the fighter's own speed. The
+ * fighter is asked "can you type N characters' worth in the time it takes you to type
+ * N characters", which is a question about a player's margin over the rung rather than
+ * about their absolute WPM. Consequences, all of them intended:
+ *
+ *   - Every rung grants the same number of lives, so no rung is immortal.
+ *   - A KO is always reachable, so rounds end in a KO instead of the clock.
+ *   - A player faster than the rung recovers comfortably; a player slower than the rung
+ *     does not. Speed still buys survival, it just no longer decides it outright.
+ *   - Accuracy buys a life, because a mistype costs a character of the budget.
+ *
+ * THE SLIDER, measured (8 matches per cell at 70v70, probe-balance.ts). `lives` is how many
+ * times a fighter at the rung's own speed survives before the budget drops under the
+ * 5-char word. The aggregate save% RISES with lives by construction — only the LAST attempt
+ * fails — so more lives does not mean "harder", it means "the opponent saves more often
+ * before it finally dies", which is what read as unbeatable in the first place:
+ *
+ *   slack | lives | ~match @70v70 | bot saves % | timeouts per 8 matches
+ *      8  |   3   |      63s      |     74%     |         0
+ *      9  |   4   |      67s      |     81%     |         0
+ *     12  |   6   |     107s      |     86%     |         1
+ *     16  |   9   |     145s      |     93%     |   5  (9-10 at the slow rungs)
+ *
+ * 8 is the shipped value: the lowest save rate, no timeouts, and a round short enough to
+ * keep a best-of-three inside a minute. NOTE it does NOT reach the 3-4 minute match the
+ * original brief asked for, and note how flat the length response is — four extra lives buy
+ * 4 seconds at slack 9 and only reach 145s at nine lives, by which point the opponent saves
+ * 93% of everything and the slow rungs are timing out. A ring-out costs about 7 seconds of
+ * clean hitting, so match length is governed by the DAMAGE ramp, not by this constant. See
+ * the balance note before reaching for this number to fix match length.
+ *
+ * Any value where `slack - k * step` lands exactly on the 5-char word length is a bad value
+ * (slack 10 does: 10 - 1.25*4 = 5.0, and that 5th save measured 0% at most rungs but 76% at
+ * others — a quantisation coin-flip, not a difficulty).
  */
-export const RECOVERY_WINDOW_STEP = 0.25; // seconds removed per prior save
-export const RECOVERY_WINDOW_MIN = 0.8; // seconds floor
+export const RECOVERY_SLACK_CHARS = 8;
+/**
+ * Characters removed from the budget per save already made this round.
+ *
+ * 1.25 and not 1.0 on purpose. With a step of exactly 1 the fourth save is handed a
+ * budget of exactly RECOVERY_WORD_LENGTH, which is not a difficulty — it is a
+ * quantisation coin-flip (measured: 0% at 30/50/60/70/85/100/120 WPM but 55% at 20).
+ * A step that leaves every budget clear of the word length makes the life count a
+ * number a designer can read off the table instead of a rounding artifact.
+ *
+ * At parity this yields 3 lives for a clean typist and 2 for a sloppy one (a mistype
+ * costs a character of budget), and the count is flat across the ladder.
+ */
+export const RECOVERY_STEP_CHARS = 1.25;
+
+/** Seconds one character takes at `wpm`. The conversion the recovery rule is built on. */
+export function secondsPerChar(wpm: number): number {
+  return 60 / (Math.max(1, wpm) * 5);
+}
+
+/**
+ * The save window, in seconds, for a fighter being rung out at difficulty rung `rungWpm`
+ * with `recoveries` saves already made this round.
+ *
+ * THE ONLY PLACE THIS IS COMPUTED. The match, the probe and the test suite all call it,
+ * so they cannot drift — the old inline formula was duplicated in three places and the
+ * step function survived in all three.
+ *
+ * Returns 0 once the budget is spent, which is deliberate: the fighter is out of lives
+ * for the round and the ring-out kills. A floor in seconds was what made a fast bot
+ * immortal, so there is deliberately no floor here beyond zero.
+ */
+export function recoveryWindowSeconds(rungWpm: number, recoveries: number): number {
+  const chars = RECOVERY_SLACK_CHARS - recoveries * RECOVERY_STEP_CHARS;
+  return Math.max(0, chars) * secondsPerChar(rungWpm);
+}
+
+/** Invulnerability granted by a successful save, so the attacker cannot immediately re-hit. */
+export const RECOVERY_INVULN = 0.6; // seconds
+
 export const COUNTER_WINDOW = 2.5; // seconds
 export const COUNTER_MULTIPLIER = 2.0;
 export const PARRY_MULTIPLIER = 0.3;
