@@ -213,7 +213,7 @@ export const SKINS: PixelSkin[] = [
     name: "Ember",
     blurb: "Burns hot. Reads huge knockback.",
     rarity: "common",
-    price: 120,
+    price: 1500,
     palette: {
       o: "#2a1410",
       h: "#f97316",
@@ -233,7 +233,7 @@ export const SKINS: PixelSkin[] = [
     name: "Tide",
     blurb: "Cool and swift. A slim profile for clean dodges.",
     rarity: "common",
-    price: 120,
+    price: 1500,
     palette: {
       o: "#0d2430",
       h: "#155e75",
@@ -253,7 +253,7 @@ export const SKINS: PixelSkin[] = [
     name: "Monolith",
     blurb: "A wall with legs. The heaviest frame in the roster.",
     rarity: "rare",
-    price: 320,
+    price: 5000,
     palette: {
       o: "#1c1c22",
       h: "#6b7280",
@@ -273,7 +273,7 @@ export const SKINS: PixelSkin[] = [
     name: "Violet Static",
     blurb: "Spiked frame. Leaves a crackling trail.",
     rarity: "rare",
-    price: 320,
+    price: 5000,
     palette: {
       o: "#2b0f3a",
       h: "#a21caf",
@@ -293,7 +293,7 @@ export const SKINS: PixelSkin[] = [
     name: "Voidwing",
     blurb: "The legendary frame. Hooded, dark, quiet.",
     rarity: "legendary",
-    price: 900,
+    price: 15000,
     palette: {
       o: "#05130d",
       h: "#14532d",

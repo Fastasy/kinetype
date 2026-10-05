@@ -5,6 +5,10 @@ import "./globals.css";
 
 import HeaderNav from "@/components/HeaderNav";
 import BrandMark from "@/components/brand/BrandMark";
+import { AuthProvider } from "@/components/auth/AuthProvider";
+import AnalyticsProvider from "@/components/AnalyticsProvider";
+import PostHogSink from "@/components/PostHogSink";
+import ThemeProvider from "@/components/ThemeProvider";
 
 const inter = Inter({
  variable: "--font-inter",
@@ -77,7 +81,6 @@ const FOOTER_LINKS = [
   { href: "/how-to-play", label: "How to play" },
   { href: "/shop", label: "Skins and themes" },
   { href: "/typing-games-unblocked", label: "Play at school" },
-  { href: "/typing-speed-test", label: "Typing speed test" },
 ];
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -94,11 +97,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
  Skip to content
  </a>
 
+ <AuthProvider>
  <HeaderNav />
+ <AnalyticsProvider />
+ <PostHogSink />
+ <ThemeProvider />
 
  <main id="main" className="flex-1 py-6">
  {children}
  </main>
+ </AuthProvider>
 
  <footer className="mt-16 border-t border-line/80 bg-page">
  <div className="mx-auto max-w-5xl px-4 py-10 text-sm text-ink-faint sm:px-6">

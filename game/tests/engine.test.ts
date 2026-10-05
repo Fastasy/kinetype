@@ -56,7 +56,9 @@ import { createRng } from "../rng";
 import { applyOutcome, DEFAULT_SAVE, type SaveData } from "../storage";
 import { purchaseWithCoins } from "../commerce";
 import { OPPONENT_SKIN_ID, PIXEL_KEYS, SKINS, SPRITE_H, SPRITE_W } from "../skins";
-import { contrast, THEMES, themeById, DEFAULT_THEME_ID } from "../themes";
+import { contrast, THEMES, themeById, DEFAULT_THEME_ID, SIGNALS_DARK, SIGNALS_LIGHT } from "../themes";
+import { DEFAULT_MAP_ID, MAPS, mapById } from "../maps";
+import { BOSSES } from "../progression";
 import type { MatchOptions, MoveKind, Prompt, PromptKind, Side } from "../types";
 
 let passed = 0;
@@ -1803,12 +1805,98 @@ test("every theme passes WCAG AA on the text that sits on it", () => {
   }
 });
 
-test("every theme defines a full arena palette", () => {
-  for (const t of THEMES) {
-    assert.equal(t.sky.length, 3, `${t.id} needs three sky bands`);
-    for (const c of [...t.sky, t.hill, t.grass, t.grassLip, t.dirt, t.dirtDark, t.ink]) {
-      assert.ok(/^#[0-9a-f]{6}$/i.test(c), `${t.id}: "${c}" is not a hex colour`);
+// ------------------------------------------------------------------------ arena maps
+// The arena belongs to the BOSS now (game/maps.ts); a theme is the website's colours. Two things
+// about a map are rules rather than style, and both are checked by arithmetic instead of by eye:
+// the blast line marks instant death, and the platform outline has to be visible on the ground it
+// outlines. A dark arena cannot carry a dark outline, and this is what stops one being added.
+
+test("every boss owns its own arena", () => {
+  assert.ok(BOSSES.length >= 9, `expected the full campaign, got ${BOSSES.length}`);
+  for (const b of BOSSES) {
+    assert.equal(mapById(b.mapId).id, b.mapId, `${b.id} points at an arena that does not exist (${b.mapId})`);
+  }
+  const used = new Set(BOSSES.map((b) => b.mapId));
+  assert.equal(used.size, BOSSES.length, "two bosses share an arena — every fight should look different");
+});
+
+test("free play keeps an arena of its own", () => {
+  assert.equal(mapById(DEFAULT_MAP_ID).id, DEFAULT_MAP_ID);
+  assert.ok(
+    !BOSSES.some((b) => b.mapId === DEFAULT_MAP_ID),
+    "free play should have its own home arena, not one borrowed from the campaign",
+  );
+});
+
+test("every arena is a complete, well-formed palette", () => {
+  for (const m of MAPS) {
+    assert.equal(m.sky.length, 3, `${m.id} needs three sky bands`);
+    const colours = [m.sky[0], m.sky[1], m.sky[2], m.hill, m.grass, m.grassLip, m.dirt, m.dirtDark, m.blast, m.ink];
+    for (const c of colours) {
+      // OPAQUE hex, deliberately: a translucent blast line cannot be contrast-checked, and it is
+      // a lethal boundary rather than a decorative hairline.
+      assert.ok(/^#[0-9a-f]{6}$/i.test(c), `${m.id}: "${c}" is not an opaque hex colour`);
     }
+  }
+  assert.equal(new Set(MAPS.map((m) => m.id)).size, MAPS.length, "map ids must be unique");
+});
+
+test("the blast line is visible on every arena", () => {
+  // 3:1 is the WCAG bar for a non-text graphic, checked against every sky band the line crosses.
+  for (const m of MAPS) {
+    for (const band of m.sky) {
+      const ratio = contrast(m.blast, band) ?? 0;
+      assert.ok(ratio >= 3, `${m.id}: blast ${m.blast} on sky ${band} is only ${ratio.toFixed(2)}:1`);
+    }
+  }
+});
+
+test("the platform outline is visible on every arena's ground", () => {
+  // Deliberately not "always dark": on a dark arena `ink` is a pale rim. The same colour draws the
+  // damage-bar track at low alpha, so this also keeps that readable on a dark map.
+  for (const m of MAPS) {
+    for (const ground of [m.dirt, m.dirtDark]) {
+      const ratio = contrast(m.ink, ground) ?? 0;
+      assert.ok(ratio >= 2, `${m.id}: ink ${m.ink} on ground ${ground} is only ${ratio.toFixed(2)}:1`);
+    }
+  }
+});
+
+test("arena and theme ids never collide", () => {
+  // They are separate concepts now, and a shared id would make a lookup bug look like data.
+  const mapIds = new Set(MAPS.map((m) => m.id));
+  for (const t of THEMES) {
+    assert.ok(!mapIds.has(t.id), `"${t.id}" is both a theme and an arena`);
+  }
+});
+
+test("every theme's SIGNALS stay readable on its own surfaces", () => {
+  // Signals carry meaning — coin is a price, heat is a loss, aqua is a block — so a theme may swap
+  // between the two fixed palettes but never invent values. Two palettes exist because NO single
+  // colour can clear AA on both a near-black page and the light one; measured, the light-page
+  // values score only 2.2-3.8:1 on the dark themes, which is a price you cannot read.
+  for (const t of THEMES) {
+    const s = t.signals ?? SIGNALS_LIGHT;
+    for (const [name, colour] of [["coin", s.coin], ["heat", s.heat], ["aqua", s.aqua], ["secondary", s.secondary]] as const) {
+      for (const [surfaceName, surface] of [["page", t.page], ["card", t.surface]] as const) {
+        const ratio = contrast(colour, surface) ?? 0;
+        assert.ok(ratio >= 4.5, `${t.id}: ${name} ${colour} on ${surfaceName} ${surface} is only ${ratio.toFixed(2)}:1`);
+      }
+    }
+    // A signal chip has to carry its own text.
+    assert.ok((contrast(s.coin, s.coinDeep) ?? 0) >= 4.5, `${t.id}: coin is not readable on its chip`);
+    assert.ok((contrast(s.heat, s.heatDeep) ?? 0) >= 4.5, `${t.id}: heat is not readable on its chip`);
+  }
+});
+
+test("signal colours are not free-form per theme", () => {
+  // The guard that keeps the MEANING fixed: a theme picks one of exactly two palettes.
+  for (const t of THEMES) {
+    if (!t.signals) continue;
+    assert.ok(
+      t.signals === SIGNALS_LIGHT || t.signals === SIGNALS_DARK,
+      `${t.id} invents its own signal palette — signals must not drift per theme`,
+    );
   }
 });
 
@@ -1828,4 +1916,3 @@ if (failures.length) {
 console.log(`${"-".repeat(56)}`);
 
 if (failed > 0) process.exit(1);
-

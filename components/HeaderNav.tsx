@@ -6,13 +6,14 @@ import { usePathname } from "next/navigation";
 
 import { saveStore } from "@/game/store";
 import BrandMark from "./brand/BrandMark";
+import AuthMenu from "./auth/AuthMenu";
 
 const LINKS = [
   { href: "/play", label: "Play" },
+  { href: "/bosses", label: "Campaign" },
+  { href: "/leaderboard", label: "Leaderboard" },
   { href: "/how-to-play", label: "How to play" },
   { href: "/shop", label: "Skins" },
-  { href: "/typing-games-unblocked", label: "Unblocked" },
-  { href: "/typing-speed-test", label: "Typing test" },
 ];
 
 export default function HeaderNav() {
@@ -25,7 +26,7 @@ export default function HeaderNav() {
  );
 
  const linkClass = (active: boolean) =>
-   `rounded-lg px-3 py-2 text-sm font-medium transition hover:bg-card hover:text-secondary ${
+   `whitespace-nowrap rounded-lg px-2.5 py-2 text-sm font-medium transition hover:bg-card hover:text-secondary ${
      active ? "bg-card text-secondary" : "text-ink-soft"
    }`;
 
@@ -42,7 +43,7 @@ export default function HeaderNav() {
    </span>
  </Link>
 
- <nav className="hidden items-center gap-1 md:flex" aria-label="Main navigation">
+ <nav className="hidden items-center gap-0.5 lg:flex" aria-label="Main navigation">
  {LINKS.map((l) => (
  <Link
  key={l.href}
@@ -56,6 +57,7 @@ export default function HeaderNav() {
  </nav>
 
  <div className="flex items-center gap-2">
+ <AuthMenu compact />
  <Link
  href="/shop"
  className="hidden rounded-lg border border-line px-2.5 py-1.5 font-mono text-xs text-ink-soft transition hover:border-coin/50 hover:text-coin sm:block"
@@ -66,7 +68,7 @@ export default function HeaderNav() {
  <button
  type="button"
  onClick={() => setOpen((v) => !v)}
- className="rounded-lg p-2 text-ink-faint hover:bg-card hover:text-ink-soft md:hidden"
+ className="rounded-lg p-2 text-ink-faint hover:bg-card hover:text-ink-soft lg:hidden"
  aria-label="Toggle navigation menu"
  aria-expanded={open}
  >
@@ -82,7 +84,7 @@ export default function HeaderNav() {
  </div>
 
  {open && (
- <div className="space-y-1 border-b border-line bg-page px-4 py-3 md:hidden">
+ <div className="space-y-1 border-b border-line bg-page px-4 py-3 lg:hidden">
  {LINKS.map((l) => (
  <Link
  key={l.href}

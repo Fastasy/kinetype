@@ -175,12 +175,6 @@ export default function UnblockedPage() {
  >
  Play Kinetype
  </Link>
- <Link
- href="/typing-speed-test"
- className="rounded-xl border border-line-strong px-5 py-2.5 font-semibold text-ink-soft transition hover:border-brand/60 hover:text-brand-bright"
- >
- Check your WPM first
- </Link>
  </div>
  </article>
  </>

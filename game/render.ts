@@ -20,7 +20,8 @@ import {
 } from "./skins";
 import { BLOCK_HOLD, HURTBOX, STAGE } from "./constants";
 import { damageColour } from "./knockback";
-import { themeById, type Theme } from "./themes";
+import { themeById } from "./themes";
+import { mapById, type ArenaMap } from "./maps";
 import type { Fighter, Side } from "./types";
 import type { Match } from "./match";
 
@@ -106,22 +107,22 @@ function spriteCanvas(skin: PixelSkin): HTMLCanvasElement | null {
 // World
 // ---------------------------------------------------------------------------
 
-function drawSky(ctx: CanvasRenderingContext2D, theme: Theme): void {
-  const bandH = STAGE.height / theme.sky.length;
-  theme.sky.forEach((c, i) => {
+function drawSky(ctx: CanvasRenderingContext2D, map: ArenaMap): void {
+  const bandH = STAGE.height / map.sky.length;
+  map.sky.forEach((c, i) => {
     ctx.fillStyle = c;
     ctx.fillRect(0, Math.floor(i * bandH), STAGE.width, Math.ceil(bandH) + 1);
   });
 
   // Blocky distant hills, one tile tall, stepping down to the horizon.
-  ctx.fillStyle = theme.hill;
+  ctx.fillStyle = map.hill;
   for (let x = 0; x < STAGE.width; x += TILE) {
     const h = TILE * (2 + ((x / TILE) % 3));
     ctx.fillRect(x, STAGE.height - 220 - h, TILE, h + 220);
   }
 }
 
-function drawPlatforms(ctx: CanvasRenderingContext2D, theme: Theme): void {
+function drawPlatforms(ctx: CanvasRenderingContext2D, map: ArenaMap): void {
   for (const p of STAGE.platforms) {
     const cols = Math.ceil(p.w / TILE);
 
@@ -131,7 +132,7 @@ function drawPlatforms(ctx: CanvasRenderingContext2D, theme: Theme): void {
         const x = p.x + c * TILE;
         const y = p.y + r * TILE;
         const m = tileShade(c, r);
-        ctx.fillStyle = shade(r === 1 ? theme.dirt : theme.dirtDark, m);
+        ctx.fillStyle = shade(r === 1 ? map.dirt : map.dirtDark, m);
         ctx.fillRect(x, y, TILE, TILE);
       }
     }
@@ -139,22 +140,23 @@ function drawPlatforms(ctx: CanvasRenderingContext2D, theme: Theme): void {
     // Grass cap with a darker lip, so the surface reads as solid.
     for (let c = 0; c < cols; c++) {
       const x = p.x + c * TILE;
-      ctx.fillStyle = shade(theme.grass, tileShade(c, 0));
+      ctx.fillStyle = shade(map.grass, tileShade(c, 0));
       ctx.fillRect(x, p.y, TILE, TILE - 6);
-      ctx.fillStyle = theme.grassLip;
+      ctx.fillStyle = map.grassLip;
       ctx.fillRect(x, p.y + TILE - 6, TILE, 6);
     }
 
-    // Hard block edges.
-    ctx.strokeStyle = theme.ink;
+    // Hard block edges. `ink` is whatever contrasts with THIS map's ground (dark on a light
+    // arena, a pale rim on a dark one), so the outline never disappears.
+    ctx.strokeStyle = map.ink;
     ctx.lineWidth = 2;
     ctx.strokeRect(p.x + 1, p.y + 1, p.w - 2, TILE * 4 - 2);
   }
 }
 
-function drawBlastLines(ctx: CanvasRenderingContext2D, theme: Theme): void {
+function drawBlastLines(ctx: CanvasRenderingContext2D, map: ArenaMap): void {
   ctx.save();
-  ctx.strokeStyle = theme.blast;
+  ctx.strokeStyle = map.blast;
   ctx.lineWidth = 3;
   ctx.setLineDash([TILE, TILE]);
   for (const x of [STAGE.blast.left, STAGE.blast.right]) {
@@ -171,21 +173,21 @@ function drawDamageBar(
   f: Fighter,
   blocksX: number,
   y: number,
-  theme: Theme,
+  map: ArenaMap,
 ): void {
   const filled = Math.max(0, Math.min(blocksX, Math.round((f.damage / 180) * blocksX)));
   const cellW = 6;
   const cellH = 8;
   for (let i = 0; i < blocksX; i++) {
     const x = f.x - (blocksX * cellW) / 2 + i * cellW;
-    // Empty cells are the theme's ink at low alpha, so the track stays visible on a dark
-    // theme instead of disappearing into a dark platform.
+    // Empty cells are the map's ink at low alpha, so the track stays visible on a dark
+    // map instead of disappearing into dark ground.
     ctx.globalAlpha = i < filled ? 1 : 0.18;
-    ctx.fillStyle = i < filled ? damageColour(f.damage) : theme.ink;
+    ctx.fillStyle = i < filled ? damageColour(f.damage) : map.ink;
     ctx.fillRect(Math.round(x), Math.round(y), cellW - 1, cellH);
   }
   ctx.globalAlpha = 1;
-  ctx.strokeStyle = theme.ink;
+  ctx.strokeStyle = map.ink;
   ctx.lineWidth = 2;
   ctx.strokeRect(
     Math.round(f.x - (blocksX * cellW) / 2) - 2,
@@ -200,7 +202,7 @@ function drawFighter(
   f: Fighter,
   skin: PixelSkin,
   time: number,
-  theme: Theme,
+  map: ArenaMap,
 ): void {
   const sc = spriteCanvas(skin);
   if (!sc) return;
@@ -296,7 +298,7 @@ function drawFighter(
   ctx.fillText(`${Math.round(f.damage)}%`, f.x, ly);
   ctx.restore();
 
-  drawDamageBar(ctx, f, 12, bottom + 10, theme);
+  drawDamageBar(ctx, f, 12, bottom + 10, map);
 }
 
 // ---------------------------------------------------------------------------
@@ -305,7 +307,10 @@ function drawFighter(
 
 export interface RenderOptions {
   humanSide: Side;
+  /** The website theme. The arena only borrows its page colour, for the letterbox bands. */
   themeId: string;
+  /** The arena this fight is happening in. Everything in the world comes from here. */
+  mapId: string;
 }
 
 export function drawScene(
@@ -316,6 +321,7 @@ export function drawScene(
   time: number,
 ): void {
   const theme = themeById(opts.themeId);
+  const map = mapById(opts.mapId);
   const fx = match.fx;
 
   ctx.save();
@@ -338,7 +344,7 @@ export function drawScene(
     ctx.translate(-victim.x, -victim.y);
   }
 
-  drawSky(ctx, theme);
+  drawSky(ctx, map);
 
   // Trails behind the fighters.
   ctx.save();
@@ -354,11 +360,11 @@ export function drawScene(
   ctx.globalAlpha = 1;
   ctx.restore();
 
-  drawBlastLines(ctx, theme);
-  drawPlatforms(ctx, theme);
+  drawBlastLines(ctx, map);
+  drawPlatforms(ctx, map);
 
   for (const f of [match.left, match.right]) {
-    drawFighter(ctx, f, match.skinFor(f.side), time, theme);
+    drawFighter(ctx, f, match.skinFor(f.side), time, map);
   }
 
   // Impact particles, square by design.
@@ -407,9 +413,21 @@ export function drawScene(
   ctx.save();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = theme.page;
+  const sw = STAGE.width * vp.scale;
+  const sh = STAGE.height * vp.scale;
+  // Fill every bar that actually exists. This used to paint only the left/right pair, which was
+  // fine while every canvas was exactly 16:9 — but fullscreen now lets the canvas fill the whole
+  // screen, so a 16:10 or ultrawide monitor produces top/bottom bars too, and those pixels were
+  // left cleared (transparent), showing whatever sat behind the canvas instead of the theme's
+  // background. Each band is guarded by its own offset so a canvas that IS 16:9 paints nothing
+  // at all rather than a stray 1px line along the top and left edges.
   if (vp.offsetX > 0.5) {
-    ctx.fillRect(0, 0, vp.offsetX, ctx.canvas.height);
-    ctx.fillRect(vp.offsetX + STAGE.width * vp.scale, 0, vp.offsetX + 2, ctx.canvas.height);
+    ctx.fillRect(0, 0, vp.offsetX + 1, ctx.canvas.height);
+    ctx.fillRect(Math.floor(vp.offsetX + sw) - 1, 0, ctx.canvas.width, ctx.canvas.height);
+  }
+  if (vp.offsetY > 0.5) {
+    ctx.fillRect(0, 0, ctx.canvas.width, vp.offsetY + 1);
+    ctx.fillRect(0, Math.floor(vp.offsetY + sh) - 1, ctx.canvas.width, ctx.canvas.height);
   }
   ctx.restore();
 }

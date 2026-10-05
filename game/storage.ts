@@ -85,11 +85,10 @@ function migratedThemes(p: Record<string, unknown>): string[] {
   return [...new Set([...DEFAULT_SAVE.ownedThemes, ...mapped])];
 }
 
-export function loadSave(): SaveData {
-  if (typeof window === "undefined") return { ...DEFAULT_SAVE };
+/** Defensive parse of a raw save string. Never throws: a corrupt save degrades to the defaults. */
+function parseSave(raw: string | null): SaveData {
+  if (!raw) return { ...DEFAULT_SAVE };
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { ...DEFAULT_SAVE };
     const parsed: unknown = JSON.parse(raw);
     if (!parsed || typeof parsed !== "object") return { ...DEFAULT_SAVE };
     const p = parsed as Record<string, unknown>;
@@ -121,6 +120,16 @@ export function loadSave(): SaveData {
   }
 }
 
+export function loadSave(): SaveData {
+  if (typeof window === "undefined") return { ...DEFAULT_SAVE };
+  try {
+    // getItem itself can throw in private mode, so the read is guarded too.
+    return parseSave(window.localStorage.getItem(STORAGE_KEY));
+  } catch {
+    return { ...DEFAULT_SAVE };
+  }
+}
+
 export function writeSave(data: SaveData): void {
   if (typeof window === "undefined") return;
   try {
@@ -135,6 +144,50 @@ export function clearSave(): void {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+// ------------------------------------------------------------------- the guest wallet
+//
+// A signed-in player's coins, owned cosmetics and equipped set come from their PROFILE. The
+// browser's own save is not thrown away though — it is parked here while they are signed in, and
+// restored on sign-out, so local play keeps its own separate wallet instead of the account's
+// balance taking it over. Neither wallet can mint the other's coins: the profile is only ever
+// written by the server, and this one only ever by local play.
+
+/** Where the browser's wallet is parked while an account is signed in. */
+export const GUEST_SAVE_KEY = `${STORAGE_KEY}:guest`;
+
+export function stashGuestSave(data: SaveData): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(GUEST_SAVE_KEY, JSON.stringify(data));
+  } catch {
+    // Private mode / quota. Signing in still works; the guest wallet just is not preserved.
+  }
+}
+
+/** The parked wallet, or null when there is none. */
+export function takeGuestSave(): SaveData | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(GUEST_SAVE_KEY);
+    return raw === null ? null : parseSave(raw);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Drop the parked wallet. Called once it has been handed back, so the NEXT sign-in parks afresh
+ * rather than restoring a stale one.
+ */
+export function clearGuestSave(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(GUEST_SAVE_KEY);
   } catch {
     // ignore
   }

@@ -76,11 +76,19 @@ export interface EngineConfig {
   botWpm: number;
   strictMode: boolean;
   skins: { left: string; right: string };
+  /** The website theme — used only for the letterbox colour outside the stage. */
   themeId: string;
+  /** The arena to fight in (game/maps.ts): sky, hills, ground, blast lines. */
+  mapId: string;
   muted: boolean;
   streakBefore: number;
   humanSide: Side;
   seed: number;
+  /**
+   * Rounds needed to win. Optional, defaulting to 3, so every existing caller is
+   * unchanged. The boss campaign uses this: its final fight is a best-of-five.
+   */
+  bestOf?: number;
 }
 
 export interface EngineCallbacks {
@@ -124,7 +132,7 @@ export class GameEngine {
       botWpm: cfg.botWpm,
       playerWpmHint: cfg.botWpm,
       strictMode: cfg.strictMode,
-      bestOf: 3,
+      bestOf: cfg.bestOf ?? 3,
       skins: cfg.skins,
     };
     this.match = new Match(opts, cfg.seed, { onEvent: (e) => this.onEvent(e) }, cfg.humanSide);
@@ -240,7 +248,7 @@ export class GameEngine {
       this.ctx,
       this.match,
       vp,
-      { humanSide: this.cfg.humanSide, themeId: this.cfg.themeId },
+      { humanSide: this.cfg.humanSide, themeId: this.cfg.themeId, mapId: this.cfg.mapId },
       this.elapsed,
     );
   }

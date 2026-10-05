@@ -1,12 +1,16 @@
-import { skinById } from "@/game/skins";
 import type { Theme } from "@/game/themes";
-import { skinPaths } from "./SkinSprite";
 
 /**
- * A miniature of the arena in a given theme, for the shop.
+ * A miniature of the WEBSITE in a given theme, for the shop and the profile.
  *
- * Drawn from the same sprite renderer the game and the landing page use, so a preview can
- * never show a theme or a fighter the real thing would not.
+ * It used to be a miniature of the arena (sky, hills, platform, a fighter), which was right when a
+ * theme WAS the arena. The arena belongs to the boss now (game/maps.ts), and what a player is
+ * actually buying is how the site looks — so the preview shows exactly that: the page, a nav bar, a
+ * card with a heading and body copy, an accent button, and the prompt card the game renders inside
+ * the site.
+ *
+ * Drawn from the theme's own tokens rather than a screenshot, so a preview can never disagree with
+ * the real thing.
  */
 export default function ThemeSwatch({ theme }: { theme: Theme }) {
   return (
@@ -16,44 +20,35 @@ export default function ThemeSwatch({ theme }: { theme: Theme }) {
       className="h-24 w-full"
       role="img"
       aria-label={`${theme.name} theme preview`}
+      data-testid="theme-swatch"
+      data-theme={theme.id}
     >
-      {theme.sky.map((c, i) => (
-        <rect key={`${theme.id}-sky-${i}`} x={0} y={i * 34} width={160} height={35} fill={c} />
-      ))}
+      {/* The page itself. */}
+      <rect x={0} y={0} width={160} height={100} fill={theme.page} />
 
-      {/* Blocky hills, same stepping idea as the renderer. */}
-      <path
-        d="M0 64h14v-7h14v7h14v-5h14v5h14v-7h14v7h14v-6h14v6h14v-5h14v5h14v-7h14v7h14v36H0z"
-        fill={theme.hill}
-      />
+      {/* Top bar: a wordmark chip and three nav items. */}
+      <rect x={0} y={0} width={160} height={13} fill={theme.surface} />
+      <rect x={0} y={12} width={160} height={1} fill={theme.border} />
+      <rect x={7} y={4} width={24} height={5} fill={theme.accent} />
+      <rect x={98} y={5} width={16} height={3} fill={theme.textMuted} />
+      <rect x={120} y={5} width={16} height={3} fill={theme.textMuted} />
+      <rect x={142} y={5} width={11} height={3} fill={theme.textMuted} />
 
-      {/* One fighter on the stage, so the swatch shows the theme against a real sprite. */}
-      <g transform="translate(46 52)">{skinPaths(skinById("spark"), 2, 0, 0, `${theme.id}-f`)}</g>
+      {/* A content card: heading, body copy, and an accent button. */}
+      <rect x={10} y={23} width={84} height={48} fill={theme.surface} stroke={theme.border} strokeWidth={2} />
+      <rect x={18} y={32} width={46} height={7} fill={theme.text} />
+      <rect x={18} y={45} width={64} height={3} fill={theme.textMuted} />
+      <rect x={18} y={51} width={56} height={3} fill={theme.textMuted} />
+      <rect x={18} y={57} width={60} height={3} fill={theme.textMuted} />
+      <rect x={18} y={63} width={30} height={9} fill={theme.accent} />
+      <rect x={22} y={66} width={22} height={3} fill={theme.onAccent} />
 
-      {/* The main platform. */}
-      <rect x={16} y={78} width={128} height={5} fill={theme.grass} />
-      <rect x={16} y={83} width={128} height={4} fill={theme.grassLip} />
-      <rect x={16} y={87} width={128} height={13} fill={theme.dirt} />
-      <rect x={16} y={78} width={128} height={22} fill="none" stroke={theme.ink} strokeWidth={2} />
-
-      {/* The prompt card, which is where a theme is felt most. */}
-      <rect
-        x={40}
-        y={16}
-        width={80}
-        height={18}
-        fill={theme.promptBg}
-        stroke={theme.promptBorder}
-        strokeWidth={2}
-      />
-      <rect x={45} y={21} width={3} height={9} fill={theme.accent} />
-      <rect x={50} y={21} width={7} height={9} fill={theme.accent} />
-      <rect x={59} y={21} width={3} height={9} fill={theme.textMuted} />
-      <rect x={64} y={21} width={7} height={9} fill={theme.textMuted} />
-
-      {/* Blast lines. */}
-      <rect x={4} y={0} width={2} height={100} fill={theme.blast} />
-      <rect x={154} y={0} width={2} height={100} fill={theme.blast} />
+      {/* The game's prompt card, which is part of the site and follows the theme too. */}
+      <rect x={104} y={23} width={46} height={48} fill={theme.promptBg} stroke={theme.promptBorder} strokeWidth={2} />
+      <rect x={110} y={33} width={32} height={4} fill={theme.promptActive} />
+      <rect x={110} y={42} width={28} height={4} fill={theme.text} />
+      <rect x={110} y={51} width={34} height={4} fill={theme.textMuted} />
+      <rect x={110} y={60} width={20} height={4} fill={theme.textMuted} />
     </svg>
   );
 }

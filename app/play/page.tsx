@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import FightClient from "@/components/game/FightClient";
 import JsonLd from "@/components/JsonLd";
+import { bossById } from "@/game/progression";
 
 export const metadata: Metadata = {
   title: "Play Kinetype: Free Online Typing Fighting Game",
@@ -35,11 +36,20 @@ const PLAY_FAQ = [
   },
   {
     q: "Do I need an account?",
-    a: "No. Coins, unlocked skins and your best words per minute are stored in your own browser only. Nothing is uploaded, and there is no email to hand over before you can play.",
+    a: "Not to play. Coins, unlocked skins and your best words per minute are stored in your own browser only, and nothing is uploaded. An account is optional and only needed for the boss campaign, cloud progress and the leaderboard — sign in with Google and you can leave whenever you like.",
   },
 ];
 
-export default function PlayPage() {
+export default async function PlayPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ boss?: string }>;
+}) {
+  // `?boss=<id>` turns the same arena into a campaign fight. Unknown ids fall back
+  // to free play rather than erroring — a stale link should still let you play.
+  const sp = await searchParams;
+  const boss = sp.boss ? bossById(sp.boss) : undefined;
+
   const schema = [
     {
       "@context": "https://schema.org",
@@ -84,7 +94,15 @@ export default function PlayPage() {
           orientation so a first-time visitor knows what to press. */}
       <section className="mx-auto max-w-6xl px-3 sm:px-4">
         <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
-          <h1 className="font-pixel text-lg text-ink sm:text-2xl">Play Kinetype</h1>
+          <h1 className="font-pixel text-lg text-ink sm:text-2xl">
+            {boss ? (
+              <>
+                {boss.name} <span className="text-ink-faint">· {boss.title}</span>
+              </>
+            ) : (
+              "Play Kinetype"
+            )}
+          </h1>
           <p className="font-mono text-xs text-ink-faint sm:text-sm">
             Small words block, ordinary words punch, long words kick. <span className="text-ink">Esc</span> quits.
           </p>
@@ -92,7 +110,7 @@ export default function PlayPage() {
       </section>
 
       <div className="mt-2">
-        <FightClient wide />
+        <FightClient wide boss={boss} />
       </div>
 
       <section className="mx-auto mt-12 max-w-3xl px-4 sm:px-6" aria-labelledby="play-faq">

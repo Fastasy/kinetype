@@ -8,10 +8,12 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "tsx game/tests/engine.test.ts"
+    "test": "tsx game/tests/engine.test.ts && tsx game/tests/progression.test.ts"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.117.2",
     "next": "^16.3.1",
+    "posthog-js": "^1.436.1",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },

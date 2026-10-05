@@ -305,11 +305,15 @@ Structured data is split so the two pages do not compete: `/` carries `WebSite` 
 Explicitly not built, and not to be smuggled in:
 
 - Real-time multiplayer and netcode
-- Accounts, login, cloud saves
 - Real payment processing
-- Leaderboards (local personal bests only)
 - Music (ranked last on cost-effectiveness, and it costs load budget)
 - A particle engine (documented programmer trap)
+
+**Promoted OUT of this list (2026-10-04): accounts, cloud saves and leaderboards are
+now IN.** They were deferred for the MVP and are specified in §14. Free play still
+works fully signed out, so the "no account needed to play" promise on the marketing
+pages stays true — an account unlocks the boss campaign, cloud progress and the
+leaderboard, and nothing else.
 
 ## 13. Acceptance criteria
 
@@ -336,6 +340,10 @@ The MVP is done when all of these are true.
 19. The engine's pure logic has unit tests that pass under plain Node.
 20. `node scripts/verify-browser.mjs` plays a real match in Chromium, confirms damage lands both ways, and confirms a typed block word raises a visible guard.
 21. Keyboard input reaches the game when it is embedded, and a player who cannot type is told to click the arena instead of assuming the game is broken.
+22. A guest can play free play with no account; the boss campaign and the leaderboard ask them to sign in rather than failing silently.
+23. A signed-in player's finished match is banked server-side, and its XP appears on the leaderboard in the correct window (today / this week / all time).
+24. Each boss is gated behind BOTH a player level and the previous boss, and a first clear pays its coin bounty exactly once — a repeat clear does not.
+25. `npm run test` covers the progression curve and the boss campaign as well as the engine.
 
 ## 13.5 The measured ladder (added 2026-10-05)
 
@@ -377,3 +385,38 @@ Read off three things:
 **DECIDED (Ruan, 2026-10-05): accept the short round.** Rounds run ~28-40s and a match ~60-105s. The shape is arcade — several matches inside the 10-minute session target — and the 3-4 minute figure in earlier versions of §3/§11 was written before anyone had measured that a KO needs only ~7s of clean hitting, so it described a match nobody had played. Do NOT "fix" match length by inflating `RECOVERY_SLACK_CHARS`; that trades the KO back for the clock. If a longer match is ever wanted, slow the damage ramp deliberately and re-run the probe.
 
 **Consequence for the round timer.** At 3 lives the 90s timer never binds — 0-1 timeouts per cell across the whole ladder — so the "on timeout the lower-damage fighter wins" rule is now close to dead code. It stays as a safety net (a stuck match must still resolve), but it is no longer doing balance work and should not be relied on as a round-length governor.
+
+## 14. Accounts, progression and leaderboards (added 2026-10-04)
+
+The feature Ruan asked for: accounts, level up, unlock harder bosses, and daily /
+weekly / overall leaderboards.
+
+**Where the data lives.** Kinetype does not own a Supabase project — the free plan
+caps an account at two active projects and both are used. The backend is therefore a
+dedicated `kinetype` SCHEMA inside an existing project, isolated from that project's
+own `public` tables. Migration: `db/migrations/0001_kinetype_accounts.sql`; it is
+idempotent and additive. Moving to a dedicated project later is an env-var change
+plus dropping the `db.schema` pin in `lib/supabase.ts`.
+
+**Accounts are optional.** Free play, coins and cosmetics stay in localStorage and
+work signed out — the marketing promise ("no account needed to play") is intact. An
+account adds exactly three things: cloud progress, the boss campaign and the
+leaderboard. Sign-in is Google only.
+
+**XP is server-authoritative.** `kinetype.submit_match()` recomputes XP from clamped
+inputs; the client never sends a score, only the raw match facts. The formula is
+mirrored in `game/progression.ts` (`xpForMatch`) and the two are pinned together by
+`game/tests/progression.test.ts`, which asserts the exact XP the live SQL returned
+during verification. Level is a GENERATED column: `floor(sqrt(xp/100)) + 1` — the
+same curve the earlier typing site used. It is derived, so the HUD and the
+leaderboard can never disagree about someone's level.
+
+**The boss campaign** is nine fights on the game's existing nine-rung bot ladder
+(20..120 WPM). A boss is a NAMED rung, not a new difficulty system: `game/progression.ts`
+holds the roster. Each fight needs BOTH the player's level to clear `unlockLevel` AND
+the previous boss to be beaten, and the final boss is best-of-five. The free WPM
+picker in /play is untouched — the campaign is additive.
+
+**Leaderboards** rank by XP earned in a window (today from 00:00 UTC, this ISO week
+from Monday, or all time), via the `kinetype.leaderboard()` RPC, which is SECURITY
+DEFINER so it reads signed-out too.

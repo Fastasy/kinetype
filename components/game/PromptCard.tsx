@@ -183,19 +183,38 @@ export default function PromptCard({
               })}
             </span>
             {/*
-              THE SEPARATOR, MADE VISIBLE. Typing a sentence has an invisible key in it — the
-              space — and a player who does not know one is due simply stops, because the
-              sentence has gone quiet with no cursor anywhere. This pill IS the cursor while a
-              separator is pending, and it pulses so the eye finds it after a glance at the
-              keyboard. It sits in the flex row at exactly the word gap it replaces.
+              THE CARET, SITTING ON THE SPACE.
+
+              Typing a sentence has an invisible key in it — the space — and a player who does
+              not know one is due simply stops, because the sentence has gone quiet with no
+              cursor anywhere. The character caret above highlights the next LETTER; once a
+              word is finished the next key is the separator, and without something here the
+              caret vanished and left no cursor at all.
+
+              Two wrong versions preceded this one. First a pulsing accent pill with the word
+              "SPACE" in it, which read as a UI chip rather than as the space it stood for
+              (Ruan: "remove the spacebar icon inbetween the text, I mean there should be a
+              space between them"). Then a bare space with no cursor, which is where the caret
+              went missing (Ruan: "make the carrett highlight the space aswell. because now the
+              carrett just dissapears when a word is done and space needs to be entered"). This
+              is the answer to both: a blank, carrying the SAME accent block as a letter's
+              caret, so it reads as the cursor rather than as a glyph.
+
+              A non-breaking space is used because a whitespace-only flex item can collapse to
+              zero width, and the negative side margins absorb the row's own `column-gap` — so
+              the highlighted block is one character wide, matching the character caret exactly.
             */}
             {prompt.pendingSpace && isLive ? (
               <span
                 data-testid="space-cursor"
-                className="animate-pulse px-1.5 py-0.5 font-mono text-[10px] font-bold tracking-wider"
-                style={{ background: theme.accent, color: theme.onAccent }}
+                aria-hidden="true"
+                style={{
+                  margin: "0 -0.6ch",
+                  background: theme.accent,
+                  color: theme.onAccent,
+                }}
               >
-                SPACE
+                {"\u00A0"}
               </span>
             ) : null}
             </Fragment>

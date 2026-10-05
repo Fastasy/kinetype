@@ -235,12 +235,6 @@ export default function HomePage() {
           >
             Playing from school
           </Link>
-          <Link
-            href="/typing-speed-test"
-            className="border-2 border-line-strong bg-card px-4 py-2 font-semibold text-ink-soft transition hover:border-brand hover:text-brand"
-          >
-            Plain typing speed test
-          </Link>
         </div>
       </section>
     </>
