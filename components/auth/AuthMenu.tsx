@@ -4,22 +4,25 @@
 //
 // Three states, in priority order:
 //   1. auth not configured  -> nothing at all (a broken button is worse than none)
-//   2. signed out           -> "Sign in with Google"
+//   2. signed out           -> a link to /signin, carrying where they are
 //   3. signed in            -> level + XP chip, an avatar, and sign out
+//
+// Signed out this is a LINK, not a button that fires Google. Now that an account can be made with
+// an email, the header offers the choice instead of committing the player to one provider — and it
+// passes the current page along, so signing in returns them to it.
 //
 // Level and XP come from the server profile, so this doubles as the player's
 // standing-at-a-glance and is deliberately the same number that ranks the board.
 
-import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
-import { useAuth } from "./AuthProvider";
+import { signInHref, useAuth } from "./AuthProvider";
 import { levelProgress } from "@/game/progression";
 
 export default function AuthMenu({ compact = false }: { compact?: boolean }) {
-  const { configured, ready, userId, profile, signInWithGoogle, signOut } = useAuth();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { configured, ready, userId, profile, signOut } = useAuth();
+  const pathname = usePathname();
 
   if (!configured) return null;
 
@@ -28,28 +31,17 @@ export default function AuthMenu({ compact = false }: { compact?: boolean }) {
   }
 
   if (!userId) {
+    // Already on the form: pointing it at itself would only strand the player.
+    const href = pathname === "/signin" ? "/signin" : signInHref(pathname);
     return (
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          disabled={busy}
-          onClick={async () => {
-            setBusy(true);
-            setError(null);
-            try {
-              await signInWithGoogle();
-            } catch (e) {
-              setError(e instanceof Error ? e.message : "Sign-in unavailable");
-              setBusy(false);
-            }
-          }}
-          className="flex items-center gap-2 rounded-lg border-2 border-line-strong bg-card px-3 py-1.5 text-xs font-semibold text-ink-soft transition hover:border-brand hover:text-brand disabled:opacity-60"
-          title={error ?? "Save your progress and climb the leaderboard"}
-        >
-          <GoogleGlyph />
-          {compact ? "Sign in" : "Sign in with Google"}
-        </button>
-      </div>
+      <Link
+        href={href}
+        data-testid="header-signin"
+        title="Save your progress and climb the leaderboard"
+        className="flex items-center gap-2 rounded-lg border-2 border-line-strong bg-card px-3 py-1.5 text-xs font-semibold text-ink-soft transition hover:border-brand hover:text-brand"
+      >
+        {compact ? "Sign in" : "Sign in or create an account"}
+      </Link>
     );
   }
 
@@ -98,16 +90,5 @@ export default function AuthMenu({ compact = false }: { compact?: boolean }) {
         Sign out
       </button>
     </div>
-  );
-}
-
-function GoogleGlyph() {
-  return (
-    <svg className="h-3.5 w-3.5" viewBox="0 0 48 48" aria-hidden="true">
-      <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.4 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.8 6.1C12.3 13.3 17.7 9.5 24 9.5z" />
-      <path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.6 5.9c4.4-4.1 6.7-10.1 6.7-17.3z" />
-      <path fill="#FBBC05" d="M10.4 28.7c-.5-1.4-.7-2.9-.7-4.7s.3-3.3.7-4.7l-7.8-6.1C1.1 16.4 0 20.1 0 24s1.1 7.6 2.6 10.8l7.8-6.1z" />
-      <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.8-5.8l-7.6-5.9c-2.1 1.4-4.9 2.3-8.2 2.3-6.3 0-11.7-3.8-13.6-9.1l-7.8 6.1C6.5 42.6 14.6 48 24 48z" />
-    </svg>
   );
 }

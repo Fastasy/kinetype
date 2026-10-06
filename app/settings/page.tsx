@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import AccountSettings from "@/components/profile/AccountSettings";
+import PasswordSettings from "@/components/profile/PasswordSettings";
 
 /**
  * Your own account: the name and photo other players see.
@@ -20,13 +21,14 @@ export default function SettingsPage() {
       <header>
         <h1 className="font-pixel text-lg text-ink sm:text-xl">Your account</h1>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-faint">
-          Your name and picture are what other players see next to your score. Set them here and
-          they follow you to any device you sign in on.
+          Your name and picture are what other players see next to your score, and your password is
+          how you sign back in. Set them here and they follow you to any device you sign in on.
         </p>
       </header>
 
-      <div className="mt-6">
+      <div className="mt-6 space-y-6">
         <AccountSettings />
+        <PasswordSettings />
       </div>
     </section>
   );

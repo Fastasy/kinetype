@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 
-import { useAuth } from "@/components/auth/AuthProvider";
+import { signInHref, useAuth } from "@/components/auth/AuthProvider";
 import { getClearedBossSet, submitMatch } from "@/lib/kinetype-db";
 import { track } from "@/lib/analytics";
 import type { Boss } from "@/game/progression";
@@ -106,7 +106,7 @@ const [focused, setFocused] = useState(false);
  const muted = save.muted;
 
  // ---- accounts / boss campaign -------------------------------------------------
- const { configured: authConfigured, ready: authReady, userId, profile, signInWithGoogle, adoptProfile } = useAuth();
+ const { configured: authConfigured, ready: authReady, userId, profile, adoptProfile } = useAuth();
  /** Set when a match has been banked server-side, for the earned-this-match line. */
  const [banked, setBanked] = useState<{
    gained: number;
@@ -139,17 +139,6 @@ const [focused, setFocused] = useState(false);
      .catch(() => {});
    return () => { active = false; };
  }, [boss, userId]);
-
- /** Surfaced sign-in failure, so the gate's button never silently does nothing. */
- const [authErr, setAuthErr] = useState<string | null>(null);
- const startSignIn = async (next: string) => {
-   setAuthErr(null);
-   try {
-     await signInWithGoogle(next);
-   } catch (e) {
-     setAuthErr(e instanceof Error ? e.message : "Could not start sign-in. Please try again.");
-   }
- };
 
  // Boss mode is account-only: the unlock ladder must persist. Guests can still play
  // free play, and /bosses sends them here only after they sign in.
@@ -478,14 +467,13 @@ const [focused, setFocused] = useState(false);
          The boss campaign keeps your progress and level on your account, so it needs you to
          sign in. Free play stays open to everyone.
        </p>
-       <button
-         type="button"
-         onClick={() => void startSignIn(`/play?boss=${boss.id}`)}
-         className="mt-6 bg-brand px-6 py-2.5 text-sm font-bold text-page transition hover:bg-brand-bright"
+       <Link
+         href={signInHref(`/play?boss=${boss.id}`)}
+         data-testid="boss-gate-signin"
+         className="mt-6 inline-block bg-brand px-6 py-2.5 text-sm font-bold text-page transition hover:bg-brand-bright"
        >
-         Sign in with Google
-       </button>
-       {authErr && <p className="mt-3 font-mono text-xs text-heat">{authErr}</p>}
+         Sign in or create an account
+       </Link>
        <p className="mt-4">
          <Link href="/play" className="text-xs text-ink-faint underline hover:text-ink-soft">
            Play free play instead
@@ -1119,13 +1107,12 @@ const [focused, setFocused] = useState(false);
  {!userId && authConfigured && authReady && (
    <p className="mt-3 flex flex-wrap items-center gap-2 text-xs text-ink-faint">
      Guest match — not counted on the leaderboard.
-     <button
-       type="button"
-       onClick={() => void startSignIn("/leaderboard")}
+     <Link
+       href={signInHref("/leaderboard")}
        className="border border-line-strong px-2 py-1 font-semibold text-ink-soft transition hover:border-brand hover:text-brand"
      >
        Sign in to bank your XP
-     </button>
+     </Link>
    </p>
  )}
  {boss && result.humanWon && (

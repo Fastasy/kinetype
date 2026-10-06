@@ -14,7 +14,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 
-import { useAuth } from "@/components/auth/AuthProvider";
+import { signInHref, useAuth } from "@/components/auth/AuthProvider";
 import { updateProfile } from "@/lib/kinetype-db";
 import {
   AVATAR_ACCEPT,
@@ -87,25 +87,36 @@ export default function AccountSettings() {
       <div className="border-2 border-line bg-card/50 px-4 py-8 text-center" data-testid="settings-signed-out">
         <p className="font-pixel text-sm text-ink">Sign in to make it yours</p>
         <p className="mx-auto mt-2 max-w-sm text-sm text-ink-faint">
-          A name and a photo belong to an account. Sign in and they follow you to any device.
+          A name and a photo belong to an account. Make one with an email address and they follow
+          you to any device.
         </p>
-        <button
-          type="button"
-          disabled={signingIn}
-          onClick={async () => {
-            setSigningIn(true);
-            setNotice(null);
-            try {
-              await signInWithGoogle("/settings");
-            } catch (err) {
-              setNotice({ kind: "err", text: errorMessage(err) });
-              setSigningIn(false);
-            }
-          }}
-          className="mt-5 border-2 border-line-strong bg-card px-4 py-2 text-sm font-semibold text-ink-soft transition hover:border-brand hover:text-brand disabled:opacity-60"
-        >
-          {signingIn ? "Opening Google…" : "Sign in with Google"}
-        </button>
+        <div className="mt-5 flex flex-wrap justify-center gap-2">
+          <Link
+            href={signInHref("/settings")}
+            data-testid="settings-signin-email"
+            className="border-2 border-brand bg-brand px-4 py-2 text-sm font-bold text-brand-deep transition hover:bg-brand-bright"
+          >
+            Sign in or create an account
+          </Link>
+          <button
+            type="button"
+            disabled={signingIn}
+            onClick={async () => {
+              setSigningIn(true);
+              setNotice(null);
+              try {
+                await signInWithGoogle("/settings");
+              } catch (err) {
+                setNotice({ kind: "err", text: errorMessage(err) });
+                setSigningIn(false);
+              }
+            }}
+            data-testid="settings-signin-google"
+            className="border-2 border-line-strong bg-card px-4 py-2 text-sm font-semibold text-ink-soft transition hover:border-brand hover:text-brand disabled:opacity-60"
+          >
+            {signingIn ? "Opening Google…" : "Continue with Google"}
+          </button>
+        </div>
         {notice && (
           <div className="mt-3">
             <Notice notice={notice} />

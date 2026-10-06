@@ -12,7 +12,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-import { useAuth } from "@/components/auth/AuthProvider";
+import { signInHref, useAuth } from "@/components/auth/AuthProvider";
 import { BOSSES, bossUnlocked, levelProgress, type Boss } from "@/game/progression";
 import { getClearedBossSet } from "@/lib/kinetype-db";
 
@@ -28,23 +28,9 @@ function stateFor(boss: Boss, level: number, cleared: Set<string>): BossState {
 }
 
 export default function BossCampaign() {
-  const { configured, ready, userId, profile, profileLoading, signInWithGoogle } = useAuth();
+  const { configured, ready, userId, profile, profileLoading } = useAuth();
   const [cleared, setCleared] = useState<Set<string>>(new Set());
   const [loadErr, setLoadErr] = useState<string | null>(null);
-  const [authErr, setAuthErr] = useState<string | null>(null);
-
-  /**
-   * Start Google sign-in. Anything thrown here is surfaced: a sign-in button that
-   * does nothing when it fails is indistinguishable from a dead page.
-   */
-  const startSignIn = async (next: string) => {
-    setAuthErr(null);
-    try {
-      await signInWithGoogle(next);
-    } catch (e) {
-      setAuthErr(e instanceof Error ? e.message : "Could not start sign-in. Please try again.");
-    }
-  };
 
   // Load the cleared set when the player signs in. State is written ONLY in the
   // promise callbacks, never synchronously in the effect body — see the note in
@@ -93,14 +79,13 @@ export default function BossCampaign() {
           The campaign tracks which bosses you have beaten and levels you up as you go, so it
           needs an account. Free play stays open to guests — nothing else changes.
         </p>
-        <button
-          type="button"
-          onClick={() => void startSignIn("/bosses")}
-          className="mt-6 bg-brand px-6 py-2.5 text-sm font-bold text-page transition hover:bg-brand-bright"
+        <Link
+          href={signInHref("/bosses")}
+          data-testid="campaign-signin"
+          className="mt-6 inline-block bg-brand px-6 py-2.5 text-sm font-bold text-page transition hover:bg-brand-bright"
         >
-          Sign in with Google
-        </button>
-        {authErr && <p className="mt-3 font-mono text-xs text-heat">{authErr}</p>}
+          Sign in or create an account
+        </Link>
       </div>
     );
   }

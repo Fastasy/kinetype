@@ -422,7 +422,32 @@ plus dropping the `db.schema` pin in `lib/supabase.ts`.
 **Accounts are optional.** Free play, coins and cosmetics stay in localStorage and
 work signed out — the marketing promise ("no account needed to play") is intact. An
 account adds exactly three things: cloud progress, the boss campaign and the
-leaderboard. Sign-in is Google only.
+leaderboard.
+
+**Two ways in: Google, or an email and a password** (added 2026-10-06). Email
+accounts are made at `/signin`, and every gate in the app now links THERE instead of
+firing Google on the spot — the header, the campaign gate, the boss gate and the
+leaderboard each pass `?next=`, so the player lands back where they were. Google stays
+one click on that page rather than being removed.
+
+Sign-up is INSTANT: the project runs with Supabase's `mailer_autoconfirm` ON, so no
+confirmation email is sent and the account is usable the moment the form is submitted.
+That is a deliberate trade. The project is on the free plan, using Supabase's built-in
+mailer, which caps auth email at TWO PER HOUR project-wide — so a confirmation-based
+signup would fail for the third new player in any hour, which is worse than an
+unverified address. The two consequences are worth stating plainly: nothing verifies
+that an address is real, and password-RESET email is capped by that same limit. That is
+why `/settings` can set a password while signed in — that path needs no email at all
+and is the recovery route that always works. Custom SMTP (Resend's free tier covers
+3,000 emails a month) removes the cap; the code already handles a confirmation-based
+flow if `mailer_autoconfirm` is ever turned back on (`signUpWithEmail` returns
+`"confirm-email"` and the form shows a "check your inbox" panel instead of signing in).
+
+Verified by `scripts/probe-email-auth.mjs`: it creates an account through the real
+form, checks the profile the email path produced, changes the password while signed
+in, signs out, signs back in with the NEW password, asserts a wrong password is
+refused, checks the campaign gate routes to the form carrying `?next=`, and deletes
+its own fixture afterwards.
 
 **XP is server-authoritative.** `kinetype.submit_match()` recomputes XP from clamped
 inputs; the client never sends a score, only the raw match facts. The formula is

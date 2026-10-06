@@ -14,7 +14,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-import { useAuth } from "@/components/auth/AuthProvider";
+import { signInHref, useAuth } from "@/components/auth/AuthProvider";
 import { getLeaderboard, type LeaderRow, type LeaderWindow } from "@/lib/kinetype-db";
 
 const TABS: { id: LeaderWindow; label: string; sub: string }[] = [
@@ -24,7 +24,7 @@ const TABS: { id: LeaderWindow; label: string; sub: string }[] = [
 ];
 
 export default function LeaderboardBoard() {
-  const { configured, ready, userId, signInWithGoogle } = useAuth();
+  const { configured, ready, userId } = useAuth();
   const [window, setWindow] = useState<LeaderWindow>("overall");
   const [rows, setRows] = useState<LeaderRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -102,13 +102,12 @@ export default function LeaderboardBoard() {
       {!userId && ready && (
         <p className="mt-3 flex flex-wrap items-center gap-2 text-xs text-ink-faint">
           You are playing as a guest.
-          <button
-            type="button"
-            onClick={() => void signInWithGoogle("/leaderboard")}
+          <Link
+            href={signInHref("/leaderboard")}
             className="border border-line-strong px-2 py-1 font-semibold text-ink-soft transition hover:border-brand hover:text-brand"
           >
             Sign in
-          </button>
+          </Link>
           to bank XP and appear here.
         </p>
       )}

@@ -34,6 +34,27 @@ export interface AuthValue {
   profile: Profile | null;
   profileLoading: boolean;
   signInWithGoogle: (next?: string) => Promise<void>;
+  /**
+   * Create an account from an email and a password.
+   *
+   * Instant by design: this project runs with `mailer_autoconfirm` ON, so the account can be used
+   * the moment this resolves and nothing is emailed. If confirmation is ever switched back on, the
+   * same call returns no session and the caller shows "check your inbox" instead — which is why the
+   * OUTCOME is returned rather than assumed.
+   */
+  signUpWithEmail: (email: string, password: string, next?: string) => Promise<EmailAuthOutcome>;
+  /** Sign in an existing email account. Throws the server's own message on a wrong password. */
+  signInWithEmail: (email: string, password: string) => Promise<void>;
+  /**
+   * Email a password-reset link.
+   *
+   * Worth knowing: this project has no custom SMTP, so the built-in mailer caps auth email at 2 an
+   * hour PROJECT-WIDE. That is why the signed-in password change in AccountSettings exists — it
+   * needs no email at all, and it is the recovery path that always works.
+   */
+  sendPasswordReset: (email: string) => Promise<void>;
+  /** Set a new password for the signed-in account. Needs no email. */
+  setPassword: (password: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<Profile | null>;
   /** Adopt a profile the server just handed back, without a second round trip. */
@@ -51,6 +72,22 @@ function sameMembers(a: readonly string[], b: readonly string[]): boolean {
 
 /** Where sign-in stashes its destination. Deliberately NOT in the redirect URL. */
 export const AUTH_NEXT_KEY = "kinetype:auth-next";
+
+/** What an email sign-up produced: a live session, or a standing request to go and confirm. */
+export type EmailAuthOutcome = "signed-in" | "confirm-email";
+
+/**
+ * The one place every "sign in" control should point.
+ *
+ * Each gate (the header, the campaign, the leaderboard) sends the player to the SAME form and
+ * states where to come back to in `?next=`. One screen holding the email fields beats a second
+ * sign-in UI inlined into four panels — and it is the only way an email account is reachable from
+ * the campaign gate at all.
+ */
+export function signInHref(next: string): string {
+  const safe = next.startsWith("/") ? next : "/bosses";
+  return `/signin?next=${encodeURIComponent(safe)}`;
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(!supabaseConfigured);
@@ -174,7 +211,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       void loadProfile(data.session);
     })();
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, next) => {
+      // A password-recovery link lands the player here ALREADY SIGNED IN, mid-flow: the reset is
+      // only half done until they choose a new password. Point the callback page at the password
+      // panel by stashing that destination where it already looks for one.
+      if (event === "PASSWORD_RECOVERY") {
+        try {
+          window.sessionStorage.setItem(AUTH_NEXT_KEY, "/settings");
+        } catch {
+          // storage disabled: the callback falls back to its own default destination
+        }
+      }
       setSession(next);
       void loadProfile(next);
     });
@@ -218,6 +265,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const signUpWithEmail = useCallback(
+    async (email: string, password: string, next = "/bosses"): Promise<EmailAuthOutcome> => {
+      const safeNext = next.startsWith("/") ? next : "/bosses";
+      // If confirmation is ever switched back on, the emailed link returns the player through
+      // /auth/callback, which reads this stash to know where they were headed. With confirmation
+      // off (as this project is configured) it simply goes unused.
+      try {
+        window.sessionStorage.setItem(AUTH_NEXT_KEY, safeNext);
+      } catch {
+        // private mode / storage disabled: fall back to the default destination
+      }
+
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        // Supabase ignores this on the current project and returns to `site_url` instead — which is
+        // exactly what /auth/callback exists to absorb. Sent anyway, so the flow is correct the day
+        // that behaviour changes.
+        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      });
+      if (error) throw error;
+
+      // Confirmation off (this project): a session comes back, the auth listener above loads the
+      // profile, and the caller can send the player straight on. Confirmation on: a user but no
+      // session, and they must click the link before they can play.
+      return data.session ? "signed-in" : "confirm-email";
+    },
+    [],
+  );
+
+  const signInWithEmail = useCallback(async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+    if (error) throw error;
+    // Nothing else to do: the listener above picks the session up, and profile loading with it.
+  }, []);
+
+  const sendPasswordReset = useCallback(async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/auth/callback`,
+    });
+    if (error) throw error;
+  }, []);
+
+  const setPassword = useCallback(async (password: string) => {
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) throw error;
+  }, []);
+
   /**
    * Adopt a profile the server just returned.
    *
@@ -242,6 +340,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     profile,
     profileLoading,
     signInWithGoogle,
+    signUpWithEmail,
+    signInWithEmail,
+    sendPasswordReset,
+    setPassword,
     signOut,
     refreshProfile,
     adoptProfile,
