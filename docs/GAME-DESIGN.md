@@ -254,7 +254,20 @@ Signals keep their hue families on the arena — red still means a heavy hit is 
 
 **Every theme is contrast-checked, including against the arena.** The test suite asserts WCAG AA (4.5:1) for text on surface, muted text on both surface and prompt background, accent on prompt background, and onAccent on accent — and separately asserts that each arena overlay clears AA against its own plate, that the outlined text and the rimmed confetti clear their bars on EVERY possible background, and that the fullscreen panels clear AA when composited over every arena at the shipped alpha. Each of those carries a **negative control** asserting the old value fails, so the check cannot quietly go hollow. A theme that looks good and cannot be read is a broken product.
 
-**Currency.** Coins, earned only. Payout per match = base by rounds won + WPM bonus + accuracy bonus + streak bonus.
+**Currency.** Coins, earned only. Payout per match = base by rounds won + WPM bonus + accuracy bonus + streak bonus, **scaled by the opponent's difficulty on a win**.
+
+**Difficulty rewards (added 2026-10-06, migration `0008`).** The payout used to ignore the opponent entirely, so beating the 20 WPM warm-up paid exactly what beating the 120 WPM final boss paid. A win is now multiplied by `DIFFICULTY_PCT`, indexed by the rung of `BOT_WPM_LADDER`:
+
+| Rung (WPM) | 20 | 30 | **40** | 50 | 60 | 70 | 85 | 100 | 120 |
+|---|---|---|---|---|---|---|---|---|---|
+| Win pays | 75% | 88% | **100%** | 125% | 155% | 190% | 230% | 275% | 325% |
+
+- The **40 WPM rung is the 100% anchor**, because break-even sits at 0.75-0.95x the player's own speed and the general adult average is 40-52 WPM, so the median player settles on rung 30-40. Their pace is therefore unchanged and every rung above is earned. Measured with one profile (a 2-0 win, 45 WPM, 95% accuracy, streak 3): 105 coins at rung 20, 140 at rung 40, 455 at rung 120.
+- **Losses are NOT scaled.** A loss pays exactly what it always paid, which is the anti-farm rule: if a loss scaled too, "select the hardest bot and throw matches" would out-earn playing at your own level. A win beats a loss at every rung, 1.5x at the bottom rising to 6.7x at the top.
+- **The boss terms are NOT scaled.** A first-clear bounty is already priced per boss in `kinetype.boss_rewards` (25 coins for Tick to 400 for Oblivion) and the flat +60 boss win bonus is a mode marker. Scaling either would charge the same difficulty twice.
+- **Scaling is integer-exact:** `(base * pct + 50) / 100` with integer division in SQL, `Math.floor` on the same arithmetic in `game/progression.ts`. A `round(base * pct / 100.0)` drifts a coin or two between the two languages, and `scripts/verify-rewards.ts` compares them for exact equality.
+- An **off-ladder opponent snaps down** to the nearest real rung, and ties resolve downward, so an ambiguous or hostile `bot_wpm` can only ever pay the lower figure. `submit_match()` now stores the snapped rung rather than the raw client value.
+- If the catalogue pace needs retuning, move this anchor or the price tiers, **not both at once**.
 
 **Payment boundary.** `game/commerce.ts` exposes `PURCHASE_PROVIDER`. It is `"earned"` in MVP. The shop renders real prices and a real purchase flow that expects a provider; with `"earned"` the flow takes the earned-currency path. Switching to a real provider is a single module swap. **No payment integration ships until multiplayer exists**, because cosmetics require an audience to be worth buying and the evidence says the ad-removal subscription is the correct first revenue line, not skins.
 
@@ -415,9 +428,15 @@ leaderboard. Sign-in is Google only.
 inputs; the client never sends a score, only the raw match facts. The formula is
 mirrored in `game/progression.ts` (`xpForMatch`) and the two are pinned together by
 `game/tests/progression.test.ts`, which asserts the exact XP the live SQL returned
-during verification. Level is a GENERATED column: `floor(sqrt(xp/100)) + 1` — the
-same curve the earlier typing site used. It is derived, so the HUD and the
-leaderboard can never disagree about someone's level.
+during verification, and by `scripts/verify-rewards.ts`, which compares both sides over
+a matrix of rungs, outcomes and hostile input and fails on a single coin of drift.
+**Both XP and coins scale with the opponent's difficulty on a win** — the coin table in
+§10 is the XP table, applied to the same performance terms, so one table serves both and
+the two currencies move together. That means XP does inflate at the top of the ladder,
+and the campaign is gated by the boss SEQUENCE rather than by the level curve: the level
+gate delays the ladder, it cannot skip it. Level is a GENERATED column:
+`floor(sqrt(xp/100)) + 1` — the same curve the earlier typing site used. It is derived,
+so the HUD and the leaderboard can never disagree about someone's level.
 
 **The boss campaign** is nine fights on the game's existing nine-rung bot ladder
 (20..120 WPM). A boss is a NAMED rung, not a new difficulty system: `game/progression.ts`

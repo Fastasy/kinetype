@@ -8,13 +8,6 @@ import {
   BLOCK_DAMAGE_MULTIPLIER,
   BLOCK_HOLD,
   BLOCK_KB_MULTIPLIER,
-  COIN_ACCURACY_FACTOR,
-  COIN_BASE_LOSS,
-  COIN_BASE_WIN,
-  COIN_PER_ROUND,
-  COIN_STREAK_CAP,
-  COIN_STREAK_STEP,
-  COIN_WPM_FACTOR,
   COUNTDOWN_TIME,
   COUNTER_MULTIPLIER,
   COUNTER_WINDOW,
@@ -44,6 +37,7 @@ import { CELEBRATION_GOLD } from "./hud";
 import { comboIntensity, comboMultiplier } from "./combo";
 import { MOVE, launchFrom } from "./knockback";
 import { BotController, botConfigForTier } from "./bot";
+import { coinsForMatch } from "./progression";
 import { createRng, type Rng } from "./rng";
 import { skinById, type PixelSkin } from "./skins";
 import { TypingRun, type CommitResult } from "./typing";
@@ -811,12 +805,17 @@ export class Match {
     const roundsWon = this.wins[this.humanSide];
     const roundsLost = this.wins[other(this.humanSide)];
 
-    let coins = humanWon ? COIN_BASE_WIN : COIN_BASE_LOSS;
-    coins += roundsWon * COIN_PER_ROUND;
-    coins += Math.round(wpm * COIN_WPM_FACTOR);
-    coins += Math.round((accuracy / 100) * COIN_ACCURACY_FACTOR);
     const streak = humanWon ? this.streakBefore + 1 : 0;
-    coins += Math.min(COIN_STREAK_CAP, streak) * COIN_STREAK_STEP;
+    // Same formula the server recomputes in kinetype.coins_for_match(), including the difficulty
+    // scaling, so a guest's local wallet and a signed-in player's account agree coin for coin.
+    const coins = coinsForMatch({
+      won: humanWon,
+      roundsWon,
+      wpm,
+      accuracy,
+      streak,
+      botWpm: this.opts.botWpm,
+    });
 
     this.result = {
       winner,

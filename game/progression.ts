@@ -9,7 +9,7 @@
 // testable under plain Node. If you change one, change the other.
 // game/tests/progression.test.ts pins this side of the contract.
 
-import { BOT_WPM_LADDER } from "./constants";
+import { BOT_WPM_LADDER, DIFFICULTY_PCT } from "./constants";
 
 // ------------------------------------------------------------------ levels
 /** XP step of the curve. level = floor(sqrt(xp / 100)) + 1  <=>  xp = (level-1)^2 * 100. */
@@ -62,43 +62,113 @@ export function levelProgress(xp: number): LevelProgress {
   };
 }
 
-// ---------------------------------------------------------------------- XP
+// ---------------------------------------------------------------- rewards
 export type MatchMode = "free" | "boss";
 
-export interface XpInput {
+/** What one finished match earned. The performance terms both payouts share. */
+export interface MatchRewardInput {
   won: boolean;
   roundsWon: number;
   wpm: number;
   /** Percent, 0..100. */
   accuracy: number;
+  /** Matches won in a row BEFORE this one. The caller zeroes it on a loss. */
   streak: number;
+  /**
+   * The OPPONENT's rung. Difficulty scales a win and nothing else, and the caller must always
+   * supply it: a payout that silently ignored the opponent is the bug this replaced.
+   */
+  botWpm: number;
+}
+
+export interface XpInput extends MatchRewardInput {
   mode: MatchMode;
   /** True only the FIRST time a given boss is beaten. */
   bossFirstClear?: boolean;
 }
 
 /**
- * XP for one finished match — mirrors kinetype.xp_for_match().
+ * The rung of BOT_WPM_LADDER an opponent sits on.
  *
- * Every term is clamped before it is summed, so a tampered payload cannot inflate
- * the total, and the server computes the same number independently. Winning a boss
- * pays a flat bonus, and the first clear of any boss pays a one-time bounty on top
- * (the server refuses to pay that bounty twice — see submit_match).
+ * Values between two rungs snap DOWN, and ties (45 sits between 40 and 50) also resolve downward,
+ * which is the conservative direction: an ambiguous rung can only ever pay the lower figure.
+ * Mirrors the `order by abs(wpm - p), idx limit 1` lookup in kinetype.difficulty_pct().
  */
-export function xpForMatch(i: XpInput): number {
+export function rungIndexFor(botWpm: number): number {
+  const wpm = Number.isFinite(botWpm) ? Math.max(0, botWpm) : BOT_WPM_LADDER[0];
+  let best = 0;
+  let bestDistance = Infinity;
+  for (let i = 0; i < BOT_WPM_LADDER.length; i += 1) {
+    const distance = Math.abs(BOT_WPM_LADDER[i] - wpm);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      best = i;
+    }
+  }
+  return best;
+}
+
+/** The percentage of a win that this opponent's rung is worth. See DIFFICULTY_PCT. */
+export function difficultyPct(botWpm: number): number {
+  return DIFFICULTY_PCT[rungIndexFor(botWpm)];
+}
+
+/**
+ * Percentage scaling that is INTEGER-EXACT, on purpose.
+ *
+ * `Math.round(total * pct / 100)` drifts by a coin or two from Postgres once the division is
+ * inexact in binary floating point, and the two sides are compared for exact equality.
+ * `(total * pct + 50) / 100` with integer division is the same number in both languages, and it
+ * rounds halves up.
+ */
+export function scaleByPct(total: number, pct: number): number {
+  return Math.floor((total * pct + 50) / 100);
+}
+
+/**
+ * The clamped performance terms both payouts are built from.
+ * Mirrors the expression inside kinetype.xp_for_match() and kinetype.coins_for_match().
+ */
+export function performanceBase(i: MatchRewardInput): number {
   const rounds = Math.min(5, Math.max(0, i.roundsWon));
   const wpm = Math.min(400, Math.max(0, i.wpm));
   const accuracy = Math.min(100, Math.max(0, i.accuracy));
   const streak = Math.min(5, Math.max(0, i.streak));
-  const total =
+  return (
     (i.won ? 40 : 12) +
     rounds * 10 +
     Math.round(wpm * 0.6) +
     Math.round((accuracy / 100) * 30) +
-    streak * 8 +
-    (i.mode === "boss" ? 60 : 0) +
-    (i.bossFirstClear ? 140 : 0);
-  return Math.max(0, total);
+    streak * 8
+  );
+}
+
+/**
+ * XP for one finished match — mirrors kinetype.xp_for_match().
+ *
+ * Every term is clamped before it is summed, so a tampered payload cannot inflate the total, and
+ * the server computes the same number independently. A WIN is scaled by the opponent's rung; a loss
+ * is not. Winning a boss pays a flat bonus, and the first clear of any boss pays a one-time bounty
+ * on top (the server refuses to pay that bounty twice — see submit_match). Those two are
+ * deliberately NOT difficulty-scaled: the bounty is already priced per boss, from 25 coins for Tick
+ * to 400 for Oblivion, and scaling it again would charge the same difficulty twice.
+ */
+export function xpForMatch(i: XpInput): number {
+  const base = performanceBase(i);
+  const scaled = i.won ? scaleByPct(base, difficultyPct(i.botWpm)) : base;
+  return Math.max(0, scaled + (i.mode === "boss" ? 60 : 0) + (i.bossFirstClear ? 140 : 0));
+}
+
+/**
+ * Coins for one finished match — mirrors kinetype.coins_for_match().
+ *
+ * The same formula as XP minus the boss terms, so the two currencies move together and the SQL
+ * mirror stays one table instead of two. A loss pays the unscaled base, which is exactly what a loss
+ * has always paid, so nothing about losing became more attractive.
+ */
+export function coinsForMatch(i: MatchRewardInput): number {
+  const base = performanceBase(i);
+  return Math.max(0, i.won ? scaleByPct(base, difficultyPct(i.botWpm)) : base);
 }
 
 // ------------------------------------------------------------------- bosses

@@ -307,6 +307,23 @@ export const COIN_ACCURACY_FACTOR = 30;
 export const COIN_STREAK_STEP = 8;
 export const COIN_STREAK_CAP = 5;
 
+/**
+ * What a WIN is worth, as a PERCENTAGE, indexed by the rung of BOT_WPM_LADDER.
+ *
+ * The problem this fixes: the payout used to ignore the opponent entirely, so beating the 20 WPM
+ * warm-up paid exactly what beating the 120 WPM final boss paid. Difficulty was decorative.
+ *
+ * Index 2 (the 40 WPM rung) is deliberately 100, and that is the whole balance argument. Break-even
+ * sits at 0.75-0.95x the player's own speed and the general adult average is 40-52 WPM, so the
+ * median player settles on rung 30-40. Anchoring there leaves the economy pace chosen in migration
+ * 0007 (about 28 days to own everything) intact for a median player, while every rung above it is
+ * now earned. If the 0007 pace needs retuning, move that anchor or the price tiers, not both.
+ *
+ * LOSSES ARE NOT SCALED BY THIS TABLE. A loss pays exactly what it always paid, which is what stops
+ * "select the hardest bot and throw matches" from becoming a farm. See coinsForMatch().
+ */
+export const DIFFICULTY_PCT = [75, 88, 100, 125, 155, 190, 230, 275, 325] as const;
+
 // ---------------------------------------------------------------- bot
 /** The explicit WPM ladder. Not easy/normal/hard: typing skill is uncorrelated with gaming skill. */
 export const BOT_WPM_LADDER = [20, 30, 40, 50, 60, 70, 85, 100, 120] as const;

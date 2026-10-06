@@ -21,18 +21,9 @@ import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-import {
-  COIN_ACCURACY_FACTOR,
-  COIN_BASE_LOSS,
-  COIN_BASE_WIN,
-  COIN_PER_ROUND,
-  COIN_STREAK_CAP,
-  COIN_STREAK_STEP,
-  COIN_WPM_FACTOR,
-} from "../game/constants";
 import { SKINS } from "../game/skins";
 import { THEMES } from "../game/themes";
-import { BOSSES } from "../game/progression";
+import { BOSSES, coinsForMatch } from "../game/progression";
 
 const creds = JSON.parse(readFileSync(join(homedir(), ".kinetype", "creds.json"), "utf8"));
 const URL_ = creds.project_url;
@@ -67,15 +58,22 @@ async function rpc(name: string, body: unknown, token = ANON): Promise<Rpc> {
   return { status: r.status, json, text };
 }
 
-/** The CLIENT's coin formula, from game/match.ts:finish() — the thing the SQL must mirror. */
-function clientCoins(won: boolean, roundsWon: number, wpm: number, accuracy: number, streak: number): number {
-  let coins = won ? COIN_BASE_WIN : COIN_BASE_LOSS;
-  coins += roundsWon * COIN_PER_ROUND;
-  coins += Math.round(wpm * COIN_WPM_FACTOR);
-  coins += Math.round((accuracy / 100) * COIN_ACCURACY_FACTOR);
-  const s = won ? streak : 0;
-  coins += Math.min(COIN_STREAK_CAP, s) * COIN_STREAK_STEP;
-  return coins;
+/**
+ * The CLIENT's coin formula, CALLED rather than copied.
+ *
+ * This used to re-derive the arithmetic from the constants, which made the probe a third source of
+ * truth for the payout and would have quietly frozen the pre-difficulty numbers in place. It now
+ * calls the shipped function, so the probe compares the DATABASE against the real client.
+ */
+function clientCoins(
+  won: boolean,
+  roundsWon: number,
+  wpm: number,
+  accuracy: number,
+  streak: number,
+  botWpm: number,
+): number {
+  return coinsForMatch({ won, roundsWon, wpm, accuracy, streak, botWpm });
 }
 
 /**
@@ -213,11 +211,11 @@ async function main() {
   // coin payout for a non-boss match is the same figure, so the two formulas are pinned together.
   const freeInput = { p_mode: "free", p_boss_id: null, p_bot_wpm: 40, p_won: true, p_wpm: 60, p_accuracy: 95, p_best_combo: 6, p_rounds_won: 2, p_rounds_lost: 0, p_streak: 2 };
   const afterFree = (await play(freeInput, token)).json;
-  const expectedFree = clientCoins(true, 2, 60, 95, 2) + FIRST_WIN_BONUS;
+  const expectedFree = clientCoins(true, 2, 60, 95, 2, freeInput.p_bot_wpm) + FIRST_WIN_BONUS;
   check(
     "a free-play win pays the client formula PLUS the first win of the day",
     afterFree.coins - coinsBefore === expectedFree,
-    `paid ${afterFree.coins - coinsBefore}, expected ${expectedFree} (formula ${clientCoins(true, 2, 60, 95, 2)} + ${FIRST_WIN_BONUS} daily)`,
+    `paid ${afterFree.coins - coinsBefore}, expected ${expectedFree} (formula ${clientCoins(true, 2, 60, 95, 2, freeInput.p_bot_wpm)} + ${FIRST_WIN_BONUS} daily)`,
   );
 
   // A boss FIRST clear also pays that boss's bounty — server-side now, not added by the client.
@@ -237,9 +235,9 @@ async function main() {
       p_wpm: 70, p_accuracy: 96, p_best_combo: 5, p_rounds_won: 2, p_rounds_lost: 1, p_streak: 1,
     };
     const afterBoss = (await play(bossInput, token)).json;
-    const expectedBoss = clientCoins(true, 2, 70, 96, 1) + boss.rewardCoins;
+    const expectedBoss = clientCoins(true, 2, 70, 96, 1, boss.botWpm) + boss.rewardCoins;
     check(
-      `a first clear of "${boss.id}" pays the match AND the bounty, once`,
+      `a first clear of "${boss.id}" (${boss.botWpm} WPM) pays the match AND the bounty, once`,
       afterBoss.coins - afterFree.coins === expectedBoss,
       `paid ${afterBoss.coins - afterFree.coins}, expected ${expectedBoss}`,
     );
@@ -248,7 +246,7 @@ async function main() {
     const afterRepeat = (await play(bossInput, token)).json;
     check(
       "clearing the same boss again pays the match but NOT the bounty",
-      afterRepeat.coins - afterBoss.coins === clientCoins(true, 2, 70, 96, 1),
+      afterRepeat.coins - afterBoss.coins === clientCoins(true, 2, 70, 96, 1, boss.botWpm),
       `paid ${afterRepeat.coins - afterBoss.coins}`,
     );
   }
@@ -260,9 +258,9 @@ async function main() {
   const afterHostile = await play(hostile, token);
   check("a tampered payload is REFUSED outright", afterHostile.status >= 400, `HTTP ${afterHostile.status}`);
   check(
-    "…and the unclamped client formula would have paid thousands",
-    clientCoins(true, 99, 9999, 500, 99) > 5000,
-    `client would say ${clientCoins(true, 99, 9999, 500, 99)}`,
+    "…and the client formula CLAMPS to the same ceiling instead of inventing thousands",
+    clientCoins(true, 99, 9999, 500, 99, 40) === 400,
+    `client would say ${clientCoins(true, 99, 9999, 500, 99, 40)}, expected 400 (clamped base at the anchor rung)`,
   );
 
   // ========================================================================== 3. spending
