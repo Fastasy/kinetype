@@ -379,6 +379,12 @@ check(
   await page.waitForTimeout(250);
   const after = await geo();
 
+  // The failure message names WHICH part moved. A bare "panel top 1134 -> 1129px" was printed while
+  // the actual failing sub-condition was the untolerated document height, which sent a reader
+  // looking at the jitter that was inside tolerance.
+  const shift = Math.abs(after.panelTop - before.panelTop);
+  const docGrew = after.docH !== before.docH;
+  const panelGrew = after.panelH !== before.panelH;
   check(
     "typing does not move the page",
     // KNOWN RESIDUAL, quantified rather than hand-waved. A 5px jitter survives, intermittently:
@@ -390,10 +396,8 @@ check(
     //
     // Repro and diagnosis: `node scripts/probe-layout-shift.mjs`, which names the moving element
     // on every keystroke. Delete the tolerance once the residual is gone.
-    Math.abs(after.panelTop - before.panelTop) <= 5 &&
-      after.docH === before.docH &&
-      after.panelH === before.panelH,
-    `panel top ${before.panelTop} -> ${after.panelTop}px (known residual tolerance 5px), panel height ${before.panelH} -> ${after.panelH}px`,
+    shift <= 5 && !docGrew && !panelGrew,
+    `panel top ${before.panelTop} -> ${after.panelTop}px (shift ${shift}, tolerance 5), panel height ${before.panelH} -> ${after.panelH}px${panelGrew ? " GONE UP" : ""}, document height ${before.docH} -> ${after.docH}px${docGrew ? " GONE UP" : ""}`,
   );
   check(
     "typing does not resize the word being typed",

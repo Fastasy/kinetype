@@ -190,6 +190,29 @@ export class Match {
     return f.state !== "hitstun" && f.state !== "staggered" && f.state !== "ko";
   }
 
+  /**
+   * Whether a blocked keystroke may be HELD for later, rather than dropped.
+   *
+   * Holding is a courtesy for a player who is mid-flow: a hit, a stagger or the opponent's
+   * recovery cut must not eat the letters their hands were already typing, because the sentence
+   * is on screen and their fingers are moving through it.
+   *
+   * It is NOT a courtesy between rounds. A keystroke pressed once a round is decided — during the
+   * KO cut, through the end-of-round hold, or during the countdown before the next round —
+   * belongs to no prompt at all, and banking it handed the player a free three-character head
+   * start on the next sentence the frame that round went live. Ruan hit this directly
+   * (2026-10-06): "when the bot is knocked off and I keep typing, three keys are held and when the
+   * round restarts those keystrokes get added." So the window is the ROUND, not the match: outside
+   * a live round the buffer stays empty and input in that window is dropped.
+   *
+   * `recovery` is here deliberately. A cut that SUCCEEDS puts the same round back to life, and
+   * that player was mid-sentence when the opponent left the stage, so their keystrokes must
+   * survive it. A cut that fails ends the round and `endRound` empties the buffer anyway.
+   */
+  private canHoldInput(): boolean {
+    return this.phase === "live" || this.phase === "finish" || this.phase === "recovery";
+  }
+
   /** Keystrokes pressed while input was blocked, oldest first. */
   private pending: Record<Side, string[]> = { left: [], right: [] };
 
@@ -241,6 +264,11 @@ export class Match {
     // key now — the separator between words — so it is accepted here like any letter.
     if (!/^[a-z ]$/.test(ch)) return false;
     if (!this.canAcceptInput(side)) {
+      // Held only while a round is running; once the round is decided (or before the next one has
+      // begun) the press is DROPPED. See canHoldInput. Still returns TRUE, because "consumed" is
+      // what keeps the browser from scrolling the page on a space — the key was taken, it simply
+      // had nothing to apply to.
+      if (!this.canHoldInput()) return true;
       // Consumed, not ignored: the keystroke is held and will land. Returning false here
       // would also tell the caller the press was worthless, which is exactly the
       // impression this buffer exists to remove.
@@ -789,6 +817,10 @@ export class Match {
     }
     this.recoveryVictim = null;
     this.recoveries = 0;
+    // A round starts with an EMPTY buffer, every round: nothing is carried in from the round
+    // before, and nothing was held for this one while it waited. Stated here because this is
+    // where a round begins — the rule itself lives in canHoldInput.
+    this.clearPending();
     this.finishSide = null;
     this.sparkFired = { left: false, right: false };
     this.roundTimer = ROUND_TIME;

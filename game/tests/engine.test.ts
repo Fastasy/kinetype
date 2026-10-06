@@ -948,7 +948,12 @@ test("strict mode's stagger holds keystrokes rather than eating them", () => {
   assert.equal(m.typing.left.chars, 1, "the key the player meant should land afterwards");
 });
 
-test("keystrokes typed during the countdown land when the round goes live", () => {
+test("keystrokes typed before a round is live are dropped, not banked for it", () => {
+  // CHANGED CONTRACT, 2026-10-06. This test used to read "keystrokes typed during the countdown
+  // land when the round goes live" — and that is exactly what Ruan reported as a bug: type while
+  // nobody can act and the next round opens with three characters of free progress that were
+  // never typed against that sentence. Holding is for a player mid-sentence, not for a round
+  // that has not started. See Match.canHoldInput.
   const m = sandbox(); // starts in the countdown
   m.typing.left.prompts[0] = promptFor("planet");
 
@@ -957,10 +962,11 @@ test("keystrokes typed during the countdown land when the round goes live", () =
   m.type("left", word.text[0]);
   m.type("left", word.text[1]);
   assert.equal(m.typing.left.chars, 0, "the round has not started");
-  assert.equal(m.queuedFor("left"), 2, "they should be held, not swallowed");
+  assert.equal(m.queuedFor("left"), 0, "nothing may be banked for a round that has not begun");
 
   toLive(m);
-  assert.equal(m.typing.left.chars, 2, "both should land on the frame the round goes live");
+  assert.equal(m.typing.left.chars, 0, "and nothing may land when it goes live");
+  assert.equal(m.queuedFor("left"), 0, "the buffer stays empty");
 });
 
 test("a decided round discards its held keystrokes instead of carrying them over", () => {
@@ -996,6 +1002,62 @@ test("a decided round discards its held keystrokes instead of carrying them over
     charsBeforeMash,
     "and nothing may be applied in the next round",
   );
+});
+
+test("mashing right through a KO and the next countdown banks nothing for the new round", () => {
+  // Ruan's report, pinned (2026-10-06): "when the bot is knocked off and I keep typing, three
+  // keys are held and when the round restarts those keystrokes get added."
+  //
+  // The test above mashes only while the recovery cut runs, so it was already green while the bug
+  // was live — `endRound` cleared that buffer. What it never covered is the mashing that CONTINUES
+  // after the round is decided: through the end-of-round hold and the whole 2.2s countdown, which
+  // is where the buffer refilled and the characters were then handed to round two.
+  //
+  // The mashing types the CORRECT next key, not a blind letter, and that is the whole point: a
+  // fistful of wrong letters costs accuracy but moves no progress, so a blind mash passes whether
+  // the bug is there or not (it did, on the first run of this test). Ruan's hands were still
+  // running through the sentence when the bot left the stage, so his keystrokes WERE the right
+  // ones — and they landed as free progress on the next round.
+  const m = sandbox();
+  toLive(m);
+  m.fighter("right").damage = 110;
+  strike(m, "left", "kick");
+
+  // Drive the KO open FIRST, and wait for the RECOVERY CUT specifically — not merely "the phase is
+  // no longer live". The kick resolves over several steps, and driving to just "not live" lands in
+  // `finish`, which still ACCEPTS input: the mashing would then be applied directly and the test
+  // would fail for a reason that has nothing to do with this bug. `recoveryVictim` is the real KO.
+  let drive = 0;
+  while (!m.recoveryVictim && drive++ < 400) m.step(STEP);
+  assert.equal(
+    m.recoveryVictim,
+    "right",
+    "the kick should have opened a recovery window on the right fighter",
+  );
+
+  const charsBefore = m.typing.left.chars;
+  let guard = 0;
+  let sawCountdown = false;
+  let heldDuringCountdown = -1;
+  while (m.phase !== "live" && guard++ < 4000) {
+    // A keystroke on EVERY frame of the window, from the KO to the next round going live.
+    const ch = m.typing.left.nextKey();
+    if (ch) m.type("left", ch);
+    m.step(STEP);
+    if (m.phase === "countdown") {
+      heldDuringCountdown = m.queuedFor("left");
+      sawCountdown = true;
+    }
+  }
+  assert.ok(sawCountdown, "round two should have counted down before going live");
+  assert.equal(m.phase, "live", "round two should have started");
+  assert.equal(
+    heldDuringCountdown,
+    0,
+    "nothing may be held while the next round counts down",
+  );
+  assert.equal(m.queuedFor("left"), 0, "no keystroke may be banked into the new round");
+  assert.equal(m.typing.left.chars, charsBefore, "and none may be applied to its sentence");
 });
 
 test("junk is refused outright and never enters the buffer", () => {

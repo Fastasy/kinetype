@@ -267,12 +267,19 @@ export const WPM_MIN_SPAN = 1;
  * input path returned false and the character was gone. Ruan hit it directly — "when he
  * hits me and I type a letter at the same time, it does not register" — and it is the
  * single worst feel bug a typing game can have, because the player is mid-flow and their
- * hands keep moving. The identical thing happened during the 2.2s countdown.
+ * hands keep moving.
  *
  * So input that cannot be applied now is held instead of dropped, and delivered in order
  * the moment it becomes legal. Three is the cap: it is enough to cover the keystrokes a
  * player fires off while being knocked back, and far too few to bank a whole word during
  * a long stun. Past the cap the excess is discarded rather than queued forever.
+ *
+ * THE WINDOW IS ONE ROUND, not the gap between rounds (corrected 2026-10-06). The 2.2s countdown
+ * used to be listed here as a hold window as well, and that is exactly what Ruan then reported as
+ * a bug: mashing while nobody could act banked three characters that were handed to the NEXT round
+ * the moment it went live — free progress on a sentence he never typed against. Holding now
+ * applies to hitstun, strict-mode stagger and a recovery cut INSIDE a live round; outside one,
+ * input is dropped. The rule is `Match.canHoldInput`, pinned by the engine tests.
  */
 export const INPUT_BUFFER_MAX = 3;
 
