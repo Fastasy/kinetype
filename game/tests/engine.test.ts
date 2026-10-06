@@ -56,10 +56,21 @@ import { createRng } from "../rng";
 import { applyOutcome, DEFAULT_SAVE, type SaveData } from "../storage";
 import { purchaseWithCoins } from "../commerce";
 import { OPPONENT_SKIN_ID, PIXEL_KEYS, SKINS, SPRITE_H, SPRITE_W } from "../skins";
-import { contrast, THEMES, themeById, DEFAULT_THEME_ID, SIGNALS_DARK, SIGNALS_LIGHT } from "../themes";
+import { contrast, luminance, THEMES, themeById, DEFAULT_THEME_ID, SIGNALS_DARK, SIGNALS_LIGHT } from "../themes";
 import { DEFAULT_MAP_ID, MAPS, mapById } from "../maps";
+import {
+  ARENA_DANGER,
+  ARENA_HUD,
+  ARENA_REWARD,
+  CELEBRATION_GOLD,
+  PANEL_ALPHA,
+  RESULT_FLARE,
+  RESULT_PLATE,
+} from "../hud";
+import { FLARE_RULES, matchFlares } from "../flares";
+import { Fx } from "../fx";
 import { BOSSES } from "../progression";
-import type { MatchOptions, MoveKind, Prompt, PromptKind, Side } from "../types";
+import type { MatchOptions, MatchResult, MoveKind, Prompt, PromptKind, Side } from "../types";
 
 let passed = 0;
 let failed = 0;
@@ -1904,6 +1915,299 @@ test("themeById never returns nothing", () => {
   assert.equal(themeById(DEFAULT_THEME_ID).id, DEFAULT_THEME_ID);
   assert.equal(themeById("nope-does-not-exist").id, THEMES[0].id);
 });
+
+// ---------------------------------------------------------------- the arena overlay blind spot
+//
+// THE BUG THESE EXIST FOR.
+//
+// A theme is the WEBSITE's colours; an arena is a MAP that no theme touches. Four overlays were
+// drawn ON the arena using THEME tokens, so they were compared against the theme in every test
+// above and passed — while being invisible on screen. Measured, the round countdown was 1.00:1 on
+// 29 of the 60 theme x arena pairs (neon ink on Crystal Vault's pale sky is literally the same
+// colour) and below the 3:1 bar on 31 of them. Ruan: "some of themes clash with the text on
+// screen like the timer."
+//
+// So the overlays now carry their OWN background (an opaque plate) or their own outline, and the
+// whole class of bug is asserted here rather than eyeballed.
+
+/** Alpha-composite `fg` at `a` over `bg`. Both must be opaque hex, which is asserted separately. */
+function over(fg: string, a: number, bg: string): string {
+  const parts = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const [r1, g1, b1] = parts(fg);
+  const [r2, g2, b2] = parts(bg);
+  const mix = (x: number, y: number) => Math.round(x * a + y * (1 - a));
+  const hex = (n: number) => n.toString(16).padStart(2, "0");
+  return `#${hex(mix(r1, r2))}${hex(mix(g1, g2))}${hex(mix(b1, b2))}`;
+}
+
+test("the old themed countdown really was invisible, so this measure can see the bug", () => {
+  // The negative control. If this ever starts passing, the assertion below has stopped measuring
+  // anything real and should not be trusted.
+  let worst = Infinity;
+  let where = "";
+  for (const t of THEMES) {
+    for (const m of MAPS) {
+      for (const band of m.sky) {
+        const r = contrast(t.text, band) ?? 0;
+        if (r < worst) {
+          worst = r;
+          where = `${t.id} ink on ${m.id}`;
+        }
+      }
+    }
+  }
+  assert.ok(worst < 3, `themed ink straight onto the arena should be broken; measured ${worst.toFixed(2)}:1 (${where})`);
+});
+
+test("outlined arena text is readable on ANY background, not just the ten arenas we ship", () => {
+  // contrast() depends only on relative luminance, so a sweep of greys covers EVERY possible
+  // background colour: a saturated sky and a grey of the same luminance score identically. The
+  // worst case of a light fill over a dark ring is where neither ring wins outright — measured
+  // 4.44:1 at luminance 0.103, which clears the 3:1 bar for large text with room to spare.
+  //
+  // This is why the 60px countdown digit can sit straight on the arena while the small chips
+  // cannot: an outline only guarantees ~4.4:1, and small text needs 4.5:1 on top of that.
+  let worst = Infinity;
+  let worstAt = "";
+  for (let v = 0; v <= 255; v++) {
+    const bg = `#${v.toString(16).padStart(2, "0").repeat(3)}`;
+    const readable = Math.max(contrast(ARENA_HUD.ink, bg) ?? 0, contrast(ARENA_HUD.outline, bg) ?? 0);
+    if (readable < worst) {
+      worst = readable;
+      worstAt = bg;
+    }
+  }
+  assert.ok(
+    worst >= 4.4,
+    `outlined arena text drops to ${worst.toFixed(2)}:1 on ${worstAt}; the light fill plus dark ring must never go below ~4.4`,
+  );
+});
+
+test("every arena overlay is a self-contained pair, on an opaque background", () => {
+  const pairs: [string, string, string][] = [
+    ["countdown plate ink", ARENA_HUD.plateInk, ARENA_HUD.plate],
+    ["countdown plate muted", ARENA_HUD.plateInkMuted, ARENA_HUD.plate],
+    ["telegraph chip", ARENA_DANGER.ink, ARENA_DANGER.bg],
+    ["save chip", ARENA_REWARD.ink, ARENA_REWARD.bg],
+    ["result banner win", RESULT_PLATE.win, RESULT_PLATE.bg],
+    ["result banner loss", RESULT_PLATE.loss, RESULT_PLATE.bg],
+    ["result banner meta", RESULT_PLATE.inkMuted, RESULT_PLATE.bg],
+    ["flare achievement", RESULT_FLARE.achievement, RESULT_FLARE.bg],
+    ["flare plain", RESULT_FLARE.plain, RESULT_FLARE.bg],
+  ];
+  for (const [label, ink, bg] of pairs) {
+    // lucid: an alpha colour cannot be contrast-checked, and a translucent surface over an arena
+    // is exactly how the FINISH flag got to 2.5:1 while every assertion passed.
+    assert.notEqual(luminance(bg), null, `${label}: background ${bg} must be an OPAQUE hex colour`);
+    const ratio = contrast(ink, bg) ?? 0;
+    assert.ok(ratio >= 4.5, `${label}: ${ink} on ${bg} is ${ratio.toFixed(2)}:1, below AA`);
+  }
+});
+
+test("the telegraph and save chips keep their meaning while changing lightness", () => {
+  // A signal must not have to be relearned because a cosmetic changed. Red still means a heavy hit
+  // is coming and gold still means it is worth something — only the lightness moved, onto the dark
+  // palette's values, because the arena is not the page.
+  assert.equal(ARENA_DANGER.ink, SIGNALS_DARK.heat, "the telegraph chip must keep the heat hue family");
+  assert.equal(ARENA_DANGER.bg, SIGNALS_DARK.heatDeep);
+  assert.equal(ARENA_REWARD.ink, SIGNALS_DARK.coin, "the save chip must keep the coin hue family");
+  assert.equal(ARENA_REWARD.bg, SIGNALS_DARK.coinDeep);
+  // And the light-page values really do fail on that plate — which is WHY the dark pair is frozen
+  // here rather than taken from the equipped theme.
+  assert.ok((contrast(SIGNALS_LIGHT.heat, ARENA_DANGER.bg) ?? 0) < 4.5, "light heat on the dark chip should fail");
+  assert.ok((contrast(SIGNALS_LIGHT.coin, ARENA_REWARD.bg) ?? 0) < 4.5, "light coin on the dark chip should fail");
+});
+
+test("the old translucent chips really were unreadable over the arena", () => {
+  // The second negative control, for the chips specifically. FINISH used to be
+  // `bg-heat-deep/70 text-heat` and the save prompt `bg-coin-deep/80 text-coin`: a themed SIGNAL
+  // colour at partial alpha over a sky no theme owns. Measured across every theme x arena pair,
+  // the best case was 4.49:1 and the worst 2.49:1 — so the two most urgent messages in the game
+  // were below AA everywhere and near-illegible in places, while all four of the flat pairs above
+  // passed. If this ever stops failing, the chip assertion above has gone hollow.
+  const worstChip = (ink: string, plate: string, alpha: number): number => {
+    let min = Infinity;
+    for (const m of MAPS) {
+      for (const band of m.sky) {
+        min = Math.min(min, contrast(ink, over(plate, alpha, band)) ?? 0);
+      }
+    }
+    return min;
+  };
+  for (const t of THEMES) {
+    const s = t.signals ?? SIGNALS_LIGHT;
+    assert.ok(
+      worstChip(s.heat, s.heatDeep, 0.7) < 4.5,
+      `${t.id}: the old FINISH chip should fail over the arena; it measured ${worstChip(s.heat, s.heatDeep, 0.7).toFixed(2)}:1`,
+    );
+    assert.ok(
+      worstChip(s.coin, s.coinDeep, 0.8) < 4.5,
+      `${t.id}: the old save chip should fail over the arena; it measured ${worstChip(s.coin, s.coinDeep, 0.8).toFixed(2)}:1`,
+    );
+  }
+});
+
+test("the fullscreen panels stay readable over every arena — and 90% did not", () => {
+  // These panels float over the arena at a partial alpha with `backdrop-blur`, so every text pair
+  // inside them — including "Xs left in round" — is measured on a composite of the theme's surface
+  // over the map's sky. The flat theme-vs-theme check at the top of this file cannot see that.
+  const worstPanel = (alpha: number): { ratio: number; where: string } => {
+    let min = Infinity;
+    let where = "";
+    for (const t of THEMES) {
+      for (const m of MAPS) {
+        for (const band of m.sky) {
+          const r = contrast(t.textMuted, over(t.surface, alpha, band)) ?? 0;
+          if (r < min) {
+            min = r;
+            where = `${t.id}/${m.id}`;
+          }
+        }
+      }
+    }
+    return { ratio: min, where };
+  };
+
+  const now = worstPanel(PANEL_ALPHA);
+  assert.ok(now.ratio >= 4.5, `fullscreen timer text drops to ${now.ratio.toFixed(2)}:1 (${now.where})`);
+
+  // Negative control: the 90% the panels used to use lands at 4.498:1 on Paper over Neon Grid —
+  // under AA, and invisible to every assertion that existed at the time.
+  const before = worstPanel(0xe6 / 255);
+  assert.ok(before.ratio < 4.5, `the old 90% alpha should fail; measured ${before.ratio.toFixed(3)}:1`);
+  assert.ok(PANEL_ALPHA > 0xe6 / 255, "PANEL_ALPHA must be more opaque than the value it replaced");
+});
+
+// ---------------------------------------------------------------- celebration confetti
+
+test("the win's confetti is visible on a PALE arena, not only on a dark one", () => {
+  // A win's confetti is gold plus the winner's light skin tones, and it is drawn with no
+  // background of its own. Measured against the arena behind it, gold on free play's own Training
+  // Ground sky is 1.02:1 — so on the arena MOST players fight in, the only celebration a win had
+  // was drawn in the colour the floor already was.
+  const onDefaultArena = Math.min(...MAPS[0].sky.map((b) => contrast(CELEBRATION_GOLD, b) ?? 0));
+  assert.ok(
+    onDefaultArena < 1.6,
+    `gold on the default arena should be invisible without help; measured ${onDefaultArena.toFixed(2)}:1`,
+  );
+
+  // Rendering now puts a dark rim under every piece, so the readable contrast is whichever of the
+  // piece and the rim sits further from the background — the same max() argument as the countdown
+  // outline. It is never worse than 3.58:1 on ANY background.
+  let worst = Infinity;
+  let worstAt = "";
+  for (let v = 0; v <= 255; v++) {
+    const bg = `#${v.toString(16).padStart(2, "0").repeat(3)}`;
+    const readable = Math.max(contrast(CELEBRATION_GOLD, bg) ?? 0, contrast(ARENA_HUD.outline, bg) ?? 0);
+    if (readable < worst) {
+      worst = readable;
+      worstAt = bg;
+    }
+  }
+  assert.ok(worst >= 3, `rimmed confetti drops to ${worst.toFixed(2)}:1 on ${worstAt}`);
+
+  // And on every arena actually shipped, not just the hypothetical worst case.
+  for (const m of MAPS) {
+    for (const band of m.sky) {
+      const readable = Math.max(contrast(CELEBRATION_GOLD, band) ?? 0, contrast(ARENA_HUD.outline, band) ?? 0);
+      assert.ok(readable >= 3, `${m.id}: rimmed confetti is only ${readable.toFixed(2)}:1 on sky ${band}`);
+    }
+  }
+});
+
+test("a win is loud: the burst is a curtain of mixed sizes, in the winner's colours", () => {
+  const fx = new Fx();
+  fx.emitConfetti(960, [CELEBRATION_GOLD, "#6d28d9", "#ffffff"]);
+  assert.equal(fx.particles.length, 102, "three colours at the default 34 pieces each");
+  assert.ok(
+    fx.particles.every((p) => p.kind === "confetti"),
+    "a win burst must not emit impact or trail particles",
+  );
+  // Mixed sizes are what stop a burst reading as one flat sheet.
+  const sizes = new Set(fx.particles.map((p) => p.size > 8));
+  assert.equal(sizes.size, 2, "the burst must mix large and small pieces");
+
+  // It has to still be on screen when the player looks back up at the arena, which is where the
+  // result card sits below in a non-fullscreen match.
+  const longest = Math.max(...fx.particles.map((p) => p.life));
+  assert.ok(longest >= 2.5, `confetti should linger while the card is read; longest life ${longest.toFixed(2)}s`);
+
+  // Every piece starts ABOVE the stage so it falls INTO view rather than appearing mid-air.
+  assert.ok(fx.particles.every((p) => p.y < 0), "pieces must spawn above the stage");
+});
+
+test("flares name what actually happened", () => {
+  const result = (over: Partial<MatchResult> = {}): MatchResult => ({
+    winner: "left" as Side,
+    humanWon: false,
+    roundsWon: 1,
+    roundsLost: 2,
+    wpm: 48,
+    accuracy: 93.4,
+    bestWpm: 48,
+    bestCombo: 5,
+    coins: 70,
+    streak: 0,
+    ...over,
+  });
+
+  // A dominant win names all of it, loudest first.
+  const big = matchFlares({
+    result: result({
+      humanWon: true,
+      roundsWon: 3,
+      roundsLost: 0,
+      accuracy: 99.1,
+      bestCombo: 14,
+      streak: 5,
+    }),
+    bestWpmEver: 48,
+    firstWinToday: true,
+    isBoss: true,
+  });
+  assert.ok(big.length <= FLARE_RULES.maxFlares, `capped at ${FLARE_RULES.maxFlares}, got ${big.length}`);
+  assert.deepEqual(
+    big.map((f) => f.label),
+    ["CLEAN SWEEP", "FLAWLESS · 99.1%", "ON FIRE · CHAIN 14", "BOSS DOWN"],
+  );
+
+  // An ordinary loss gets nothing at all rather than a consolation prize it did not earn.
+  const quiet = matchFlares({
+    result: result(),
+    bestWpmEver: 61,
+    firstWinToday: false,
+    isBoss: false,
+  });
+  assert.deepEqual(quiet, []);
+
+  // A loss that IS a personal best gets exactly the one true thing about it.
+  const fast = matchFlares({
+    result: result({ wpm: 64, bestWpm: 64 }),
+    bestWpmEver: 64,
+    firstWinToday: false,
+    isBoss: false,
+  });
+  assert.deepEqual(fast, [{ label: "NEW TOP SPEED · 64 WPM", tone: "plain" }]);
+
+  // Win-only flares must never appear on a loss, whatever the numbers.
+  const lostWell = matchFlares({
+    result: result({ accuracy: 99.9, bestCombo: 20, streak: 9, roundsLost: 0 }),
+    bestWpmEver: 99,
+    firstWinToday: true,
+    isBoss: true,
+  });
+  assert.deepEqual(lostWell, [], "a loss must not collect win-only flares");
+
+  // And a zero-WPM match (never typed anything) must not be crowned a personal best.
+  const idle = matchFlares({
+    result: result({ wpm: 0, bestWpm: 0 }),
+    bestWpmEver: 0,
+    firstWinToday: false,
+    isBoss: false,
+  });
+  assert.deepEqual(idle, [], "0 WPM is not a top speed");
+});
+
 
 // ================================================================ report
 

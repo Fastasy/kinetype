@@ -15,6 +15,8 @@ import { botConfigForTier } from "@/game/bot";
 import { freshSeed } from "@/game/rng";
 import { OPPONENT_SKIN_ID, RARITY_LABEL, skinById } from "@/game/skins";
 import { themeById } from "@/game/themes";
+import { ARENA_DANGER, ARENA_HUD, ARENA_OUTLINE_SHADOW, ARENA_REWARD, PANEL_ALPHA_BYTE, RESULT_FLARE, RESULT_PLATE } from "@/game/hud";
+import { matchFlares } from "@/game/flares";
 import { DEFAULT_MAP_ID } from "@/game/maps";
 import { applyOutcome } from "@/game/storage";
 import { saveStore } from "@/game/store";
@@ -444,6 +446,26 @@ const [focused, setFocused] = useState(false);
  const comboColour = me && me.combo >= COMBO_FIRE_CHAIN ? COMBO_FIRE : theme.accent;
  const onFire = !!me && me.combo >= COMBO_FIRE_CHAIN;
 
+ /**
+  * The payout counts up rather than simply appearing.
+  *
+  * Called HERE, above the boss-mode early return and unconditionally, because the result card is
+  * only RENDERED on a win or a loss — a hook inside that JSX branch, or below the `bossBlocked`
+  * return, would change the hook count between renders. `result?.coins ?? 0` is therefore the
+  * target, and the animation restarts on its own the moment a new result lands. The real figure is
+  * always the one in `data-coins` on the result card.
+  */
+ const coinsShown = useCountUp(result?.coins ?? 0);
+ /** What was actually notable about this match. See game/flares.ts. */
+ const flares = result
+   ? matchFlares({
+       result,
+       bestWpmEver: save.bestWpm,
+       firstWinToday: Boolean(banked?.firstWin),
+       isBoss: Boolean(boss),
+     })
+   : [];
+
  // Boss mode without an account: the unlock ladder cannot persist, so gate here
  // rather than pretend the fight means anything.
  if (bossBlocked && boss) {
@@ -474,9 +496,9 @@ const [focused, setFocused] = useState(false);
  }
 
  return (
- <section
-   ref={sectionRef}
-   data-testid="fight-section"
+<section
+  ref={sectionRef}
+  data-testid="fight-section"
    // No per-section theme override any more. The equipped theme is written onto <html> by
    // components/ThemeProvider.tsx, so the fight inherits it like every other page — that is the
    // whole point of a WEBSITE theme. The semantic signals (--color-heat, --color-coin,
@@ -602,7 +624,7 @@ const [focused, setFocused] = useState(false);
      ? "relative z-20 order-3 shrink-0 border-b border-line/80 px-4 py-2 backdrop-blur"
        : "mt-3 shrink-0 rounded-2xl border border-line/80 px-3 py-2"
    }
-   style={{ background: isFullscreen ? translucent(theme.surface, "e6") : theme.surface }}
+   style={{ background: isFullscreen ? translucent(theme.surface, PANEL_ALPHA_BYTE) : theme.surface }}
  >
  <div className="flex items-center justify-between gap-3">
  <div className="flex items-center gap-2">
@@ -791,7 +813,21 @@ const [focused, setFocused] = useState(false);
 
  {stage === "fighting" && snap?.phase === "countdown" && (
  <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
- <span className="font-mono text-6xl font-black text-ink ">
+ {/*
+   THE COUNTDOWN TIMER, drawn in the ARENA's ink rather than the THEME's.
+   It used to be `text-ink`, i.e. whatever ink the equipped cosmetic uses — but the thing behind
+   it is the map's sky, which no theme touches. Measured, that made it invisible in 31 of the 60
+   theme x arena pairs (as bad as 1.00:1: light-green ink on Crystal Vault's pale sky), and free
+   play's own Training Ground hid it on four of the six themes. Ruan: "some of themes clash with
+   the text on screen like the timer."
+   A light fill over a dark eight-direction ring is readable on ANY background, because whichever
+   ring has the greater contrast carries the glyph — see game/hud.ts for the arithmetic.
+ */}
+ <span
+   data-testid="countdown"
+   className="font-mono text-6xl font-black"
+   style={{ color: ARENA_HUD.ink, textShadow: ARENA_OUTLINE_SHADOW }}
+ >
  {Math.ceil(snap.countdown)}
  </span>
  </div>
@@ -799,15 +835,26 @@ const [focused, setFocused] = useState(false);
 
  {stage === "fighting" && snap?.phase === "finish" && (
  <div className="pointer-events-none absolute left-1/2 top-4 -translate-x-1/2">
- <span className="animate-pulse rounded-lg border border-heat/60 bg-heat-deep/70 px-3 py-1 font-mono text-sm font-black tracking-widest text-heat">
+ {/*
+   FINISH keeps the heat hue (a heavy hit is coming) but on its OWN opaque chip. It used to be
+   `bg-heat-deep/70 text-heat`: a semi-transparent themed surface over an arena the theme does not
+   own, which measured 2.49-2.63:1 on every theme — the exact trap the theme suite cannot see,
+   because a themed pair measured against a themed pair always looks fine.
+ */}
+ <span
+ className="animate-pulse px-3 py-1 font-mono text-sm font-black tracking-widest"
+ style={{ background: ARENA_DANGER.bg, color: ARENA_DANGER.ink }}
+ >
  FINISH
  </span>
  </div>
  )}
 
  {stage === "fighting" && me?.recovering && (
- <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-xl border border-coin/70 bg-coin-deep/80 px-4 py-2 text-center">
- <div className="font-mono text-sm font-bold text-coin">TYPE THE SAVE WORD</div>
+ <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 px-4 py-2 text-center"
+   style={{ background: ARENA_REWARD.bg }}
+ >
+ <div className="font-mono text-sm font-bold" style={{ color: ARENA_REWARD.ink }}>TYPE THE SAVE WORD</div>
  </div>
  )}
  </div>
@@ -824,7 +871,7 @@ const [focused, setFocused] = useState(false);
        "relative z-20 order-4 mt-auto shrink-0 border-t border-brand-deep/40 px-4 py-2 backdrop-blur"
      : "mt-3 shrink-0 rounded-2xl border border-brand-deep/40 px-3 py-3"
  }
- style={{ background: isFullscreen ? translucent(theme.surface, "e6") : theme.surface }}
+ style={{ background: isFullscreen ? translucent(theme.surface, PANEL_ALPHA_BYTE) : theme.surface }}
  >
  <div className="flex flex-wrap items-center justify-between gap-3">
  <div className="flex items-center gap-3">
@@ -967,29 +1014,91 @@ const [focused, setFocused] = useState(false);
        "relative z-20 order-4 mt-auto shrink-0 border-t border-line px-5 py-3 backdrop-blur"
      : "mt-3 rounded-2xl border border-line bg-card/50 px-5 py-4"
  }
- style={isFullscreen ? { background: translucent(theme.surface, "e6") } : undefined}
+ style={isFullscreen ? { background: translucent(theme.surface, PANEL_ALPHA_BYTE) } : undefined}
 >
- <div className="flex flex-wrap items-baseline gap-3">
- <span
- className={`font-mono text-xl font-black ${
- result.humanWon ? "text-brand-bright" : "text-heat"
- }`}
+ {/*
+   THE OUTCOME BANNER.
+
+   This was the smallest text on the screen — a `text-xl` "WIN" on a themed card — at the loudest
+   moment of the game, and it was the only payoff for a match that can run three rounds. It is now
+   on its OWN opaque plate with the numbers that earned it, and it is deliberately NOT themed: a
+   win is the game's own signal, and it has to read identically for a player who has just spent
+   their coins on a cosmetic. See game/hud.ts.
+
+   The `data-*` attributes are the honest surface: `data-coins` and `data-wpm` on the card are
+   unchanged, so every existing probe and the streak/banking suites keep reading the real figures
+   while the displayed coin total counts up.
+ */}
+ <div
+   data-testid="outcome-banner"
+   data-outcome={result.humanWon ? "win" : "loss"}
+   data-flares={flares.map((f) => f.label).join("|")}
+   className={`kt-banner relative overflow-hidden px-4 ${isFullscreen ? "py-2" : "py-3"}`}
+   style={{ background: RESULT_PLATE.bg }}
  >
- {result.humanWon ? "WIN" : "LOSS"}
+ <div className="relative z-10 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+ <span
+ className={`font-pixel tracking-wide ${isFullscreen ? "text-lg" : "text-2xl sm:text-3xl"}`}
+ style={{ color: result.humanWon ? RESULT_PLATE.win : RESULT_PLATE.loss }}
+ >
+ {result.humanWon ? "VICTORY" : "DEFEAT"}
  </span>
- <span className="font-mono text-sm text-ink-faint">
- rounds {result.roundsWon}-{result.roundsLost}
+ <span className="font-mono text-xs" style={{ color: RESULT_PLATE.inkMuted }}>
+ rounds {result.roundsWon}-{result.roundsLost} · best of {boss?.bestOf ?? 3}
  </span>
  </div>
+
+ {flares.length > 0 && (
+ <div className="relative z-10 mt-2 flex flex-wrap gap-1.5">
+ {flares.map((f, i) => (
+ <span
+ key={f.label}
+ data-testid="flare"
+ data-label={f.label}
+ data-tone={f.tone}
+ className="kt-pop px-2 py-0.5 font-mono text-[10px] font-bold tracking-wider"
+ style={{
+   background: RESULT_FLARE.bg,
+   color: f.tone === "achievement" ? RESULT_FLARE.achievement : RESULT_FLARE.plain,
+   // Staggered so the flares land one after another instead of all at once.
+   animationDelay: `${140 + i * 90}ms`,
+ }}
+ >
+ {f.label}
+ </span>
+ ))}
+ </div>
+ )}
+
+ {/*
+   Purely decorative: one highlight dragged across the plate, z-0 beneath the z-10 text so it can
+   never wash out a number. A loss gets no sweep — the sweep is the celebration, and a loss has
+   its own signal (the heat-red DEFEAT).
+ */}
+ {result.humanWon && (
+ <span
+ aria-hidden="true"
+ className="kt-shine pointer-events-none absolute inset-y-0 left-0 z-0 w-1/4"
+ style={{
+   background: `linear-gradient(90deg, transparent, ${RESULT_PLATE.win}40, transparent)`,
+ }}
+ />
+ )}
+ </div>
+
  <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
  {[
- { k: "Coins", v: `+${result.coins}` },
+ { k: "Coins", v: `+${coinsShown}` },
  { k: "WPM", v: `${result.wpm}` },
  { k: "Accuracy", v: `${result.accuracy.toFixed(1)}%` },
  { k: "Best chain", v: `${result.bestCombo}` },
  { k: streakLabel(result.streak), v: `${save.bestWpm}` },
- ].map((s) => (
- <div key={s.k} className="rounded-xl border border-line bg-page/60 px-3 py-2">
+ ].map((s, i) => (
+ <div
+ key={s.k}
+ className="kt-rise rounded-xl border border-line bg-page/60 px-3 py-2"
+ style={{ animationDelay: `${180 + i * 60}ms` }}
+ >
  <div className="text-[10px] uppercase tracking-wider text-ink-faint">{s.k}</div>
  <div className="font-mono text-lg font-bold text-ink">{s.v}</div>
  </div>
@@ -1080,6 +1189,40 @@ const [focused, setFocused] = useState(false);
 
 function streakLabel(streak: number): string {
   return streak > 0 ? `Streak ${streak}` : "Best WPM";
+}
+
+/**
+ * Count a number up to its real value, so a payout lands as an event rather than a label.
+ *
+ * Two deliberate properties:
+ *
+ *   * The animation cannot invent a number. It interpolates toward the value it was given and
+ *     ends exactly on it; the authoritative figure also sits in `data-coins` on the result card,
+ *     which is what every probe and the leaderboard read.
+ *   * Every setState happens inside a requestAnimationFrame callback, never in the effect body,
+ *     which is what React 19's set-state-in-effect rule requires. The reduced-motion path sets
+ *     the target in one frame from inside a callback for the same reason — and because a player
+ *     who asked for less motion should get the number immediately, not a fast count.
+ */
+function useCountUp(target: number, ms = 700): number {
+  const [progress, setProgress] = useState(0);
+  useEffect(() => {
+    let raf = 0;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      raf = window.requestAnimationFrame(() => setProgress(1));
+      return () => window.cancelAnimationFrame(raf);
+    }
+    const start = performance.now();
+    const tick = (ts: number) => {
+      const t = Math.min(1, (ts - start) / ms);
+      // Ease-out: the last few coins land slowly enough to read.
+      setProgress(1 - Math.pow(1 - t, 3));
+      if (t < 1) raf = window.requestAnimationFrame(tick);
+    };
+    raf = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(raf);
+  }, [target, ms]);
+  return Math.round(target * progress);
 }
 
 /**

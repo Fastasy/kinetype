@@ -233,8 +233,20 @@ check("player panel appears after starting", true);
 // The focus guard exists because a keydown listener on `window` does not fire
 // unless the game's document has focus. This was a real bug: the game shipped
 // looking completely unresponsive when embedded, because typing did nothing.
+//
+// The guard is gated on WINDOW focus, and that is the contract — so asserting it is PRESENT is
+// asserting a constant that depends on the OS, not on the code. It read 0 against a correct build,
+// because a page Playwright has just opened normally holds focus, and in that state the RIGHT
+// answer is no hint at all. Assert the relationship instead: the guard must be on screen exactly
+// when the document does not have focus. scripts/probe-focus-hint.mjs drives all four focus
+// transitions directly, including "still hidden after clicking a control inside the page".
 const hintBefore = await page.locator('[data-testid="focus-hint"]').count();
-check("a focus prompt shows before any input arrives", hintBefore > 0, `${hintBefore} present`);
+const windowFocused = await page.evaluate(() => document.hasFocus());
+check(
+  "the focus prompt matches WINDOW focus, whatever it happens to be",
+  hintBefore > 0 === !windowFocused,
+  `hint ${hintBefore > 0 ? "shown" : "hidden"}, document.hasFocus() = ${windowFocused}`,
+);
 // Do what a player does: click the arena once so it can read the keyboard.
 const hint = page.locator('[data-testid="focus-hint"]');
 if (await hint.count()) await hint.first().click();
@@ -628,15 +640,77 @@ if (unlockCount > 0) {
 // again. This is the only check that proves the whole theme path is wired end to end.
 console.log("\n--- Themes ---");
 
-const readFightVar = async (name) => {
-  await page.goto(`${BASE}/play`, { waitUntil: "domcontentloaded" });
-  return page
-    .locator('[data-testid="fight-section"]')
-    .evaluate((el, n) => el.style.getPropertyValue(n).trim(), name);
+/**
+ * Read the equipped theme OFF `<html>`, which is where it actually lands.
+ *
+ * This used to read `el.style` (the INLINE variable) on the fight `<section>` — the older
+ * per-section model. `30c9e06` moved a theme onto `<html>` via components/ThemeProvider.tsx so it
+ * repaints the whole site, the section override was removed, and this read `""` ever after. That
+ * made two checks fail permanently against a product that was working exactly as designed — and a
+ * suite that cries wolf is worse than no suite, because the next real failure is one more red line
+ * to skim past.
+ *
+ * NO navigation either. ThemeProvider writes the tokens in an EFFECT after hydration, so a read
+ * taken on `domcontentloaded` of a fresh navigation lands BEFORE the effect has run and returns the
+ * stylesheet default. For Paper that default is the expected answer, so the mistake is invisible on
+ * the "before" read and only shows up as a wrong "after" one.
+ */
+const readThemeVar = async (name) => {
+  const onHtml = await page.evaluate(
+    (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim().toLowerCase(),
+    name,
+  );
+  const section = page.locator('[data-testid="fight-section"]');
+  const onSection = (await section.count())
+    ? await section.evaluate((el, n) => el.style.getPropertyValue(n).trim().toLowerCase(), name)
+    : "";
+  return { onHtml, onSection };
 };
 
-const themeBefore = await readFightVar("--color-page");
-check("the default theme is applied to the fight", themeBefore === "#f2ede3", themeBefore);
+/**
+ * Poll until ThemeProvider's effect has actually written the theme, then return.
+ *
+ * `--color-line-strong` is the hydration signal, deliberately: app/globals.css ships `#b3a68b` and
+ * `themeCssVars` rewrites it to the theme's `promptBorder` (`#c9c3b4` for Paper, `#4a5488` for
+ * Midnight). So it is a token whose BASE value can never be mistaken for an applied one — the same
+ * read on `--color-page` looks correct by accident, because Paper's value IS the stylesheet default.
+ */
+const waitForThemeApplied = async (expected) => {
+  for (let i = 0; i < 50; i++) {
+    const v = await page.evaluate(() =>
+      getComputedStyle(document.documentElement).getPropertyValue("--color-line-strong").trim().toLowerCase(),
+    );
+    if (v === expected) return v;
+    await page.waitForTimeout(100);
+  }
+  return null;
+};
+
+await page.goto(`${BASE}/play`, { waitUntil: "networkidle" });
+const paperApplied = await waitForThemeApplied("#c9c3b4");
+check(
+  "ThemeProvider writes the stored theme onto <html> after hydration",
+  paperApplied === "#c9c3b4",
+  `--color-line-strong ${paperApplied ?? "never became the theme's value"}`,
+);
+
+/**
+ * Read `--color-page` after a LIVE theme change, polling for that theme's own token first.
+ * Midnight's `--color-line-strong` is `#4a5488`; waiting for it is what proves the store update
+ * reached ThemeProvider and its effect re-ran, rather than the read racing it.
+ */
+const readThemeVarAfterEquip = async () => {
+  await waitForThemeApplied("#4a5488");
+  return readThemeVar("--color-page");
+};
+
+const themeBefore = await readThemeVar("--color-page");
+check("the default theme is applied to <html>", themeBefore.onHtml === "#f2ede3", themeBefore.onHtml);
+check(
+  "the fight does not override the theme per-section any more",
+  themeBefore.onSection === "",
+  `fight section inline --color-page reads "${themeBefore.onSection}"`,
+);
 
 await page.goto(`${BASE}/shop`, { waitUntil: "networkidle" });
 await page.evaluate(() => {
@@ -654,11 +728,11 @@ check("a paid theme offers an Unlock button", (await buyMidnight.count()) > 0);
 if (await buyMidnight.count()) {
   await buyMidnight.click();
   await page.waitForTimeout(400);
-  const themeAfter = await readFightVar("--color-page");
+  const themeAfter = await readThemeVarAfterEquip();
   check(
-    "buying a theme equips it and repaints the fight",
-    themeAfter === "#0f1226",
-    `--color-page ${themeBefore} -> ${themeAfter}`,
+    "buying a theme equips it and repaints the SITE live",
+    themeAfter.onHtml === "#0f1226",
+    `--color-page on <html> ${themeBefore.onHtml} -> ${themeAfter.onHtml}`,
   );
   await page.goto(`${BASE}/play`, { waitUntil: "networkidle" });
   await page.waitForTimeout(600);

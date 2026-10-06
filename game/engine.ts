@@ -234,6 +234,10 @@ export class GameEngine {
     }
     if (this.match.result && !this.ended) {
       this.ended = true;
+      // The end-of-match flourish plays from the engine, next to the `onEnd` handoff, so the sound
+      // and the result card are triggered by the same event rather than by a component that might
+      // be re-rendering at the time.
+      this.audio.fanfare(this.match.result.humanWon);
       this.cb.onEnd?.(this.match.result);
     }
   };

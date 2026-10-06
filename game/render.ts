@@ -21,6 +21,7 @@ import {
 import { BLOCK_HOLD, HURTBOX, STAGE } from "./constants";
 import { damageColour } from "./knockback";
 import { themeById } from "./themes";
+import { ARENA_HUD } from "./hud";
 import { mapById, type ArenaMap } from "./maps";
 import type { Fighter, Side } from "./types";
 import type { Match } from "./match";
@@ -370,9 +371,28 @@ export function drawScene(
   // Impact particles, square by design.
   ctx.save();
   for (const p of fx.particles) {
-    ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+    const fade = Math.max(0, p.life / p.maxLife);
+    // ------------------------------------------------------------------ confetti
+    // CONFETTI IS KEPT SOLID AND FULL SIZE. It used to share the impact particles' decay — both
+    // shrinking toward 2px and fading to nothing — so by the time the player had read the result
+    // card the celebration had dissolved. Worse, the pieces are gold and the winner's light skin
+    // tones, and measured against the arena behind them they were nearly invisible on six of the
+    // ten arenas INCLUDING free play's own: gold on the Training Ground's sky is 1.02:1. The whole
+    // reward for winning was being drawn in a colour the floor already was.
+    //
+    // The fix is the same one the countdown uses, and for the same reason: give it a ring that
+    // contrasts with whatever is behind it. A dark rim under a light piece is never worse than
+    // 3.58:1 on ANY background, because whichever of the two is further from the background is the
+    // one the eye picks up. Impact and trail sparks keep their decay — there the fade IS the effect.
+    const celebration = p.kind === "confetti";
+    const s = celebration ? Math.max(3, Math.round(p.size)) : Math.max(2, Math.round(p.size * fade));
+    ctx.globalAlpha = celebration ? 0.5 + 0.5 * fade : fade;
+    if (celebration) {
+      const r = 2;
+      ctx.fillStyle = ARENA_HUD.outline;
+      ctx.fillRect(Math.round(p.x) - r, Math.round(p.y) - r, s + r * 2, s + r * 2);
+    }
     ctx.fillStyle = p.colour;
-    const s = Math.max(2, Math.round(p.size * (p.life / p.maxLife)));
     ctx.fillRect(Math.round(p.x), Math.round(p.y), s, s);
   }
   ctx.globalAlpha = 1;

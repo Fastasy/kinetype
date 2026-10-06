@@ -111,20 +111,36 @@ export class Fx {
     }
   }
 
-  emitConfetti(width: number, colour: string): void {
-    for (let i = 0; i < 60; i++) {
-      this.push({
-        x: Math.random() * width,
-        y: -10 - Math.random() * 40,
-        vx: (Math.random() - 0.5) * 120,
-        vy: 90 + Math.random() * 200,
-        life: 1.4 + Math.random() * 1.1,
-        maxLife: 2.5,
-        size: 3 + Math.random() * 5,
-        colour: i % 3 === 0 ? colour : i % 3 === 1 ? "#facc15" : "#e4e4e7",
-        kind: "confetti",
-        spin: (Math.random() - 0.5) * 14,
-      });
+  /**
+   * The confetti a decided match gets.
+   *
+   * This used to be 60 small squares in three hardcoded colours, which read as drizzle rather
+   * than as a celebration — and a win had no other reward feedback in the arena at all. Three
+   * changes make it land:
+   *
+   *   * `colours` is a list, so a win looks like the FIGHTER that won (the winner's skin trim,
+   *     plus gold, which is already the game's "this is worth something" colour).
+   *   * The pieces start up to 140px ABOVE the stage and at mixed speeds, so they arrive as a
+   *     curtain with depth rather than one flat sheet crossing the screen together.
+   *   * Every fourth piece is large and slow. Mixing sizes is what stops a burst reading as noise.
+   */
+  emitConfetti(width: number, colours: readonly string[], perColour = 34): void {
+    for (const colour of colours.length ? colours : ["#facc15"]) {
+      for (let i = 0; i < perColour; i++) {
+        const big = i % 4 === 0;
+        this.push({
+          x: Math.random() * width,
+          y: -10 - Math.random() * 140,
+          vx: (Math.random() - 0.5) * 150,
+          vy: 70 + Math.random() * 210,
+          life: 1.5 + Math.random() * 1.2,
+          maxLife: 2.7,
+          size: big ? 9 + Math.random() * 5 : 3 + Math.random() * 3,
+          colour,
+          kind: "confetti",
+          spin: (Math.random() - 0.5) * 16,
+        });
+      }
     }
   }
 

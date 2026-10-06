@@ -184,14 +184,15 @@ Essential list, all procedural (no image or audio assets, so the build stays far
 
 | # | Element | Spec |
 |---|---|---|
-| 1 | **Key audio** | WebAudio oscillators. Distinct samples for correct char, wrong char, block, punch, kick, hit, parry, KO. Correct/wrong must be both audible **and** visible: the sentence renders large with per-character highlighting, because typists are looking at the keyboard. A guarded hit plays the block thud *as well as* the hit, because "it landed" and "it was smothered" are different information. |
+| 1 | **Key audio** | WebAudio oscillators. Distinct samples for correct char, wrong char, block, punch, kick, hit, parry, KO. Correct/wrong must be both audible **and** visible: the sentence renders large with per-character highlighting, because typists are looking at the keyboard. A guarded hit plays the block thud *as well as* the hit, because "it landed" and "it was smothered" are different information. **A decided match gets its own flourish** — a rising C-E-G-C arpeggio for a win with the last note doubled into a chord, a falling three-note figure for a loss — because ending a win and a loss on the same neutral KO thud is the flattest possible reading of the game's biggest moment. |
 | 2 | **Hitstop** | 2-6 frames on commit, scaled by damage, hard-capped at 6. Both fighters freeze for the identical duration. Hurtboxes stay **static** while the sprite vibrates, or attacks that should connect start missing. |
 | 3 | **Screenshake** | Decaying. Small on light hits, large on KO, minimal on a block. |
 | 4 | **Damage gradient** | Section 4 table. |
 | 5 | **Kill spark + Finish Zoom** | Distance to blast line, not move power. One slow-motion zoom per match. |
-| 6 | **Particles** | One impact puff per hit, a guard burst on a block, a trail behind a launched fighter, confetti on match win. Hand-rolled, capped pool. No particle engine. |
+| 6 | **Particles** | One impact puff per hit, a guard burst on a block, a trail behind a launched fighter, confetti on match win. Hand-rolled, capped pool. No particle engine. Confetti is its own case: a curtain of ~100 mixed-size pieces in the winner's skin trim plus gold, spawned up to 140px above the stage so it falls INTO view. It is held at full size with a floor on its opacity and given a **dark rim per piece**, because a light piece on a pale arena is invisible — gold on the Training Ground measured 1.02:1. Impact and trail sparks keep their decay; there the fade *is* the effect. |
 | 7 | **Squash** | Pushed fighter tweens scale and rotation, recovering over ~0.18s. |
 | 8 | **Guard frame** | A raised block draws a filled teal slab with a bright lip that fades as the guard runs out, deliberately not the parry's corner brackets, so "I am blocking" and "I have a read" cannot be confused. |
+| 9 | **Result banner** | The outcome must be the loudest thing on screen. A fixed dark plate (NOT a themed surface, so it reads identically after a cosmetic purchase) carrying a pixel-font VICTORY/DEFEAT, the round score, and up to four **achievement flares** naming what was actually notable: clean sweep, flawless, on fire, boss down, first win today, N in a row, new top speed. Thresholds live in `game/flares.ts` so they are testable and cannot drift. The flare logic is deliberately available on a loss for the top-speed case only — "you lost and you have never typed faster" is the true and useful sentence. The coin payout counts up rather than appearing, with the authoritative figure in `data-coins` so no probe or leaderboard ever reads an animation frame. |
 
 **Over-juice guard.** Hitstop is capped, shake is capped, and particles use a fixed-size pool. Abundant feedback past the point the player notices it becomes noise.
 
@@ -234,17 +235,24 @@ Shop surfaces:
 
 ### Themes
 
-A theme repaints the **whole fight**, not one panel. The earlier design shipped "HUD overlays" that recoloured only the prompt card, which is not a theme and was replaced at Ruan's request.
+A theme repaints the **whole site**, not one panel and not one page. It is applied to `<html>` by `components/ThemeProvider.tsx`, so an equipped theme recolours the marketing pages, the leaderboard, the shop, the profile and the fight screen inside all of them.
 
-A theme carries the arena sky bands, the hills, the grass and dirt of the stage, the blast-line colour, the prompt card, the panels and everything the fight sits on. Six ship: Paper (free), Midnight, Sunset, Frost, Neon Grid, Volcano.
+**A theme is no longer the arena.** The design originally had a `Theme` carry both the website chrome and the arena palette (sky, hills, ground, blast line). That conflated two ideas and made the shop effectively sell arenas: every boss fought in the same recoloured field, and "buying a theme" bought a different-looking field rather than a different-looking site. The arena is now `game/maps.ts`, owned by the boss — each boss fights in its own place, free play uses the Training Ground, and nothing about it is unlockable. Six themes ship: Paper (free), Midnight, Sunset, Frost, Neon Grid, Volcano.
 
-Two implementation notes matter more than the list:
-
-**Theming is CSS variables, not a prop drill.** Tailwind v4 emits each colour token as a real custom property, so `FightClient` redefines `--color-page`, `--color-ink`, `--color-brand` and friends on the fight `<section>`. Every `bg-page`, `text-ink` and `border-line` inside follows automatically, and a new theme adds no class names. This requires `@theme` and NOT `@theme inline` in `globals.css`: the inline form bakes each value into the generated utility and makes a scoped override impossible.
+**Theming is CSS variables, not a prop drill.** Tailwind v4 emits each colour token as a real custom property, so redefining `--color-page`, `--color-ink`, `--color-brand` and friends on `<html>` restyles everything inside with **zero** class-name changes. This requires `@theme` and NOT `@theme inline` in `globals.css`: the inline form bakes each value into the generated utility and makes a scoped override impossible.
 
 **Signals are not themed.** The damage ramp, the red lethal telegraph, the teal block and parry states, and the per-word move underlines keep their colours in every theme. They tell the player what is happening, and relearning them because the arena changed colour would be a defect. The move chips are drawn as filled blocks with their own background for exactly this reason, so a fixed colour stays readable on a dark theme as well as a light one.
 
-**Every theme is contrast-checked.** The test suite asserts WCAG AA (4.5:1) for text on surface, muted text on both surface and prompt background, accent on prompt background, and onAccent on accent. A theme that looks good and cannot be read is a broken product, so this is arithmetic in `game/themes.ts` rather than an eyeball judgement.
+**Nothing drawn on the ARENA may use a theme token.** This is the rule that was broken, and it cost the round countdown its legibility in **31 of the 60 theme × arena pairs** — 29 of them at roughly 1.1:1, i.e. not low contrast but invisible. Free play's own Training Ground hid it on four of the six themes. The same blind spot had the FINISH flag at 2.49:1, the save prompt at 4.09:1, the fullscreen round timer at 4.498:1, and — worst of all — made a win's confetti **1.02:1 on the default arena**, so the only celebration a win had was drawn in the colour the floor already was.
+
+The cause was structural, not careless: the theme suite compares theme tokens against OTHER theme tokens, and all of those pairs passed while the screen was unreadable. So `game/hud.ts` now holds a fixed palette for anything whose backdrop the theme does not decide, and two techniques cover the whole class:
+
+  * **An opaque plate** for anything small — the FINISH flag, the save prompt, the result banner, the achievement flares. Contrast becomes a constant (white on `#0b0b12` is 19.6:1) whatever is behind it.
+  * **A light fill over a dark ring** for text too large to sit on a plate (the 60px countdown) and for every confetti piece. The readable contrast is `max(fill, ring)` rather than the fill's own ratio, which is **never below 4.44:1 on any background**, and 3.58:1 for the gold confetti. Because contrast depends only on relative luminance, a sweep of greys proves it for every possible colour, not just the ten arenas shipped.
+
+Signals keep their hue families on the arena — red still means a heavy hit is coming, gold still means it is worth something — but they take the DARK palette's values against their own dark chip, because the arena is not the page. The light-page values score 2.4:1 and 2.2:1 there, so hue alone was never going to be enough: this is arithmetic, not taste.
+
+**Every theme is contrast-checked, including against the arena.** The test suite asserts WCAG AA (4.5:1) for text on surface, muted text on both surface and prompt background, accent on prompt background, and onAccent on accent — and separately asserts that each arena overlay clears AA against its own plate, that the outlined text and the rimmed confetti clear their bars on EVERY possible background, and that the fullscreen panels clear AA when composited over every arena at the shipped alpha. Each of those carries a **negative control** asserting the old value fails, so the check cannot quietly go hollow. A theme that looks good and cannot be read is a broken product.
 
 **Currency.** Coins, earned only. Payout per match = base by rounds won + WPM bonus + accuracy bonus + streak bonus.
 

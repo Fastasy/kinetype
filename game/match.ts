@@ -40,6 +40,7 @@ import {
   STRICT_STAGGER,
 } from "./constants";
 import { Fx } from "./fx";
+import { CELEBRATION_GOLD } from "./hud";
 import { comboIntensity, comboMultiplier } from "./combo";
 import { MOVE, launchFrom } from "./knockback";
 import { BotController, botConfigForTier } from "./bot";
@@ -830,7 +831,9 @@ export class Match {
       streak,
     };
     if (humanWon) {
-      this.fx.emitConfetti(STAGE.width, this.skins[this.humanSide].palette.t);
+      // Gold first, because gold is the game's "worth something" and a win is the payoff, then the
+      // winner's own skin trim so the celebration looks like the fighter that delivered it.
+      this.fx.emitConfetti(STAGE.width, [CELEBRATION_GOLD, this.skins[this.humanSide].palette.t, "#ffffff"]);
     }
     this.publish({ type: "matchEnd", winner });
   }

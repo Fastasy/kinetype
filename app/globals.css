@@ -101,6 +101,82 @@ svg[shape-rendering="crispEdges"] {
   image-rendering: pixelated;
 }
 
+/* ------------------------------------------------------------------ the win
+ *
+ * Entrance animations for the result banner. TWO RULES, both of which matter:
+ *
+ *  1. Every keyframe ENDS on the resting state (opacity 1, no transform). The reduced-motion
+ *     block at the bottom of this file collapses the duration to 0.001ms, which then lands on the
+ *     final frame — so an animation can never leave a number invisible for a player who asked for
+ *     less motion. An animation that fades IN from 0 is safe here; one that faded OUT would not be.
+ *  2. Nothing animates a VALUE. The numbers count up in React (see useCountUp), because a CSS
+ *     animation cannot know what the real number is; the CSS only moves the box.
+ */
+
+/* The banner slams in: overshoot, then settle. */
+@keyframes kt-banner-in {
+  from {
+    opacity: 0;
+    transform: translateY(-14px) scale(0.94);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(2px) scale(1.015);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Achievement flares pop in one after another. */
+@keyframes kt-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* The stat cells rise into place. */
+@keyframes kt-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* A slow highlight dragged across the banner, once. Purely decorative, and it ends transparent. */
+@keyframes kt-shine {
+  from {
+    transform: translateX(-120%) skewX(-18deg);
+  }
+  to {
+    transform: translateX(320%) skewX(-18deg);
+  }
+}
+
+.kt-banner {
+  animation: kt-banner-in 380ms cubic-bezier(0.22, 1.2, 0.4, 1) both;
+}
+.kt-pop {
+  animation: kt-pop-in 260ms cubic-bezier(0.22, 1.2, 0.4, 1) both;
+}
+.kt-rise {
+  animation: kt-rise-in 320ms ease-out both;
+}
+.kt-shine {
+  animation: kt-shine 900ms 420ms ease-in-out 1 both;
+}
+
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

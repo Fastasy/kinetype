@@ -84,6 +84,74 @@ export class AudioBus {
     if (r.overtone) note(r.freq * r.overtone, 0.45);
   }
 
+  /**
+   * The end-of-match flourish — the one moment the game should be loud about.
+   *
+   * Every voice above is a single blip, so a decided match used to end on the same dull `ko` thud
+   * whether the player had won or been knocked off the edge. A four-note rising figure for a win
+   * and a three-note falling one for a loss cost nothing in assets, because this bus is entirely
+   * procedural, and they are the difference between "the round stopped" and "you won".
+   *
+   * The win's last note is doubled into a chord so it lands and rings rather than just stopping.
+   */
+  fanfare(won: boolean): void {
+    if (this.muted) return;
+    const ctx = this.ctx;
+    const master = this.master;
+    if (!ctx || !master || ctx.state !== "running") return;
+    const base = ctx.currentTime + 0.02;
+    const at = (offset: number) => base + offset;
+
+    if (won) {
+      // C5 · E5 · G5 · C6 — a major arpeggio, i.e. the sound of winning.
+      const notes: [number, number][] = [
+        [523.25, 0],
+        [659.25, 0.09],
+        [783.99, 0.18],
+        [1046.5, 0.28],
+      ];
+      for (const [freq, offset] of notes) {
+        this.blip(ctx, master, "triangle", freq, 0.24, 0.075, at(offset));
+      }
+      this.blip(ctx, master, "square", 523.25, 0.6, 0.045, at(0.28));
+      this.blip(ctx, master, "square", 783.99, 0.6, 0.035, at(0.28));
+      return;
+    }
+
+    const falling: [number, number][] = [
+      [311.13, 0],
+      [233.08, 0.14],
+      [174.61, 0.3],
+    ];
+    for (const [freq, offset] of falling) {
+      this.blip(ctx, master, "triangle", freq, 0.3, 0.065, at(offset));
+    }
+  }
+
+  /** One scheduled tone. Separated out so a flourish can place notes on its own timeline. */
+  private blip(
+    ctx: AudioContext,
+    master: GainNode,
+    type: OscillatorType,
+    freq: number,
+    duration: number,
+    gain: number,
+    startAt: number,
+  ): void {
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, startAt);
+    g.gain.setValueAtTime(0.0001, startAt);
+    // A short attack rather than a click, and an exponential tail so notes do not cut off.
+    g.gain.exponentialRampToValueAtTime(gain, startAt + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+    osc.connect(g);
+    g.connect(master);
+    osc.start(startAt);
+    osc.stop(startAt + duration + 0.02);
+  }
+
   dispose(): void {
     if (this.ctx) void this.ctx.close();
     this.ctx = null;
