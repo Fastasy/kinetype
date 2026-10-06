@@ -18,9 +18,9 @@ SRC = os.path.join(ROOT, "game/sentences.ts")
 src = open(SRC).read()
 
 BLOCK_MAX_CHARS, KICK_MIN_CHARS = 3, 8
-BAND_MAX = {"short": 28, "medium": 44}
-MIN_CHARS, MAX_CHARS = 16, 62
-MIN_WORDS, MAX_WORDS = 4, 11
+BAND_MAX = {"short": 30, "medium": 54}
+MIN_CHARS, MAX_CHARS = 16, 88
+MIN_WORDS, MAX_WORDS = 4, 16
 MAX_WORD = 12
 
 

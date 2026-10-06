@@ -356,15 +356,43 @@ export class TypingRun {
     return this.clock;
   }
 
-  /** Rolling-window WPM over committed correct characters. */
+  /**
+   * The live meter: correct characters within the last WPM_WINDOW seconds, expressed per minute.
+   *
+   * Two things make this the honest reading, and both were wrong before:
+   *
+   *   1. THE DIVISOR IS THE WINDOW, NOT THE GAP BETWEEN THE OLDEST AND NEWEST KEYSTROKE IN IT.
+   *      Those two are only the same while the player types continuously. Any pause let the span
+   *      collapse to whatever survived it, so the meter reported the speed of the surviving burst
+   *      rather than the speed of the window, and it swung hard after every hiccup. A pause now
+   *      drags the number down and a burst lifts it, over a fixed window, which is the reading a
+   *      player expects from a speedometer.
+   *   2. Time comes from tick() alone. A hard-coded per-keystroke cost used to advance the window's
+   *      clock ahead of the wall clock, and it under-read a fast typist worst of all.
+   */
   wpm(): number {
-    if (this.recent.length < 2) return 0;
-    const span = this.recent[this.recent.length - 1].t - this.recent[0].t;
-    // A sub-second span is the first two or three keystrokes of a sentence, not a speed.
-    // Dividing by it produced a number that swung wildly at the start of every round.
+    // Early in a round there is no full window yet, so the elapsed typing time IS the window.
+    const span = Math.min(this.clock, WPM_WINDOW);
     if (span < WPM_MIN_SPAN) return 0;
-    const correctChars = this.recent.filter((r) => r.correct).length;
+    let correctChars = 0;
+    for (const r of this.recent) if (r.correct) correctChars++;
     return Math.round((correctChars / 5) * (60 / span));
+  }
+
+  /**
+   * The match's honest speed: every correct character typed, over the whole typing clock.
+   *
+   * This is the number the result screen, the saved personal best and the payout use. It is the
+   * same definition the free test on /typing-speed-test uses, so the two agree, and it cannot be
+   * inflated by one lucky burst the way a peak can. A peak is a fine thing to celebrate and a bad
+   * thing to pay out on.
+   *
+   * The clock it divides by is typing time only: the countdown, hitstop and a round-over freeze do
+   * not advance it, so time the player could not act is not held against them.
+   */
+  averageWpm(): number {
+    if (this.clock < WPM_MIN_SPAN) return 0;
+    return Math.round((this.correct / 5) * (60 / this.clock));
   }
 
   accuracy(): number {

@@ -219,14 +219,14 @@ test("every sentence is lowercase a-z words separated by single spaces", () => {
   }
 });
 
-test("every sentence is 4 to 11 words, 16 to 62 characters", () => {
+test("every sentence is 4 to 16 words, 16 to 88 characters", () => {
   for (const s of SENTENCES) {
     const words = s.split(" ");
     assert.ok(
-      words.length >= 4 && words.length <= 11,
+      words.length >= 4 && words.length <= 16,
       `${words.length} words in: ${s}`,
     );
-    assert.ok(s.length >= 16 && s.length <= 62, `${s.length} characters in: ${s}`);
+    assert.ok(s.length >= 16 && s.length <= 88, `${s.length} characters in: ${s}`);
   }
 });
 
@@ -1083,6 +1083,69 @@ test("a steady typist's meter matches the speed they actually typed", () => {
     error < 0.12,
     `meter reported ${reported} WPM for a true ${trueWpm.toFixed(1)} WPM (${(error * 100).toFixed(1)}% off)`,
   );
+});
+
+test("a pause pulls the meter DOWN instead of re-basing it on the next burst", () => {
+  // Driven at the TypingRun level, not through a live match: a match can end its round mid-test,
+  // which freezes the typing clock and would make this read as a pass or a failure for the wrong
+  // reason. One key every six frames is a steady 120 WPM.
+  const run = new TypingRun(createRng(7), { strictMode: false, tier: 6 });
+  const frames = (seconds: number) => Math.round(seconds / STEP);
+
+  let typed = 0;
+  for (let i = 0; i < frames(4); i++) {
+    run.tick(STEP);
+    if (i % 6 === 0) {
+      const key = run.nextKey();
+      if (key === null) break;
+      run.handleChar(key);
+      typed++;
+    }
+  }
+  assert.equal(typed, 40, "the harness should have fed four seconds of steady keys");
+
+  const before = run.wpm();
+  assert.ok(Math.abs(before - 120) <= 2, `a 120 WPM burst should read 120, got ${before}`);
+
+  // Now stop for four seconds. The burst is still inside the eight-second window, so the honest
+  // reading spreads it over the whole window: about half. The bug this pins divided by the gap
+  // between the burst's own keystrokes instead, so a pause changed the number not at all and the
+  // meter then jumped the moment the burst aged out of the window.
+  for (let i = 0; i < frames(4); i++) run.tick(STEP);
+
+  const after = run.wpm();
+  assert.ok(after < before, `a stall must lower the meter (${before} -> ${after})`);
+  assert.ok(after > 0, "the burst is still inside the window, so it still reads something");
+  assert.ok(Math.abs(after - 60) <= 3, `four seconds of stall should halve it, got ${after}`);
+});
+
+test("the match average tracks the whole run, and a stall drags it down", () => {
+  const run = new TypingRun(createRng(11), { strictMode: false, tier: 6 });
+  const frames = (seconds: number) => Math.round(seconds / STEP);
+
+  let typed = 0;
+  for (let i = 0; i < frames(6); i++) {
+    run.tick(STEP);
+    if (i % 6 === 0) {
+      const key = run.nextKey();
+      if (key === null) break;
+      run.handleChar(key);
+      typed++;
+    }
+  }
+  assert.equal(typed, 60, "six seconds at ten characters a second");
+
+  // 60 characters in six seconds is 120 WPM, and the live meter and the average must agree while
+  // typing is continuous. They only diverge once there is a pause for the average to remember.
+  assert.ok(Math.abs(run.averageWpm() - 120) <= 2, `average ${run.averageWpm()}`);
+  assert.ok(Math.abs(run.wpm() - 120) <= 2, `meter ${run.wpm()}`);
+
+  // Six seconds of nothing: the same characters are now spread over twice the time, so the honest
+  // match figure halves. A rolling peak would not move at all, which is exactly why the payout
+  // uses this figure rather than the peak: a burst is worth celebrating, not worth paying twice.
+  for (let i = 0; i < frames(6); i++) run.tick(STEP);
+  assert.ok(Math.abs(run.averageWpm() - 60) <= 2, `the average must halve: ${run.averageWpm()}`);
+  assert.ok(run.wpm() < run.averageWpm(), `the window forgets the burst before the average does: ${run.wpm()}`);
 });
 
 // ================================================================ combo
@@ -2180,14 +2243,16 @@ test("flares name what actually happened", () => {
   });
   assert.deepEqual(quiet, []);
 
-  // A loss that IS a personal best gets exactly the one true thing about it.
+  // A loss that IS a personal best gets exactly the one true thing about it. The label says
+  // "fastest match" rather than "top speed" because both figures compared here are the match
+  // AVERAGE (game/typing.ts:averageWpm), so promising a peak would be a small lie.
   const fast = matchFlares({
     result: result({ wpm: 64, bestWpm: 64 }),
     bestWpmEver: 64,
     firstWinToday: false,
     isBoss: false,
   });
-  assert.deepEqual(fast, [{ label: "NEW TOP SPEED · 64 WPM", tone: "plain" }]);
+  assert.deepEqual(fast, [{ label: "FASTEST MATCH · 64 WPM", tone: "plain" }]);
 
   // Win-only flares must never appear on a loss, whatever the numbers.
   const lostWell = matchFlares({

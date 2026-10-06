@@ -332,3 +332,92 @@ we appreciate your kind support
 the volunteers packed the boxes
 the calendar shows a busy month
 the chocolate melted in the heat
+
+# ---------------------------------------------------------------------------
+# Longer sentences, added 2026-10-06 with the band change (short <= 30,
+# medium <= 54, long 55+). The ceiling moved from 62 to 88 characters and the
+# word cap from 11 to 16, because a sentence is a hand of moves and the old hand
+# was too small to plan more than a word or two ahead. Every line below still
+# carries at least one block word and at least one punch word, and most carry a
+# kick (8+ characters), which matters most here: the long band is where a player
+# finds the kill move.
+# ---------------------------------------------------------------------------
+the carpenter measured the doorway twice before he cut the timber
+the librarian arranged the shelves so the children could reach every book
+the engineer explained the plan to the crew before the work began
+the captain gathered the team near the water and explained the drill
+the gardener watered the young plants every morning through the dry season
+the students compared their answers and discussed the difficult question
+the mechanic listened to the engine and knew which part was worn
+the teacher asked the class to read the chapter before the next lesson
+she opened the window so the cool air could move through the small room
+the farmer repaired the fence before the sheep wandered into the road
+he practised the difficult rhythm until he could play it without a mistake
+the inspector checked every connection and recorded the result on the form
+the children built a long tunnel in the sand and decorated it with shells
+the driver checked the mirror and signalled before he changed lanes
+the choir rehearsed the same line until every voice landed on the note
+a careful reader noticed the mistake that everyone else had missed
+the builder mixed the mortar and laid the bricks in a straight line
+the nurse recorded the temperature and returned to check the patient
+the guide pointed to the horizon and described the shape of the islands
+he packed the tools into the van and drove to the site before sunrise
+the coach watched the replay and marked where the defence had drifted
+she measured the fabric carefully and pinned the pattern to the cloth
+the runner kept a steady pace through the second half of the course
+the pilot checked the instruments twice before the long flight began
+the guard checked the gate and then walked the perimeter of the yard
+the workshop was quiet except for the sound of the saw and the steady hammer
+he read the instructions carefully and assembled the frame on the kitchen floor
+the class discussed the story and argued about what the ending really meant
+she wrote the summary in her own words so the idea stayed in her memory
+the team reviewed the plan and agreed that the second option was safer
+a good teacher explains the reason behind a rule instead of repeating it
+the climber secured the rope and then tested the knot with his full weight
+the printer jammed again so he cleared the tray and started the job over
+the gardener explained which plants needed shade and which could stand in the sun
+the mechanic tightened the last bolt and then listened to the engine again
+the teacher divided the class into groups and handed each one a different task
+he practised the difficult passage in short bursts so his hands stayed relaxed
+the librarian showed the children how to find a book using the catalogue
+the engineer drew the plan on the board and explained why the angle mattered
+she collected the samples carefully and labelled every jar before the journey
+the captain reviewed the footage and pointed out where the defence had drifted
+the student rewrote the notes in a neat hand and read them again that night
+he measured the room before ordering the furniture so nothing had to go back
+the choir practised the difficult harmony until the notes finally locked in
+the instructor demonstrated the correct posture and then watched every student
+the crew loaded the truck before dawn so the delivery would reach the coast
+the coach explained the drill slowly and then ran the squad through it twice
+the technician checked the wiring carefully before switching the power on
+the children gathered the leaves into a pile and jumped in without a thought
+the instructor explained the drill twice and then watched the whole group repeat it
+she practised the difficult passage every morning until her accuracy stopped slipping
+the carpenter measured the timber carefully and cut every piece before he assembled it
+the technician traced the fault through the wiring and replaced the damaged section
+the teacher gave the class a difficult problem and asked them to explain their method
+he collected the results into a summary and presented the findings to the committee
+the gardener planted the young trees in a straight line along the eastern boundary
+she compared the two methods carefully and recorded which one produced better results
+the librarian arranged a display of books about the history of the surrounding area
+the mechanic listened to the engine again and decided the problem was in the gearbox
+he measured the angle twice because a small mistake would make the whole frame crooked
+the students discussed the question in small groups before they wrote anything down
+the instructor watched the whole class and corrected the posture of every second student
+she organised the files into clear sections so the next person could find anything
+the farmer repaired the fence along the boundary before the sheep could wander out
+the engineer checked the measurements again and ordered a replacement for the worn part
+the class practised the difficult passage until the whole group finished together
+he explained the method slowly and asked the students to repeat it in their own words
+the crew loaded the equipment carefully and secured every box before the long drive
+the captain gathered the squad and explained the changes to the plan for the second half
+the mechanic replaced the damaged bearing and then tested the engine under a full load
+the teacher asked every student to write a summary of the chapter in a few words
+she practised the difficult passage until she could type it without looking at the keys
+the inspector measured the depth of the concrete before the surface started to harden
+the children collected the fallen leaves and carried them to the compost behind the shed
+the gardener pruned the hedge before the spring arrived
+she checked the measurements twice before cutting the cloth
+the students compared notes and agreed on a single answer
+the mechanic replaced the worn part and tested the engine
+he practised the drill until every movement was smooth

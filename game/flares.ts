@@ -41,7 +41,12 @@ export const FLARE_RULES = {
  * the card renders — so `wpm >= bestWpmEver` means this match is the fastest on record. That is
  * also the correct answer on a tie, which is why it is `>=` and not `>`.
  *
- * The top-speed flare is deliberately available on a LOSS as well: "you lost, and you have never
+ * Both numbers being compared are the match AVERAGE (game/typing.ts:averageWpm), not the rolling
+ * peak, which is why the flare says fastest match rather than top speed: it is comparing two honest
+ * averages, and a label that promised a peak while showing an average would be the same small lie
+ * the payout used to tell.
+ *
+ * The fastest-match flare is deliberately available on a LOSS as well: "you lost, and you have never
  * typed faster" is the true and useful sentence, and a loss that names an improvement is not a
  * flat wall. Everything else is win-only.
  */
@@ -75,7 +80,7 @@ export function matchFlares({
   }
 
   if (result.wpm > 0 && result.wpm >= bestWpmEver) {
-    out.push({ label: `NEW TOP SPEED · ${result.wpm} WPM`, tone: "plain" });
+    out.push({ label: `FASTEST MATCH · ${result.wpm} WPM`, tone: "plain" });
   }
 
   // Capped so a freak match cannot paper the banner in chips. Order is the priority order, so the

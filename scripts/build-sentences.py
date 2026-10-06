@@ -39,9 +39,9 @@ BLOCK_MAX_CHARS = 3
 KICK_MIN_CHARS = 8
 
 # --- must match BAND_BOUNDS in the generated file ---------------------------
-BAND_MAX = {"short": 28, "medium": 44}  # anything above 44 is "long"
-MIN_CHARS, MAX_CHARS = 16, 62
-MIN_WORDS, MAX_WORDS = 4, 11
+BAND_MAX = {"short": 30, "medium": 54}  # anything above 54 is "long"
+MIN_CHARS, MAX_CHARS = 16, 88
+MIN_WORDS, MAX_WORDS = 4, 16
 MAX_WORD = 12
 
 BLOCK = set("""

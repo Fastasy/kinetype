@@ -24,7 +24,7 @@ Kinetype is a free browser game where typing is the only weapon. Every word in a
 - There is no download, install, extension or plugin. It uses canvas and JavaScript, so it runs wherever a modern browser runs, Chromebooks included. A physical keyboard is required to play well.
 - The bot ladder runs 20, 30, 40, 50, 60, 70, 85, 100 and 120 words per minute. The player picks the rung, and break even sits at roughly 0.75 to 0.95 times the player's own typing speed.
 - A round is capped at 90 seconds and measures about 28 to 40 seconds. A best of three match runs about 60 to 105 seconds.
-- The sentence pool is hand written and school safe: 305 sentences, lowercase letters and single spaces only, no punctuation, brands, proper nouns or profanity.
+- The sentence pool is hand written and school safe: 384 sentences, lowercase letters and single spaces only, no punctuation, brands, proper nouns or profanity.
 - As of 6 October 2026 we found no other typing game that uses escalating knockback with stage out elimination and a word driven recovery prompt.
 
 Contact: info@allegrodigital.co.za

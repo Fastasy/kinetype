@@ -185,7 +185,7 @@ export default function MiddleSchoolPage() {
             </p>
             <p>
               The words are the part worth checking first. Every sentence in the game is hand
-              written, 305 of them, and the rules are strict: lowercase letters and single spaces
+              written, 384 of them, and the rules are strict: lowercase letters and single spaces
               only, no punctuation, no numbers, no abbreviations, no brand names, no proper nouns
               and no profanity. Every sentence has to contain at least one short word and at least
               one ordinary word, so the sentence can always both attack and defend. The test the

@@ -800,7 +800,11 @@ export class Match {
   private finish(winner: Side): void {
     const human = this.typing[this.humanSide];
     const humanWon = winner === this.humanSide;
-    const wpm = human.bestWpm;
+    // The HONEST match speed, not the eight-second peak. This one figure is what the result screen
+    // reports, what the saved personal best and the "fastest match" flare compare against, and what
+    // the payout is computed from. The peak is still carried on the result as `bestWpm` for the card
+    // to celebrate, because a top speed is a fine thing to show and a bad thing to pay out on.
+    const wpm = human.averageWpm();
     const accuracy = human.accuracy();
     const roundsWon = this.wins[this.humanSide];
     const roundsLost = this.wins[other(this.humanSide)];

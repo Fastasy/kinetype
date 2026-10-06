@@ -281,7 +281,7 @@ export const INPUT_BUFFER_MAX = 3;
  * Flawless words per rung of the combo ladder.
  *
  * Three is the smallest chain that reads as intentional rather than lucky. It is also
- * comfortably reachable inside ONE sentence: the pool's sentences run 4 to 11 words, so a
+ * comfortably reachable inside ONE sentence: the pool's sentences run 4 to 16 words, so a
  * clean short sentence clears the first rung and a clean long one peaks the ladder. A player
  * who cannot feel the combo build inside a single sentence never learns it exists.
  */

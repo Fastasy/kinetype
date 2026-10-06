@@ -127,6 +127,17 @@ export default function PromptCard({
       <div
         data-testid="sentence"
         className={`flex flex-wrap items-baseline gap-x-[0.6ch] gap-y-1 font-mono tracking-wide ${
+          // RESERVE TWO LINES OF HEIGHT, for the same reason the flawed chip below is always
+          // rendered. The sentence is a wrapping row, so a one-line sentence and a two-line
+          // sentence are different heights, and the next sentence arrives the instant this one
+          // ends. While every sentence fitted one line that never mattered. It does now: the pool
+          // runs to 88 characters, so the common case is a two-line sentence, and swapping between
+          // the two sizes shoved the arena and both prompts up and down the moment a sentence
+          // completed. `lh` is the resolved line-height, so this is exactly two lines at whatever
+          // text size this card is using, plus the row gap. Browsers without `lh` ignore the
+          // declaration and behave as before, which is the safe direction to fail.
+          "min-h-[calc(2lh+0.25rem)]"
+        } ${
           compact ? "text-sm sm:text-base" : isRecovery ? "text-3xl sm:text-4xl" : "text-xl sm:text-2xl"
         }`}
       >
