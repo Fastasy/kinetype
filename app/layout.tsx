@@ -80,6 +80,7 @@ const FOOTER_LINKS = [
   { href: "/", label: "What is Kinetype" },
   { href: "/how-to-play", label: "How to play" },
   { href: "/guides", label: "Guides" },
+  { href: "/typing-speed-test", label: "Typing speed test" },
   { href: "/shop", label: "Skins and themes" },
   { href: "/typing-games-unblocked", label: "Play at school" },
 ];

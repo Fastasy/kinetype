@@ -13,6 +13,7 @@ const ROUTES: { path: string; priority: number; changeFrequency: "daily" | "week
   { path: "/typing-fighting-games", priority: 0.8, changeFrequency: "monthly" },
   { path: "/typing-games-for-middle-school", priority: 0.8, changeFrequency: "monthly" },
   { path: "/games-like-nitro-type", priority: 0.75, changeFrequency: "monthly" },
+  { path: "/typing-speed-test", priority: 0.9, changeFrequency: "weekly" },
   { path: "/guides", priority: 0.7, changeFrequency: "weekly" },
 ];
 

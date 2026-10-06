@@ -4,6 +4,7 @@ Kinetype is a free browser game where typing is the only weapon. Every word in a
 
 ## Play
 - [Play Kinetype](https://kinetype.app/play) - the game. Pick a bot from 20 to 120 words per minute and fight best of three rounds.
+- [Typing speed test](https://kinetype.app/typing-speed-test) - a plain 15, 30 or 60 second WPM and accuracy test with no game attached
 - [Kinetype](https://kinetype.app/) - what the game is, how an exchange is decided, and the roster
 - [How to play](https://kinetype.app/how-to-play) - the mechanics: moves, blocking, parries and recovery
 - [Boss campaign](https://kinetype.app/bosses) - nine named bosses, each gated behind your level and the one before it

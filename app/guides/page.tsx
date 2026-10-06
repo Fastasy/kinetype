@@ -98,6 +98,12 @@ export default function GuidesPage() {
           >
             How to play
           </Link>
+          <Link
+            href="/typing-speed-test"
+            className="rounded-xl border border-line px-5 py-2.5 font-bold text-ink-soft transition hover:border-brand/50 hover:text-ink"
+          >
+            Typing speed test
+          </Link>
         </div>
       </article>
     </>
