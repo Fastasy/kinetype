@@ -449,6 +449,38 @@ in, signs out, signs back in with the NEW password, asserts a wrong password is
 refused, checks the campaign gate routes to the form carrying `?next=`, and deletes
 its own fixture afterwards.
 
+**Considered and DEFERRED (2026-10-06): username-first sign-in.** Ruan asked whether sign-in
+could be a username with the email optional, linked later in settings. It is feasible — every
+claim below was verified against this project with throwaway accounts, all deleted — and the
+findings live here so nobody re-runs the investigation:
+
+- **Sign-up and sign-in with a username-shaped address work.** A synthetic
+  `<handle>@users.kinetype.app` email plus a password returns a session immediately (confirmation
+  is off), and `signInWithPassword` accepts the same address. The unique `@` would therefore be
+  free: Supabase's own email uniqueness enforces it, with no lookup RPC and no way to enumerate
+  other players' addresses.
+- **Linking a REAL email to such an account FAILS on the ordinary path.** `PUT /user { email }`
+  answers `400 "Email address "<synthetic>" is invalid"`, because the change flow wants to email
+  the CURRENT address to approve it, and that address is not deliverable. A real email can never
+  become a Supabase identity on a username account.
+- **Two escape routes DO work** (both verified): the admin API can migrate an existing account
+  onto a synthetic email, and `admin/generate_link { type: "recovery" }` mints a reset link for a
+  synthetic account WITHOUT sending mail — so recovery would be OURS to deliver (Resend), and the
+  built-in mailer's two-emails-per-hour cap would stop mattering for signup entirely.
+- **What the unique `@` still needs** before it can serve as a login key: a case-insensitive
+  unique index (`Ruan` and `ruan` are two separate accounts today), a claim-not-suffix RPC
+  (`assign_handle()` silently answers `ruan-2` on a collision — fine for a generated display
+  handle, wrong for a login, where the player must be TOLD a name is taken), a reserved-name list
+  and a profanity filter for a school-facing site.
+
+**Why deferred:** the recovery cliff is the real cost. An account with no linked email could never
+be recovered, so "optional email" becomes a permanent nag, and genuine recovery needs custom SMTP
+(Resend) plus a recovery route of our own. There is no evidence yet that the email field costs
+signups, and the identity benefit is already mostly present — every profile has a unique public
+handle today. **REVISIT when either (a) signup attempts show a drop-off at the email field, or
+(b) the account count passes ~50** — the migration cost verified above grows with every account
+created, so this gets more expensive the longer it waits. Not a revenue task either way.
+
 **XP is server-authoritative.** `kinetype.submit_match()` recomputes XP from clamped
 inputs; the client never sends a score, only the raw match facts. The formula is
 mirrored in `game/progression.ts` (`xpForMatch`) and the two are pinned together by
