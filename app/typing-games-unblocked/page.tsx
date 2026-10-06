@@ -175,6 +175,18 @@ export default function UnblockedPage() {
  >
  Play Kinetype
  </Link>
+ <Link
+ href="/guides"
+ className="rounded-xl border border-line px-5 py-2.5 font-bold text-ink-soft transition hover:border-brand/50 hover:text-ink"
+ >
+ Guides
+ </Link>
+ <Link
+ href="/typing-games-for-middle-school"
+ className="rounded-xl border border-line px-5 py-2.5 font-bold text-ink-soft transition hover:border-brand/50 hover:text-ink"
+ >
+ For teachers
+ </Link>
  </div>
  </article>
  </>

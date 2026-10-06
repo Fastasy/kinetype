@@ -13,6 +13,7 @@ const LINKS = [
   { href: "/bosses", label: "Campaign" },
   { href: "/leaderboard", label: "Leaderboard" },
   { href: "/how-to-play", label: "How to play" },
+  { href: "/guides", label: "Guides" },
   { href: "/shop", label: "Skins" },
 ];
 

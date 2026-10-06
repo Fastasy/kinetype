@@ -10,6 +10,10 @@ const ROUTES: { path: string; priority: number; changeFrequency: "daily" | "week
   { path: "/how-to-play", priority: 0.9, changeFrequency: "monthly" },
   { path: "/shop", priority: 0.7, changeFrequency: "monthly" },
   { path: "/typing-games-unblocked", priority: 0.8, changeFrequency: "monthly" },
+  { path: "/typing-fighting-games", priority: 0.8, changeFrequency: "monthly" },
+  { path: "/typing-games-for-middle-school", priority: 0.8, changeFrequency: "monthly" },
+  { path: "/games-like-nitro-type", priority: 0.75, changeFrequency: "monthly" },
+  { path: "/guides", priority: 0.7, changeFrequency: "weekly" },
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {
