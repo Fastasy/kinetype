@@ -9,6 +9,7 @@ import { AuthProvider } from "@/components/auth/AuthProvider";
 import AnalyticsProvider from "@/components/AnalyticsProvider";
 import PostHogSink from "@/components/PostHogSink";
 import ThemeProvider from "@/components/ThemeProvider";
+import TourOverlay from "@/components/tour/TourOverlay";
 
 const inter = Inter({
  variable: "--font-inter",
@@ -104,6 +105,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
  <AnalyticsProvider />
  <PostHogSink />
  <ThemeProvider />
+ {/* The first-visit tour. Mounted at the root because a step can live on any route: the overlay
+     itself decides whether to open, and does it a render after hydration so the first paint
+     matches the server's. */}
+ <TourOverlay />
 
  <main id="main" className="flex-1 py-6">
  {children}

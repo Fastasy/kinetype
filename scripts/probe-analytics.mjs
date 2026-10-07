@@ -9,6 +9,8 @@
 
 import { chromium } from "playwright";
 
+import { suppressTour } from "./lib/tour-seen.mjs";
+
 const SITE = process.env.SITE ?? "https://www.kinetype.app";
 
 // Prefer the real Chrome already on the machine over Playwright's bundled build:
@@ -23,6 +25,10 @@ const context = await browser.newContext({
   userAgent:
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
 });
+// Not a first-time visitor. This probe clicks a /play link on the landing page, and the
+// first-visit tour auto-opens there for a fresh browser with an overlay that swallows clicks —
+// see scripts/lib/tour-seen.mjs for why.
+await suppressTour(context);
 const page = await context.newPage();
 
 const sends = [];

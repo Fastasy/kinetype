@@ -14,6 +14,8 @@
 import { chromium } from "playwright";
 import { mkdirSync } from "node:fs";
 
+import { suppressTour } from "./lib/tour-seen.mjs";
+
 const BASE = process.env.BASE_URL ?? "http://localhost:3000";
 const SHOTS = "verification";
 mkdirSync(SHOTS, { recursive: true });
@@ -34,6 +36,10 @@ const failedRequests = [];
 
 const browser = await chromium.launch();
 const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+// Not a first-time visitor: the first-visit tour auto-opens on `/` for a fresh browser and its
+// overlay swallows pointer events, so this probe would be clicking a dim layer instead of the Play
+// button. See scripts/lib/tour-seen.mjs.
+await suppressTour(context);
 const page = await context.newPage();
 
 page.on("console", (m) => {

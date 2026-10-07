@@ -576,6 +576,7 @@ const [focused, setFocused] = useState(false);
  >
  {/* ---------------------------------------------------------- controls */}
  <div
+   data-tour="fight-controls"
    className={
      isFullscreen
        ? // ORDER MATTERS IN FULLSCREEN. The DOM order is controls · bot · arena · player · footer,
@@ -774,6 +775,7 @@ const [focused, setFocused] = useState(false);
      ~450px of panels left it only 628px tall and the 16:9 stage could not grow past that. */}
  <div
    data-testid="arena"
+   data-tour="fight-arena"
    className={
      isFullscreen
        ? // FILL THE SCREEN. Deliberately NOT aspect-locked any more: the canvas takes the whole

@@ -85,6 +85,7 @@ export default function HomePage() {
         <div className="mt-7 flex flex-wrap items-center gap-3">
           <Link
             data-testid="play-cta"
+            data-tour="play-cta"
             href="/play"
             className="border-2 border-brand bg-brand px-6 py-3 font-pixel text-[11px] text-brand-deep transition hover:bg-brand-bright sm:text-xs"
           >
@@ -103,7 +104,7 @@ export default function HomePage() {
       </section>
 
       {/* ------------------------------------------------------- arena frame */}
-      <div className="mx-auto mt-9 max-w-5xl px-4 sm:px-6">
+      <div data-tour="arena-teaser" className="mx-auto mt-9 max-w-5xl px-4 sm:px-6">
         <ArenaTeaser className="w-full border-2 border-line" />
         <p className="mt-3 font-mono text-xs text-ink-faint">
           One sentence is live. Its small words block, its ordinary words punch, and its long words kick.

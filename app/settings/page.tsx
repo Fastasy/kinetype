@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import AccountSettings from "@/components/profile/AccountSettings";
 import PasswordSettings from "@/components/profile/PasswordSettings";
+import TourReplayButton from "@/components/tour/TourReplayButton";
 
 /**
  * Your own account: the name and photo other players see.
@@ -24,6 +25,12 @@ export default function SettingsPage() {
           Your name and picture are what other players see next to your score, and your password is
           how you sign back in. Set them here and they follow you to any device you sign in on.
         </p>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <TourReplayButton />
+          <span className="text-xs text-ink-faint">
+            The walkthrough only opens itself on your first visit.
+          </span>
+        </div>
       </header>
 
       <div className="mt-6 space-y-6">

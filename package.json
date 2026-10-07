@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "tsx game/tests/engine.test.ts && tsx game/tests/progression.test.ts && tsx game/tests/quests.test.ts"
+    "test": "tsx game/tests/engine.test.ts && tsx game/tests/progression.test.ts && tsx game/tests/quests.test.ts && tsx game/tests/tour.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",

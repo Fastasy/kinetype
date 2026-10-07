@@ -32,7 +32,10 @@ export default function HeaderNav() {
    }`;
 
  return (
- <header className="sticky top-0 z-50 border-b-2 border-line bg-page">
+ // `data-tour` is the first-visit tour's handle on this element (game/tour.ts). It is on the
+ // HEADER rather than on the <nav>, because the nav is `hidden lg:flex` and a target that does not
+ // exist on a phone is a step that cannot point at anything.
+ <header data-tour="site-header" className="sticky top-0 z-50 border-b-2 border-line bg-page">
  <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
  <Link
    href="/"
@@ -61,6 +64,7 @@ export default function HeaderNav() {
  <AuthMenu compact />
  <Link
  href="/shop"
+ data-tour="nav-coins"
  className="hidden rounded-lg border border-line px-2.5 py-1.5 font-mono text-xs text-ink-soft transition hover:border-coin/50 hover:text-coin sm:block"
  aria-label="Your coin balance"
  >

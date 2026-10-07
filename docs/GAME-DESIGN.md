@@ -1,10 +1,18 @@
 # Kinetype — Game Design Spec
 
-**Version** 1.3 · **Date** 2026-10-07 · **Status** MVP implementation
+**Version** 1.4 · **Date** 2026-10-07 · **Status** MVP implementation
 **Companion research** vault `Kinetype/Research/2026-09-28-design-evidence-knockback-and-typing.md`
 **Companion balance note** vault `Kinetype/Research/2026-10-05-balance-recovery-ladder-and-match-length.md`
 
 This document is the build contract. Every number here is either sourced from the design research or an explicit tuning constant that lives in `game/constants.ts`. If the code and this document disagree, the code is wrong.
+
+**1.4 changelog (2026-10-07).** The first-visit tour arrives: a nine-step walk through the front door
+and into the arena that opens itself once per browser, then can be replayed from Your account or
+`?tour=1`. Specified in the new §16. It grants nothing — no coins, no XP — so it needs no migration
+and no server rule; the one thing worth flagging up front is that its seen flag is **deliberately
+not** part of the save wallet, because the wallet is parked and restored around sign-in and a tour
+flag in there would be rolled back by signing out (§16.3). §11.5 gained a paragraph and §13 gained
+five acceptance criteria; nothing else changed.
 
 **1.3 changelog (2026-10-07).** Quests arrive: three dailies (one easy, one medium, one hard) and two weeklies, each paying bonus XP and coins, **rotating every day** so the set cannot be memorised. Specified in full in the new §15, which is the only section that changed; §10's currency paragraph and the acceptance criteria were extended to point at it. The one thing worth flagging up front: quests pay **XP as well as coins**, which is a knowing departure from 0007's "daily bonuses pay coins only" rule, argued in §15.5 with its two bounded consequences.
 
@@ -327,6 +335,12 @@ Two rules hold this together:
 
 Structured data is split so the two pages do not compete: `/` carries `WebSite` + `FAQPage`, `/play` carries `VideoGame` + `WebApplication` + `BreadcrumbList` + its own play-specific `FAQPage`. The fullscreen control wraps the entire fight section, panels included, because a fullscreen arena with the player's prompts outside it would be unplayable.
 
+**The front door teaches too** (added 2026-10-07). A first-time visitor gets a nine-step tour that
+starts on `/`, points at the header, the coin balance, the Play button and the arena frame, walks
+them into `/play`, explains the fight controls, the arena and the quest board, and gets out of the
+way. It is the only onboarding in the product and it is specified in §16 — including why it opens on
+`/` alone and why its seen flag lives outside the save wallet.
+
 ## 12. Out of scope for MVP
 
 Explicitly not built, and not to be smuggled in:
@@ -380,6 +394,14 @@ The MVP is done when all of these are true.
 29. A **flagged** match advances no quest and pays no quest reward, and neither does a match on a day that has already burned the daily XP ceiling.
 30. The account's XP and coins equal exactly (match XP) + (quest awards) + (the first-win bonus) — `npx tsx scripts/probe-quests.ts` proves it against the live project and then deletes its fixture.
 31. `node scripts/probe-quests-ui.mjs` plays a real signed-in player's board in Chromium and confirms the cards, the grading, the claimed badges and the progress numbers all come from the server's own figures.
+
+**Added for the first-visit tour (2026-10-07, §16).**
+
+32. A visitor who has never seen it gets a nine-step tour that opens itself on `/`, points at the header, the coin balance, the Play button and the arena frame, walks them into `/play`, explains the fight controls, the arena and the quest board, and closes on a centred outro. A visitor who HAS seen it is not shown it again, and a visitor who lands straight on `/play` is not interrupted at all.
+33. Every callout is fully on screen at 1280x900 and at 390x844, sits off its target wherever there is room for it to, and its arrow points at the **visible** part of the target — never at a centre point that a tall block has pushed below the fold. `node scripts/probe-tour.mjs` asserts all of that against the real DOM, on both viewports, on every step.
+34. The tour owns the keyboard and the pointer while it is open: Escape and Skip close it, arrows page it, Tab stays inside the callout, and a stray keystroke cannot reach the fight underneath — which it otherwise would, because `FightClient` listens on `window` and reads Escape as "quit the match".
+35. It can be brought back deliberately, by `?tour=1` or by "Replay the walkthrough" on `Your account`, and neither is a dead end: the replay navigates to whatever page the first step lives on.
+36. Opening the tour never changes the first paint: the seen flag is read on the client, the server snapshot is "seen", and `node scripts/probe-tour.mjs` fails on a hydration warning on every page it visits.
 
 ## 13.5 The measured ladder (added 2026-10-05)
 
@@ -697,4 +719,152 @@ warning, which is a live risk here: the rotation is derived from the date, and t
 value the server and the browser can disagree about. `QuestBoard` reads it in an **effect**, never
 during render, and renders one frame of skeleton instead — the same discipline `game/store.ts`
 documents for the save.
+
+## 16. The first-visit tour (added 2026-10-07)
+
+### 16.1 The problem it solves
+
+Kinetype explains itself well and still loses people at the front door. `/` carries six nav
+destinations, a coin balance, a boss campaign, a shop, and a fight with its own vocabulary — chain,
+parry, blast line, SAVE word. All of it is written down, and all of it is written down in
+paragraphs. A visitor who does not read paragraphs has no idea what to click first, and the
+cheapest fix for that is not more copy: it is pointing at the thing while saying one sentence
+about it.
+
+So: a nine-step tour, once per browser. It is the only onboarding in the product.
+
+### 16.2 What it does
+
+Nine steps, in this order, and the order is the argument — it follows a visitor from "what is this"
+to "I am in the arena":
+
+| # | Where | Points at | Says |
+|---|---|---|---|
+| 1 | `/` | nothing (centred) | what the tour is, and how to leave it |
+| 2 | `/` | the header | every destination in the product, and which two need an account |
+| 3 | `/` | the coin balance | that coins are earned and cannot be bought |
+| 4 | `/` | the Play button | one click, no download, no account |
+| 5 | `/` | the arena frame | the whole game in one sentence: small words block, ordinary punch, long kick |
+| 6 | `/play` | the fight controls | bot speed, strict mode, then Fight |
+| 7 | `/play` | the arena | where the sentence appears, that the space is a real key, what a parry is |
+| 8 | `/play` | the quest board | three dailies and two weeklies, rotating daily, account required |
+| 9 | `/play` | nothing (centred) | where the strategy lives, and how to get the tour back |
+
+**It navigates, once.** Step 6's route is `/play`, so advancing from step 5 pushes the router and
+the tour carries on over the arena. It is one navigation in one direction; Back walks it in
+reverse. A first-visit tour that outlives a minute gets skipped rather than read, which is why the
+Campaign, Leaderboard and shop are NAMED in step 2 and not visited — three more page loads is three
+more steps, and a step list that long is a step list nobody finishes. Extending it is one entry in
+`TOUR_STEPS`; the engine already handles a route change.
+
+**What it draws.** A dim over the viewport with a hole cut over the target (`box-shadow: 0 0 0
+9999px`, one element, no seams), a bordered callout beside it, and a square arrow on the callout
+edge facing the target. There is no image asset and no tour library: `placeCallout` in
+`game/tour.ts` is pure, unit-tested arithmetic, and the overlay measures and renders. The points
+where this gets subtle are all in that function:
+
+- The preferred side is tried, then the opposite side, then the two perpendicular sides, then it is
+  clamped — so a callout is never off-screen, ever.
+- The arrow aims at the middle of the target's **visible span**, not its geometric centre. A block
+  taller than the viewport, which the quest board and the arena both are on a phone, has its centre
+  below the fold; an arrow pointing there points at nothing the visitor can see. This was a real
+  defect, caught by the phone probe rather than by eye, and it is now pinned by two unit cases.
+- A target with no room around it — again the quest board on a phone — gets a callout pinned to a
+  viewport edge, over the block. That is the intended degradation: the alternative is nowhere to
+  put it.
+
+### 16.3 Where the state lives, and where it must not
+
+The seen flag is `localStorage["kinetype:tour"]`, holding `{version, at}`.
+
+**Not in the save wallet**, and that is a deliberate decision rather than tidiness. `SaveData` is
+parked in `kinetype:save:guest` while an account is signed in and restored on sign-out (§14), so a
+tour flag living in there would be rolled back by the act of signing out: a player would be shown
+the first-visit tour again for having the nerve to have an account. It is a UI preference about one
+browser and it gets its own key.
+
+**Versioned, not a boolean.** `hasSeenTour` compares the stored version against `TOUR_VERSION`, so
+shipping a materially different tour sets `TOUR_VERSION = 2` and returning visitors see the new one
+without ever being shown the old one again.
+
+**Read on the client, never during render.** `game/tour-store.ts` follows `game/store.ts` exactly:
+a cached `getSnapshot`, a server snapshot that means "seen", and `useSyncExternalStore`. The server
+and the first client paint both render closed, and the tour opens on the render after hydration.
+Reading localStorage during render would be a hydration mismatch, and every probe in this repo
+fails on one.
+
+**`started` is load-bearing.** Openness is derived from three terms: a replay request, a tour that
+has already begun, and a visitor who has not seen it arriving at `/`. The first version derived it
+from two, and the tour closed itself the moment it walked the visitor to `/play` — because `/` was
+no longer the current route. The probe caught it as a missing overlay after the navigation. It is
+the kind of bug that a screenshot of step 1 would never show.
+
+### 16.4 Why the front door only
+
+`TOUR_AUTO_OPEN_ROUTES` is `["/"]`. Auto-opening on `/play` would drop a modal over an arena the
+visitor is already using, and auto-opening on the SEO landing pages (`/typing-games-unblocked` and
+friends) would cover the copy those pages exist to deliver. A visitor who lands deep and later
+clicks through to the front door gets the tour then, which is the right moment anyway.
+
+It can still be asked for from anywhere: `?tour=1` forces it, and "Replay the walkthrough" on
+`Your account` sets an in-memory replay that takes the visitor to step 1's page. The replay is
+in-memory rather than a link to `/?tour=1` so it does not throw away the page they were on.
+
+### 16.5 The keyboard is the hard part
+
+`FightClient` listens on **`window`** for keydown, reads Escape as "quit the match", and swallows
+Tab and every arrow. A tour listening on the bubble phase would therefore quit the fight the
+visitor was reading about, the first time they pressed Escape. So the overlay registers in the
+**capture** phase, before the game's listener can see anything, and swallows every key while it is
+open. Tab is trapped inside the callout, the pointer is swallowed by a full-viewport catcher (the
+highlighted element is deliberately NOT clickable — the tour does its own navigation), and body
+scroll is locked with `overflow: hidden` rather than a `position: fixed` hack, because the tour
+still has to be able to scroll its own target into view.
+
+Focus is moved to the callout on every step and returned to whatever had it when the tour closes.
+
+### 16.6 Where it lives
+
+| Piece | Path |
+|---|---|
+| The steps, the copy, the seen flag, the callout arithmetic (pure) | `game/tour.ts` |
+| The external store: seen, replay, started, index | `game/tour-store.ts` |
+| The overlay | `components/tour/TourOverlay.tsx` |
+| The "show me that again" button | `components/tour/TourReplayButton.tsx` |
+| Targets | a `data-tour="<id>"` attribute on the element itself |
+| Unit cases | `game/tests/tour.test.ts` (wired into `npm test`) |
+| The browser probe | `scripts/probe-tour.mjs` |
+
+A step's target is an attribute, not a selector, so a step names an element the way the rest of the
+codebase names one and a refactor that moves the element only has to carry the attribute. Every
+target is an element that exists **before a match starts** — the bot panel, the prompt card and the
+player panel only mount while `stage === "fighting"`, so a step pointing at one of them would have
+to start a fight the visitor did not ask for or silently degrade. The in-fight UI is therefore
+described in step 7's copy while the arrow points at the arena that will hold it. A target that
+never appears at all degrades to a centred callout with the same copy: the explanation is the
+payload and the arrow is the polish, and a tour that silently skips a step teaches nothing.
+
+Not instrumented: no PostHog event is fired for the tour, so there is no funnel data on it yet. If
+that changes, `tourStore` is the one place to emit from.
+
+### 16.7 Verified, not argued
+
+| What | Where |
+|---|---|
+| The step list's shape, the seen flag, the index maths, and the placement arithmetic over a grid of targets and viewports | `game/tests/tour.test.ts` (30 cases) |
+| The tour opening, walking, navigating, closing, remembering, replaying, on desktop and on a phone | `node scripts/probe-tour.mjs` (173 checks) |
+
+The unit sweep is the part worth stealing: it runs **every** combination of five viewports, targets
+from 200px off-screen on each side up to 1.4 viewports wide and a full viewport tall, and all four
+preferred sides — and asserts the callout always lands inside the viewport and the arrow always
+lands inside the callout. A callout 40px below the fold looks like a design decision, so it is
+cheaper to make it a failing test than to notice it in a screenshot.
+
+The browser probe is the one that found the two defects this feature actually had: the tour closing
+itself on the navigation to `/play`, and the arrow aiming below the fold at the quest board. It runs
+with a **fresh context** every time, so "first visit" means what it says, on `reducedMotion:
+"reduce" so the scroll settles deterministically, and it fails on a hydration warning on every
+page it touches. It reports a 4xx/5xx from our own server with the URL, and ignores the local
+PostHog proxy (`/ph`), which fails on this box because the rewrite resolves PostHog to IPv6 and the
+connect is refused — noise about the dev machine, not about the change.
 

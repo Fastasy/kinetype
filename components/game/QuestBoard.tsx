@@ -254,7 +254,15 @@ export default function QuestBoard() {
 
   if (!board || !now) {
     return (
-      <section id="quests" aria-label="Quests" data-testid="quests" data-state="loading">
+      // `data-tour` on BOTH returns: the tour must be able to point at the board whether it is
+      // still loading or already showing, or the step depends on how fast the network is.
+      <section
+        id="quests"
+        aria-label="Quests"
+        data-testid="quests"
+        data-tour="quest-board"
+        data-state="loading"
+      >
         <h2 className="font-pixel text-sm text-ink">Quests</h2>
         <p className="mt-3 border-2 border-line bg-card/50 px-4 py-6 text-center font-mono text-xs text-ink-faint">
           Loading today&apos;s quests…
@@ -267,7 +275,13 @@ export default function QuestBoard() {
   const showSignIn = authConfigured && authReady && !userId;
 
   return (
-    <section id="quests" aria-labelledby="quests-heading" data-testid="quests" data-state="ready">
+    <section
+      id="quests"
+      aria-labelledby="quests-heading"
+      data-testid="quests"
+      data-tour="quest-board"
+      data-state="ready"
+    >
       <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
         <h2 id="quests-heading" className="font-pixel text-sm text-ink sm:text-base">
           Quests
