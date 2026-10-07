@@ -107,6 +107,8 @@ It also improves the game on its own terms: hits become scarce, so timing a kick
 
 **Corrected 2026-10-06 — the hold is per ROUND, not per match.** The original version of this decision folded the 2.2s countdown into the hold window, and that turned out to be a bug Ruan found by playing: mash while nobody can act and three characters were banked and handed to the NEXT round the moment it went live, i.e. free progress on a sentence he never typed against. Holding now covers hitstun, strict-mode stagger and a recovery cut *inside a live round*; input pressed once the round is decided (through the KO cut, the end-of-round hold and the next countdown) is dropped. Rule: `Match.canHoldInput`.
 
+**Amended 2026-10-07 — the recovery cut is out of the window too.** The correction above drew the line at "inside a live round", which still left the KO cut holding: the player whose OPPONENT is falling cannot act, so their mashing queued up and the HUD announced **"3 KEYS HELD"** while the round was already lost. Ruan photographed that exact chip and said that was the feature he meant. Holding is now limited to **hitstun and strict-mode stagger** — the only two cases where the player is genuinely mid-sentence with the prompt in front of them. Removing the cut costs nobody their save: the cut blocks only the player whose opponent is off the stage, while the falling fighter's own save input is *accepted*, never held.
+
 ## 6. Typing
 
 | Element | Decision |
@@ -117,7 +119,7 @@ It also improves the game on its own terms: hits become scarce, so timing a kick
 | Prompts on screen | **1 per fighter, always.** The next sentence arrives the instant the current one ends, with no gap and nothing to select. |
 | Mistype default | **Bonus lost, not progress lost.** A wrong character clears *that word's* precision bonus. Progress stands and the rest of the sentence still earns its own bonus, so a typo early in a long sentence costs one word's damage rather than the sentence. |
 | Strict mode (opt-in) | A player setting. Mistype adds 0.4s of stagger. For players who want the risk dial turned up. |
-| Input while the player cannot act | **Held inside a round, dropped between them.** Up to `INPUT_BUFFER_MAX` (3) keystrokes are queued and delivered in the order they were pressed, on the frame the fighter can act again. Applies to hitstun, strict-mode stagger and a recovery cut — nothing is held once the round is decided, so the KO cut, the end-of-round hold and the next countdown drop input rather than banking it. The HUD shows the count, so a wait is never silent. |
+| Input while the player cannot act | **Held for a hit and a stagger, dropped everywhere else.** Up to `INPUT_BUFFER_MAX` (3) keystrokes are queued and delivered in the order they were pressed, on the frame the fighter can act again — and only for hitstun and strict-mode stagger, where the player is mid-sentence and the game must not appear to eat their hands. While the opponent is off the stage, once the round is decided, and during the next countdown, input is dropped rather than banked, so the HUD never advertises a queue that has nowhere to go. |
 | Combo | **A chain of flawlessly typed words.** Every `COMBO_STEP` (3) clean words in a row adds `COMBO_BONUS_PER_STEP` (15%) to the damage of every move, capped at `COMBO_MAX_STEPS` (4) rungs, so a chain of 12 is worth ×1.60 and no more. ANY mistake breaks it — a wrong letter, a missed separator, a stray space. Stacks on top of the per-word precision bonus. Cleared at the start of each round (a fresh climb) but the match best is kept. |
 | Precision bonus | Completing a word with zero errors increases that move's damage by 25% and shows a distinct flash. |
 | Accuracy | Tracked per round and per match. Feeds the coin payout. |
@@ -358,7 +360,7 @@ The MVP is done when all of these are true.
 14. A hit cannot land inside the hit cooldown, and the cooldown always exceeds max hitstun.
 15. Repeated saves in one round grant progressively tighter windows.
 16. Both fighters spawn in the middle of the stage, apart, and symmetric about their own blast lines.
-17. A keystroke the player presses while they cannot act *within a live round* is held and delivered, never dropped, and the HUD says so. Between rounds it is the opposite: input is dropped, never banked, so no round can open with characters the player never typed against that sentence.
+17. A keystroke the player presses while they cannot act is held and delivered — hitstun and strict-mode stagger only — and the HUD reports the real count while it waits. Everywhere else it is the opposite: while the opponent is off the stage, after the round is decided, and during the next countdown, input is DROPPED, never banked and never shown as queued, so the HUD cannot advertise keys waiting for a sentence they will not reach.
 18. `npm run build`, `npm run lint` and `tsc --noEmit` all pass clean.
 19. The engine's pure logic has unit tests that pass under plain Node.
 20. `node scripts/verify-browser.mjs` plays a real match in Chromium, confirms damage lands both ways, and confirms a typed block word raises a visible guard.

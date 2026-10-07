@@ -274,12 +274,14 @@ export const WPM_MIN_SPAN = 1;
  * player fires off while being knocked back, and far too few to bank a whole word during
  * a long stun. Past the cap the excess is discarded rather than queued forever.
  *
- * THE WINDOW IS ONE ROUND, not the gap between rounds (corrected 2026-10-06). The 2.2s countdown
- * used to be listed here as a hold window as well, and that is exactly what Ruan then reported as
- * a bug: mashing while nobody could act banked three characters that were handed to the NEXT round
- * the moment it went live — free progress on a sentence he never typed against. Holding now
- * applies to hitstun, strict-mode stagger and a recovery cut INSIDE a live round; outside one,
- * input is dropped. The rule is `Match.canHoldInput`, pinned by the engine tests.
+ * THE WINDOW IS NARROW, and it took two passes to get there (2026-10-06, then 2026-10-07). The 2.2s
+ * countdown used to be listed here as a hold window, and Ruan reported the result as a bug: mashing
+ * while nobody could act banked three characters that were handed to the NEXT round the moment it
+ * went live — free progress on a sentence he never typed against. The first correction scoped
+ * holding to "inside a round", which still left the KO cut; he then photographed the HUD saying
+ * "3 KEYS HELD" while the bot was off the stage. Holding is now hitstun and strict-mode stagger
+ * ONLY: the two cases where the player is genuinely mid-sentence with the prompt in front of them.
+ * Everything else drops input. The rule is `Match.canHoldInput`, pinned by the engine tests.
  */
 export const INPUT_BUFFER_MAX = 3;
 

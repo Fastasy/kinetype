@@ -193,24 +193,27 @@ export class Match {
   /**
    * Whether a blocked keystroke may be HELD for later, rather than dropped.
    *
-   * Holding is a courtesy for a player who is mid-flow: a hit, a stagger or the opponent's
-   * recovery cut must not eat the letters their hands were already typing, because the sentence
-   * is on screen and their fingers are moving through it.
+   * Holding is a courtesy for a player who is mid-flow INSIDE a round: a hit or a stagger must not
+   * eat the letters their hands were already typing, because the sentence is on screen and their
+   * fingers are still moving through it.
    *
-   * It is NOT a courtesy between rounds. A keystroke pressed once a round is decided — during the
-   * KO cut, through the end-of-round hold, or during the countdown before the next round —
-   * belongs to no prompt at all, and banking it handed the player a free three-character head
-   * start on the next sentence the frame that round went live. Ruan hit this directly
-   * (2026-10-06): "when the bot is knocked off and I keep typing, three keys are held and when the
-   * round restarts those keystrokes get added." So the window is the ROUND, not the match: outside
-   * a live round the buffer stays empty and input in that window is dropped.
+   * It is not a courtesy anywhere else, and that line took TWO passes to draw (2026-10-06, then
+   * 2026-10-07). Ruan reported it first as keystrokes arriving in the NEXT round — "when the bot is
+   * knocked off and I keep typing, three keys are held and when the round restarts those keystrokes
+   * get added" — and then, still seeing the HUD badge, pointed at what was left of it: the panel
+   * announcing "3 KEYS HELD" while the bot was off the stage. Both were the same window, and the
+   * second report was the correction: a round that is decided holds NOTHING. Those keystrokes
+   * belong to no prompt, so they must neither land on the next sentence nor advertise themselves as
+   * waiting for one.
    *
-   * `recovery` is here deliberately. A cut that SUCCEEDS puts the same round back to life, and
-   * that player was mid-sentence when the opponent left the stage, so their keystrokes must
-   * survive it. A cut that fails ends the round and `endRound` empties the buffer anyway.
+   * A RECOVERY CUT is deliberately excluded. It only ever blocks the player whose OPPONENT is off
+   * the stage — the falling fighter's own save input is ACCEPTED, never held — so dropping here
+   * cannot cost anybody their save. What it removes is a queue that had nowhere to go: the round
+   * was already lost, and if the bot saved itself those characters landed on a sentence the player
+   * had stopped reading.
    */
   private canHoldInput(): boolean {
-    return this.phase === "live" || this.phase === "finish" || this.phase === "recovery";
+    return this.phase === "live" || this.phase === "finish";
   }
 
   /** Keystrokes pressed while input was blocked, oldest first. */

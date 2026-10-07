@@ -969,34 +969,37 @@ test("keystrokes typed before a round is live are dropped, not banked for it", (
   assert.equal(m.queuedFor("left"), 0, "the buffer stays empty");
 });
 
-test("a decided round discards its held keystrokes instead of carrying them over", () => {
+test("a round that ends while keys are held does not carry them over", () => {
+  // The buffer CAN legitimately be non-empty inside a round — that is the hitstun courtesy — and a
+  // round can end while it is, on the clock rather than on a KO. Whatever is still queued at that
+  // moment belongs to the round that just finished.
+  //
+  // REWRITTEN 2026-10-07. This test used to source its held keys from the KO cut, and the cut no
+  // longer holds anything at all (see canHoldInput), so it was asserting a state that can no longer
+  // exist. The `endRound` clear it guards is still needed for exactly this case, so it now builds
+  // the held keys the way a player does — mashing through a hitstun — and ends the round on the
+  // clock.
   const m = sandbox();
   toLive(m);
-  m.fighter("right").damage = 110;
-  strike(m, "left", "kick");
+  m.typing.left.prompts[0] = promptFor("planet");
+  strike(m, "right", "punch");
+  assert.equal(m.left.state, "hitstun", "the punch should stun the player");
 
-  // The right fighter has no bot controller in a sandbox, so it cannot save itself and
-  // the round ends in a KO. Drive until the recovery cut is open.
-  let guard = 0;
-  while (!m.recoveryVictim && guard++ < 400) m.step(STEP);
-  // Declared as `string`: the point of this test is the round transition, and TS 5.5
-  // narrows `m.phase` through the assertion below, which then rejects the loop guard.
-  const cutPhase: string = m.phase;
-  assert.ok(cutPhase === "recovery", "the kick should have opened a recovery window");
-  assert.equal(m.recoveryVictim, "right", "the right fighter is the one falling");
-
-  // Mash while the round is being decided: the player cannot act during the cut, so all
-  // of this is held in the buffer.
   const charsBeforeMash = m.typing.left.chars;
-  for (const ch of "wasd") m.type("left", ch);
-  assert.ok(m.queuedFor("left") > 0, "the mashing should be held while the cut runs");
+  for (const ch of "was") m.type("left", ch);
+  assert.equal(m.queuedFor("left"), INPUT_BUFFER_MAX, "the mashing is held while the stun runs");
 
-  // Drive on until round two is actually live and accepting input.
-  let guard2 = 0;
-  while (m.phase !== "live" && guard2++ < 4000) m.step(STEP);
-  assert.equal(m.phase, "live", "the next round should have started");
+  // End it on the clock: damage decides the round, and the transition still has to empty the queue.
+  m.fighter("right").damage = m.left.damage + 10;
+  m.roundTimer = 0;
+  let guard = 0;
+  while (m.phase !== "countdown" && m.phase !== "matchOver" && guard++ < 600) m.step(STEP);
 
-  assert.equal(m.queuedFor("left"), 0, "nothing may be banked into the next round");
+  assert.ok(
+    m.phase === "countdown" || m.phase === "matchOver",
+    `the round should have restarted (phase ${m.phase})`,
+  );
+  assert.equal(m.queuedFor("left"), 0, "nothing may survive the round it was typed in");
   assert.equal(
     m.typing.left.chars,
     charsBeforeMash,
@@ -1036,6 +1039,14 @@ test("mashing right through a KO and the next countdown banks nothing for the ne
   );
 
   const charsBefore = m.typing.left.chars;
+  // THE CUT ITSELF (added 2026-10-07). This is the case Ruan pointed at with a screenshot: mash
+  // while the bot is falling and the HUD announced "3 KEYS HELD". The player cannot act there —
+  // that is what the cut is — so nothing may sit in the queue waiting for a round already lost.
+  const chInCut = m.typing.left.nextKey();
+  if (chInCut) m.type("left", chInCut);
+  assert.equal(m.queuedFor("left"), 0, "nothing may be held while the opponent is off the stage");
+  assert.equal(m.typing.left.chars, charsBefore, "and nothing may be applied either");
+
   let guard = 0;
   let sawCountdown = false;
   let heldDuringCountdown = -1;
