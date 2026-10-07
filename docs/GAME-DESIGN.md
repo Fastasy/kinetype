@@ -1,10 +1,12 @@
 # Kinetype — Game Design Spec
 
-**Version** 1.2 · **Date** 2026-10-05 · **Status** MVP implementation
+**Version** 1.3 · **Date** 2026-10-07 · **Status** MVP implementation
 **Companion research** vault `Kinetype/Research/2026-09-28-design-evidence-knockback-and-typing.md`
 **Companion balance note** vault `Kinetype/Research/2026-10-05-balance-recovery-ladder-and-match-length.md`
 
 This document is the build contract. Every number here is either sourced from the design research or an explicit tuning constant that lives in `game/constants.ts`. If the code and this document disagree, the code is wrong.
+
+**1.3 changelog (2026-10-07).** Quests arrive: three dailies (one easy, one medium, one hard) and two weeklies, each paying bonus XP and coins, **rotating every day** so the set cannot be memorised. Specified in full in the new §15, which is the only section that changed; §10's currency paragraph and the acceptance criteria were extended to point at it. The one thing worth flagging up front: quests pay **XP as well as coins**, which is a knowing departure from 0007's "daily bonuses pay coins only" rule, argued in §15.5 with its two bounded consequences.
 
 **1.2 changelog (2026-10-05).** The recovery window moved from SECONDS to CHARACTERS. It was a flat seconds figure (1.8s, -0.25s per save, floor 0.8s) and that made surviving a ring-out a pure function of absolute WPM, which measured as a step rather than a curve: nothing below 33 WPM could ever save, nothing at or above 75 WPM could ever fail to, and the 70 WPM bot Ruan reported on saved four times out of five. Also fixed in the same session, on Ruan's call: the bot now banks typing progress through a stun under the player's own `INPUT_BUFFER_MAX` cap (§9), removing a ~1-rung edge the human held for free. Match length was measured, and Ruan decided to accept short arcade rounds rather than pad them (§13.5). §3, §7, §9, §11 and §13.5 changed.
 
@@ -258,7 +260,7 @@ Signals keep their hue families on the arena — red still means a heavy hit is 
 
 **Every theme is contrast-checked, including against the arena.** The test suite asserts WCAG AA (4.5:1) for text on surface, muted text on both surface and prompt background, accent on prompt background, and onAccent on accent — and separately asserts that each arena overlay clears AA against its own plate, that the outlined text and the rimmed confetti clear their bars on EVERY possible background, and that the fullscreen panels clear AA when composited over every arena at the shipped alpha. Each of those carries a **negative control** asserting the old value fails, so the check cannot quietly go hollow. A theme that looks good and cannot be read is a broken product.
 
-**Currency.** Coins, earned only. Payout per match = base by rounds won + WPM bonus + accuracy bonus + streak bonus, **scaled by the opponent's difficulty on a win**.
+**Currency.** Coins, earned only. Payout per match = base by rounds won + WPM bonus + accuracy bonus + streak bonus, **scaled by the opponent's difficulty on a win**. Quests (§15) are a second, small earning stream, bounded by construction and retunable without touching any of this.
 
 **Difficulty rewards (added 2026-10-06, migration `0008`).** The payout used to ignore the opponent entirely, so beating the 20 WPM warm-up paid exactly what beating the 120 WPM final boss paid. A win is now multiplied by `DIFFICULTY_PCT`, indexed by the rung of `BOT_WPM_LADDER`:
 
@@ -312,7 +314,7 @@ The game is NOT the homepage. The fighting box has its own page so the arena can
 | Route | Job | Primary keyword intent |
 |---|---|---|
 | `/` | Sell it. Hero, a static arena frame, the three things that decide an exchange, the roster, FAQ. **Never boots the engine.** | "typing fighting game" (informational) |
-| `/play` | Play it. One line of orientation, then the arena. | "play typing fighting game online" (transactional) |
+| `/play` | Play it. One line of orientation, then the arena. Below the arena: today's quests (§15). | "play typing fighting game online" (transactional) |
 | `/how-to-play` | Teach the mechanics | "how to play typing fighting game" |
 | `/shop` | Skins and themes | "typing game skins" |
 | `/typing-games-unblocked` | The school audience | "typing games unblocked" |
@@ -369,6 +371,15 @@ The MVP is done when all of these are true.
 23. A signed-in player's finished match is banked server-side, and its XP appears on the leaderboard in the correct window (today / this week / all time).
 24. Each boss is gated behind BOTH a player level and the previous boss, and a first clear pays its coin bounty exactly once — a repeat clear does not.
 25. `npm run test` covers the progression curve and the boss campaign as well as the engine.
+
+**Added for quests (2026-10-07, §15).**
+
+26. `/play` shows three daily quests (one easy, one medium, one hard) and two weekly quests, and the daily three are **different tomorrow** — never the same quest twice running.
+27. The rotation is a pure function of the UTC date and is computed identically on both sides: the client renders it from `game/quests.ts`, the server pays from `kinetype.quest_ids_for()`, and `npx tsx scripts/verify-quests.ts` fails if they disagree on any of 400 consecutive days or 120 weeks.
+28. Quest progress is DERIVED from `kinetype.matches` and is never sent by a client; a quest pays **once** per period, and a second `quest_award()` call pays zero.
+29. A **flagged** match advances no quest and pays no quest reward, and neither does a match on a day that has already burned the daily XP ceiling.
+30. The account's XP and coins equal exactly (match XP) + (quest awards) + (the first-win bonus) — `npx tsx scripts/probe-quests.ts` proves it against the live project and then deletes its fixture.
+31. `node scripts/probe-quests-ui.mjs` plays a real signed-in player's board in Chromium and confirms the cards, the grading, the claimed badges and the progress numbers all come from the server's own figures.
 
 ## 13.5 The measured ladder (added 2026-10-05)
 
@@ -508,3 +519,182 @@ picker in /play is untouched — the campaign is additive.
 **Leaderboards** rank by XP earned in a window (today from 00:00 UTC, this ISO week
 from Monday, or all time), via the `kinetype.leaderboard()` RPC, which is SECURITY
 DEFINER so it reads signed-out too.
+
+---
+
+## 15. Quests (added 2026-10-07)
+
+**The feature.** Three daily quests — one **easy**, one **medium**, one **hard** — and two **weekly**
+quests, each paying bonus XP and coins, and **the daily set changes every day**.
+
+Migration `0009_quests.sql`. Rotation and reward table in `game/quests.ts`. Board in
+`components/game/QuestBoard.tsx`, mounted on `/play` below the arena.
+
+### 15.1 What it is for
+
+0007 gave the day a hook — a first-win bonus and a consecutive-day streak — but the hook is the
+**same** every day and pays a flat 100. There is no answer to "what should I do *today*". A quest is
+that answer, and grading it means there is always one worth doing and one worth reaching for.
+
+The second half matters as much as the first: a fixed checklist is not a game, it is homework you
+learn once. So the set rotates.
+
+### 15.2 The rotation is a pure function of the DATE
+
+Not of the player, and not of a roll. Same day, same quests, for everybody, on every device, with
+**no assignment state stored anywhere** — no row saying who was given what.
+
+```
+epoch_day(d)  = days since 1970-01-01                      // the daily clock
+epoch_week(d) = floor((epoch_day(d) + 3) / 7)              // Monday-aligned weeks
+```
+
+The `+3` is the alignment and it is not arbitrary: 1970-01-01 was a **Thursday**, so day 0 sits
+three days into its Monday week, and the first Monday (day 4) has to open week *1* rather than week
+0. Sunday therefore belongs to the week that started six days earlier — asserted in the test suite on
+real dates, because a week boundary that is off by a day is the kind of bug that only shows up on a
+Sunday.
+
+Each tier is an ordered pool walked with a **stride of one**, with its own starting offset so the
+tiers do not march in lockstep:
+
+| Tier | Pool | Offset |
+|---|---|---|
+| easy | 6 | `+0` |
+| medium | 7 | `+2` |
+| hard | 5 | `+4` |
+
+A stride of one is what guarantees the property the whole feature is about: **tomorrow's easy quest
+is never today's easy quest.** The unequal pool sizes are doing real work too. `6 × 5 = 30` means
+easy and hard only re-pair every 30 days, and `lcm(6, 7, 5) = 210` means the daily **set** does not
+repeat for 210 days — so the rotation cannot be learned by heart inside a month, which is exactly
+what a fixed rotation would collapse into.
+
+The weekly pair is a **curated** list of all fifteen pairs of the six weekly quests, walked one pair
+per week — a 15-week cycle. Written out rather than generated: a generated pair can be "win five in
+a row" next to "beat three 85 WPM opponents", which is legal and miserable. Every weekly quest
+appears in exactly five pairs, so the cycle is fair.
+
+### 15.3 Progress is DERIVED, never sent
+
+Every metric is a count over rows the server **already holds** in `kinetype.matches`:
+
+| Metric | Counts | Uses `threshold` |
+|---|---|---|
+| `matches` | matches played | — |
+| `wins` | matches won | — |
+| `rounds_won` | rounds won, summed | — |
+| `clean_wins` | wins with no round dropped | — |
+| `boss_wins` | boss fights won | — |
+| `win_streak` | **longest run** of consecutive wins | — |
+| `fast_matches` | matches at ≥ N WPM | WPM |
+| `sharp_wins` | wins at ≥ N% accuracy | accuracy |
+| `combo_matches` | matches reaching a chain of ≥ N | chain length |
+| `big_scalps` | wins against an opponent at ≥ N WPM | WPM |
+
+There is **no parameter to send progress in**. A client cannot claim 3/3 because there is nowhere to
+put the claim. `win_streak` is the odd one out — it is a MAX, not a count, so it is recomputed fresh
+from the window on every call with the standard gaps-and-islands trick rather than accumulated in a
+column. That is deliberate: a loss after two wins means the run is over, and a stored counter could
+not express that.
+
+### 15.4 Payment, and the anti-farm rules
+
+**Once per quest per period, forever**, enforced by the primary key on
+`kinetype.quest_awards (user_id, quest_id, period_key)` and an `on conflict do nothing` insert. A
+quest that has paid is paid; a replayed or concurrent submission finds the row and pays nothing.
+
+The periods are `d:2026-10-07` and `w:2026-10-05` — the week is named by its **Monday**, not an ISO
+week number, so it is unambiguous without a calendar lookup.
+
+Three rules bound it, all consistent with 0006:
+
+- **A flagged match does nothing.** It does not advance a quest and cannot complete one. A flagged
+  submission is not a match the game believes.
+- **A capped day does nothing.** If the day has already burned the 25 000 XP ceiling, quests are not
+  scored either — a farm must not advance the board.
+- **The ceiling now covers quest XP too.** `quest_award()` reads match XP *plus* quest XP already
+  paid today, so "no account mints more than 25 000 XP in a UTC day" stays literally true instead of
+  becoming "25 000 from matches plus whatever quests happen to pay". The guard can only ever reduce a
+  payout.
+
+The board's progress number is the **raw** metric and may overshoot its target — five clean wins
+against a target of one is five. The bar and the displayed count clamp to the target, because "5/1"
+beside a full bar reads as a bug; the raw figure stays on `data-progress` so a probe can still see it.
+
+### 15.5 Quests pay XP, and that is a knowing departure from 0007
+
+0007 says daily bonuses pay **coins only**, never XP, because "XP drives the level curve and unlocks
+the boss ladder, and it is pinned by a test that mirrors `xp_for_match`". Quests break that rule at
+the designer's instruction.
+
+The consequences are real, and both are acceptable **because they are bounded**:
+
+1. **Quest XP is small next to match XP.** A *perfect* day is 340 XP; a single 2-0 win at the 40 WPM
+   anchor pays 140. All three dailies together are worth about two and a half matches, for
+   considerably more than two and a half matches of work.
+2. **It accelerates the boss ladder slightly.** Level is derived from XP, so quest XP does open
+   levels sooner. That is inherent in "quests give XP" and was chosen knowingly. The campaign is
+   still gated by the boss SEQUENCE, so a level bought with quest XP cannot skip a fight — it only
+   gets you to the gate sooner.
+
+### 15.6 The pacing figure, and where to turn the dial
+
+Measured against 0007's own numbers: the catalogue costs 52 500 coins and the measured base earning
+rate is ~1 900 coins a day, which 0007 sized at about 28 days to own everything.
+
+| | XP | coins |
+|---|---|---|
+| best possible daily trio | 340 | 480 |
+| best possible weekly pair | 820 | 1 130 |
+| **a PERFECT week** (all three dailies every day, both weeklies) | **3 200** | **4 490** |
+
+That is **+34% at PERFECTION** against a base of ~13 300 coins a week — and perfection is not
+realistic, because "win a match at 100% accuracy" and "win three in a row" rarely land on the same
+evening. The effect in practice is closer to +15-20%, which pulls the catalogue in to roughly 21-24
+days for an engaged player and leaves the casual pace where 0007 put it.
+
+**The dials are the reward columns in `kinetype.quest_defs` and nothing else.** No other code reads
+them. The reward ceilings are asserted by `game/tests/quests.test.ts` and re-checked against the
+database by `scripts/verify-quests.ts`, so a cap cannot drift upward by accident. If the pace needs
+retuning, move these numbers — or 0007's price tiers — and not both at once.
+
+### 15.7 Two copies of one table, on purpose
+
+The board renders the rotation from `game/quests.ts`; the server pays from
+`kinetype.quest_ids_for()`. Two implementations of one rule is normally a defect, and here it is a
+deliberate trade with a guard on it:
+
+- the client needs the quests **instantly and signed out** — the rotation is pure, so asking the
+  server for it would be a round trip to compute a constant;
+- the server must **own payment**, so it cannot be handed the answer.
+
+The guard is that drift is a failing test rather than a surprise. `scripts/verify-quests.ts` checks
+every field of every quest against the database, then walks **400 consecutive days and 120 weeks**
+comparing both rotations quest by quest, and fails on a single one. If the board ever promised a
+quest the server would not score, that is a quest nobody could ever complete.
+
+### 15.8 Verified, not argued
+
+| What | Where |
+|---|---|
+| The rotation, the period maths, the weekly pairs, the reward ceilings | `game/tests/quests.test.ts` (35 cases) |
+| TypeScript vs live Postgres, 400 days + 120 weeks + every field | `npx tsx scripts/verify-quests.ts` (65 checks) |
+| Quests pay, pay once, and only for honest matches — against the live project | `npx tsx scripts/probe-quests.ts` (39 checks) |
+| The board draws, graded, signed in and out, with the server's own numbers | `node scripts/probe-quests-ui.mjs` (21 checks) |
+
+`scripts/probe-quests.ts` is the one that matters most and it is a **conservation** check: it makes a
+throwaway account play a scripted run of five wins, then asserts the profile's XP and coins equal
+*exactly* (match XP) + (quest awards) + (the first-win bonus). Not "close to". A quest paying twice,
+paying the wrong amount, or paying for a quest that was never completed all break that equation. It
+then submits a match inside the server's 5-second gap to confirm a flagged submission pays nothing
+and moves no quest, calls `quest_award()` again to confirm it pays zero, and deletes its own fixture
+in a `finally` block.
+
+The UI probe signs in through the **real form** with an account that has **real matches** behind it,
+so the progress bars are showing numbers the server actually derived. It also fails on a hydration
+warning, which is a live risk here: the rotation is derived from the date, and the date is the one
+value the server and the browser can disagree about. `QuestBoard` reads it in an **effect**, never
+during render, and renders one frame of skeleton instead — the same discipline `game/store.ts`
+documents for the save.
+

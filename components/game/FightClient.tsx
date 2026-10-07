@@ -4,9 +4,10 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import Link from "next/link";
 
 import { signInHref, useAuth } from "@/components/auth/AuthProvider";
-import { getClearedBossSet, submitMatch } from "@/lib/kinetype-db";
+import { getClearedBossSet, getMyQuests, submitMatch } from "@/lib/kinetype-db";
 import { track } from "@/lib/analytics";
 import type { Boss } from "@/game/progression";
+import { questById } from "@/game/quests";
 import PromptCard from "./PromptCard";
 import { BOT_WPM_LADDER, COMBO_FIRE_CHAIN, COMBO_MAX_STEPS, COMBO_STEP } from "@/game/constants";
 import { comboSteps } from "@/game/combo";
@@ -117,6 +118,21 @@ const [focused, setFocused] = useState(false);
    firstWin: boolean;
  } | null>(null);
  const [bankErr, setBankErr] = useState<string | null>(null);
+ /**
+  * Quests this match just finished.
+  *
+  * The quest's reward is already inside `banked` — it is paid in the same server call as the match,
+  * so it shows up in the XP and coin totals. But a bonus folded silently into a bigger number is a
+  * bonus nobody notices they earned, so the quest is named here as well.
+  */
+ const [questDone, setQuestDone] = useState<{ id: string; title: string; xp: number; coins: number }[]>([]);
+ /**
+  * The quests already claimed when this session started, keyed `id|period` — the PERIOD matters, or
+  * a daily quest claimed yesterday would look claimed again today and never be announced.
+  * Null until the first load, and only ever set from null here: bankMatch owns it afterwards, so a
+  * profile refresh cannot race the diff that decides what to announce.
+  */
+ const claimedQuestsRef = useRef<Set<string> | null>(null);
  /** Bosses already beaten, so a first clear can pay its coin reward exactly once. */
  const [clearedBosses, setClearedBosses] = useState<Set<string>>(new Set());
  const clearedRef = useRef<Set<string>>(new Set());
@@ -139,6 +155,27 @@ const [focused, setFocused] = useState(false);
      .catch(() => {});
    return () => { active = false; };
  }, [boss, userId]);
+
+ // The quests already claimed on this account, loaded once so that the FIRST match of a session
+ // does not announce a quest that was finished yesterday.
+ useEffect(() => {
+   if (!authConfigured || !userId) {
+     claimedQuestsRef.current = null;
+     return;
+   }
+   let active = true;
+   void getMyQuests()
+     .then((rows) => {
+       // Only ever set from null: bankMatch keeps this ref up to date afterwards, and letting a
+       // late baseline overwrite it would swallow the next quest's announcement.
+       if (!active || claimedQuestsRef.current !== null) return;
+       claimedQuestsRef.current = new Set(
+         rows.filter((r) => r.claimed).map((r) => `${r.quest_id}|${r.period_key}`),
+       );
+     })
+     .catch(() => {});
+   return () => { active = false; };
+ }, [authConfigured, userId]);
 
  // Boss mode is account-only: the unlock ladder must persist. Guests can still play
  // free play, and /bosses sends them here only after they sign in.
@@ -231,6 +268,38 @@ const [focused, setFocused] = useState(false);
        // chip agree with the account without a second request.
        adoptProfile(updated);
      }
+
+     // ---- quests --------------------------------------------------------------------------
+     // Read AFTER the match is banked, because the reward was paid inside that same server call.
+     // Whatever is claimed now that was not claimed a moment ago is what this match just finished.
+     //
+     // In its own try: a quest read that fails must not be reported as a failed match. The board
+     // below the arena reloads this anyway, so the worst case is a missing line, not a lost match.
+     try {
+       const before = claimedQuestsRef.current;
+       const rows = await getMyQuests();
+       const nowClaimed = rows.filter((q) => q.claimed);
+       if (before) {
+         const fresh = nowClaimed.filter((q) => !before.has(`${q.quest_id}|${q.period_key}`));
+         if (fresh.length) {
+           setQuestDone(
+             fresh.map((q) => ({
+               id: q.quest_id,
+               title: questById(q.quest_id)?.title ?? "Quest complete",
+               xp: q.reward_xp,
+               coins: q.reward_coins,
+             })),
+           );
+         }
+       }
+       claimedQuestsRef.current = new Set(
+         nowClaimed.map((q) => `${q.quest_id}|${q.period_key}`),
+       );
+     } catch {
+       // Swallowed on purpose, and logged so it is not invisible.
+       console.warn("[kinetype] quest refresh after a match failed");
+     }
+
      if (wasFirstClear && r.humanWon && boss) {
        // The bounty is paid SERVER-side inside submit_match(). Adding rewardCoins here as well
        // would pay it twice.
@@ -254,6 +323,8 @@ const [focused, setFocused] = useState(false);
  engineRef.current?.destroy();
  setResult(null);
  setSnap(null);
+ // A fresh match clears the last one's quest announcement.
+ setQuestDone([]);
 
  // Funnel top: someone actually chose to fight, rather than just landing on /play.
  track("game_start", {
@@ -1104,6 +1175,21 @@ const [focused, setFocused] = useState(false);
    </p>
  )}
  {bankErr && <p className="mt-3 font-mono text-xs text-heat">Save failed: {bankErr}</p>}
+{questDone.length > 0 && (
+  <p
+    data-testid="quest-done"
+    data-quests={questDone.map((q) => q.id).join("|")}
+    className="mt-3 font-mono text-xs text-brand-bright"
+  >
+    Quest complete —{" "}
+    {questDone.map((q, i) => (
+      <span key={q.id}>
+        {i > 0 && " · "}
+        <span className="text-ink-soft">{q.title}</span> +{q.xp} XP, +{q.coins} coins
+      </span>
+    ))}
+  </p>
+)}
  {!userId && authConfigured && authReady && (
    <p className="mt-3 flex flex-wrap items-center gap-2 text-xs text-ink-faint">
      Guest match — not counted on the leaderboard.

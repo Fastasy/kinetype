@@ -7,6 +7,7 @@
 
 import { supabase } from "./supabase";
 import type { Boss, MatchMode } from "@/game/progression";
+import type { QuestScope, QuestTier } from "@/game/quests";
 
 export interface Profile {
   id: string;
@@ -281,6 +282,59 @@ export async function updateProfile(input: {
   });
   if (error) throw error;
   return (data as Profile) ?? null;
+}
+
+export interface QuestStatus {
+  quest_id: string;
+  scope: QuestScope;
+  tier: QuestTier | null;
+  metric: string;
+  /** WPM, accuracy or chain length the metric has to clear. 0 where the metric does not use one. */
+  threshold: number;
+  target: number;
+  reward_xp: number;
+  reward_coins: number;
+  /**
+   * DERIVED BY THE SERVER, every call, from the matches it holds — not from anything the client
+   * sent. It cannot be stale and it cannot be inflated: there is no parameter to inflate it with.
+   *
+   * This is the RAW metric, not a fraction of the target: five clean wins against a target of one
+   * comes back as 5, because five is what happened. The progress BAR clamps to the target
+   * (`Math.min`); this number deliberately does not, so a board can still say "you doubled it".
+   */
+  progress: number;
+  completed: boolean;
+  /** True once the reward has been paid for this period. Pays once, forever. */
+  claimed: boolean;
+  /** `d:2026-10-07` or `w:2026-10-05`. Identifies the period the progress belongs to. */
+  period_key: string;
+  /** When this period resets, ISO. Drives the countdown. */
+  ends_at: string;
+}
+
+/**
+ * The signed-in player's live quests with their progress.
+ *
+ * WHICH quests those are is not decided here — the rotation is a pure function of the date, and the
+ * board renders it locally from game/quests.ts. This call only asks for PROGRESS, which is the half
+ * that has to come from the server because it is the half that pays.
+ *
+ * Returns `[]` signed out (there is no account for a reward to land on), so callers can treat an
+ * empty result as "no account", not as an error.
+ */
+export async function getMyQuests(): Promise<QuestStatus[]> {
+  const { data, error } = await supabase.rpc("my_quests");
+  if (error) throw error;
+  return ((data as QuestStatus[]) ?? []).map((q) => ({
+    ...q,
+    // numeric arrives as a JSON number from PostgREST, but coerce so a stray string cannot turn
+    // a progress bar into `1/undefined`.
+    threshold: Number(q.threshold) || 0,
+    target: Number(q.target) || 1,
+    progress: Number(q.progress) || 0,
+    reward_xp: Number(q.reward_xp) || 0,
+    reward_coins: Number(q.reward_coins) || 0,
+  }));
 }
 
 export type { Boss };

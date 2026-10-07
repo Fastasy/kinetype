@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import FightClient from "@/components/game/FightClient";
+import QuestBoard from "@/components/game/QuestBoard";
 import JsonLd from "@/components/JsonLd";
 import { bossById } from "@/game/progression";
 
@@ -112,6 +113,13 @@ export default async function PlayPage({
       <div className="mt-2">
         <FightClient wide boss={boss} />
       </div>
+
+      {/* The quests sit BELOW the arena on purpose. The whole point of /play is that the arena is
+          the page, and a panel above it would push the fight below the fold for a first-time
+          visitor — which is the one conversion this page exists to make. */}
+      <section className="mx-auto mt-10 max-w-5xl px-3 sm:px-4">
+        <QuestBoard />
+      </section>
 
       <section className="mx-auto mt-12 max-w-3xl px-4 sm:px-6" aria-labelledby="play-faq">
         <h2 id="play-faq" className="font-pixel text-sm text-ink sm:text-base">
