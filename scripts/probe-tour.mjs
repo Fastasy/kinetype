@@ -207,9 +207,32 @@ function checkStep(label, g, { expectSpotlight = true } = {}) {
   check(`${where} arrow rides the facing edge`, edgeOk);
 }
 
+/**
+ * Click Next and wait until the step is actually ON SCREEN.
+ *
+ * The step attribute flips the instant Next is clicked, and the overlay *card* only mounts once the
+ * router has landed on that step's route — that is deliberate, it stops a stale callout being drawn
+ * over the wrong page mid-navigation. Waiting on the step attribute alone passed on localhost and
+ * failed on production, where the navigation is slower: the probe measured `fight-controls` while
+ * the card was still absent and reported an empty title. So wait for the step, the card, AND the
+ * route. This is the class of bug the production run exists to find.
+ */
 async function advance(page, expected) {
   await page.click(NEXT);
-  await page.waitForSelector(`[data-testid="tour"][data-step="${expected.id}"]`, { timeout: 10000 });
+  await page.waitForFunction(
+    (id) => {
+      const tour = document.querySelector('[data-testid="tour"]');
+      if (!tour || tour.getAttribute("data-step") !== id) return false;
+      return Boolean(document.querySelector('[data-testid="tour-card"]'));
+    },
+    expected.id,
+    { timeout: 20000 },
+  );
+  if (expected.route) {
+    await page.waitForFunction((route) => window.location.pathname === route, expected.route, {
+      timeout: 20000,
+    });
+  }
   // Let the spotlight follow the scroll before measuring.
   await page.waitForTimeout(220);
   return geom(page);
@@ -277,15 +300,31 @@ console.log("\n2. bringing it back deliberately");
 
   await page.goto(`${BASE}/settings`, { waitUntil: "domcontentloaded" });
   await page.waitForSelector('[data-testid="tour-replay"]', { timeout: 15000 });
-  await page.click('[data-testid="tour-replay"]');
-  await page.waitForSelector(TOUR, { timeout: 10000 });
+  // A PRODUCTION-ONLY RACE. The button is in the DOM before React has hydrated the page, and a click
+  // in that window is dispatched to markup that has no handler attached yet — nothing happens, and
+  // on localhost the window is too short to notice. It timed out here and passed there, which is the
+  // whole reason the probe is run against both. Retry the click the way a real visitor would: press
+  // it again if nothing happened. Three attempts, and a genuinely broken button still fails all
+  // three, so this cannot mask a real defect. (Every interactive element on the site has this
+  // window; it is not specific to the tour.)
+  let replayed = false;
+  for (let attempt = 0; attempt < 3 && !replayed; attempt++) {
+    if (attempt > 0) await page.waitForTimeout(400);
+    await page.click('[data-testid="tour-replay"]');
+    replayed = await page
+      .waitForSelector(TOUR, { timeout: 4000 })
+      .then(() => true)
+      .catch(() => false);
+  }
   // The overlay appears before the router has landed on step 1's route, so wait for the navigation
   // rather than reading the URL in the same breath as the click. `waitForFunction` rather than
   // `waitForURL`: the tour navigates with the client-side router, which does not emit the
   // navigation event `waitForURL` is waiting on.
-  await page.waitForFunction(() => window.location.pathname === "/", null, { timeout: 10000 });
-  const replayed = await geom(page);
-  check("Your account → Replay brings it back", replayed?.step === "welcome");
+  if (replayed) {
+    await page.waitForFunction(() => window.location.pathname === "/", null, { timeout: 10000 });
+  }
+  const replayState = await geom(page);
+  check("Your account → Replay brings it back", replayState?.step === "welcome");
   check("…and takes the visitor to the first step's page", new URL(page.url()).pathname === "/", `(${page.url()})`);
   check("no page errors and no hydration warning", noise.length === 0, noise.slice(0, 3).join(" // "));
   await context.close();
@@ -320,7 +359,17 @@ console.log("\n3. keyboard, and the fight must not eat it");
   await page.goto(`${BASE}/?tour=1`, { waitUntil: "domcontentloaded" });
   await page.waitForSelector(TOUR, { timeout: 15000 });
   for (let i = 0; i < 6; i++) await page.keyboard.press("ArrowRight");
-  await page.waitForSelector(`${TOUR}[data-step="fight-arena"]`, { timeout: 10000 });
+  // Same wait as `advance`: the card only exists once the router has landed on /play.
+  await page.waitForFunction(
+    () => {
+      const tour = document.querySelector('[data-testid="tour"]');
+      if (!tour || tour.getAttribute("data-step") !== "fight-arena") return false;
+      if (!document.querySelector('[data-testid="tour-card"]')) return false;
+      return window.location.pathname === "/play";
+    },
+    null,
+    { timeout: 20000 },
+  );
   await page.waitForTimeout(700);
   check(
     "the tour walked the visitor into the game",

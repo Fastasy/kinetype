@@ -863,8 +863,16 @@ cheaper to make it a failing test than to notice it in a screenshot.
 The browser probe is the one that found the two defects this feature actually had: the tour closing
 itself on the navigation to `/play`, and the arrow aiming below the fold at the quest board. It runs
 with a **fresh context** every time, so "first visit" means what it says, on `reducedMotion:
-"reduce" so the scroll settles deterministically, and it fails on a hydration warning on every
+"reduce"` so the scroll settles deterministically, and it fails on a hydration warning on every
 page it touches. It reports a 4xx/5xx from our own server with the URL, and ignores the local
 PostHog proxy (`/ph`), which fails on this box because the rewrite resolves PostHog to IPv6 and the
 connect is refused — noise about the dev machine, not about the change.
+
+**It is run against localhost AND production, and that is not ceremony.** The production pass (173
+checks against `www.kinetype.app`, after the 2026-10-07 deploy) found two timing assumptions that
+localhost hides because localhost is too fast to expose them: the probe was measuring a step as soon
+as its attribute flipped, before the router had landed and mounted the callout, and it was clicking
+the replay button inside the hydration window, where a click is dispatched to markup with no handler
+attached yet. Both are probe defects rather than product defects — but only one of them was visible
+from the dev box, which is exactly why the production run exists.
 
