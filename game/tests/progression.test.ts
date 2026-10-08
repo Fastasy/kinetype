@@ -253,6 +253,41 @@ test("unlock levels and reward coins only ever climb", () => {
   assert.ok(BOSSES[0].unlockLevel >= 1, "the first boss is always reachable");
 });
 
+test("the roster's order and level gates are the pairs the SQL mirror seeds", () => {
+  // db/migrations/0010_boss_gate.sql seeds kinetype.boss_defs from this exact list — it cannot be
+  // imported here, so the pairs are pinned as literals. If the roster ever changes, this fails and
+  // points at the migration that has to change with it, and `scripts/verify-bosses.ts` proves the
+  // live table really matches the roster. Without this, a boss added to BOSSES would be enterable
+  // from the URL while the server's roster had never heard of it — a fight the server would refuse.
+  assert.deepEqual(
+    BOSSES.map((b) => [b.id, b.unlockLevel]),
+    [
+      ["tick", 1],
+      ["bandit", 2],
+      ["vex", 3],
+      ["havoc", 4],
+      ["quartz", 5],
+      ["cannon", 6],
+      ["nimbus", 8],
+      ["vortex", 10],
+      ["oblivion", 12],
+    ],
+  );
+});
+
+test("the gate never loosens as the player grows", () => {
+  // Monotonicity, because a gate that closed as levels rose would be a bug the shape checks above
+  // would not catch: every boss open at some (level, clears) must stay open with MORE of either.
+  const all = BOSSES.map((b) => b.id);
+  for (let i = 0; i < BOSSES.length; i += 1) {
+    const cleared = all.slice(0, i);
+    const level = BOSSES[i].unlockLevel;
+    if (!bossUnlocked(BOSSES[i], level, cleared)) continue;
+    assert.ok(bossUnlocked(BOSSES[i], level + 5, cleared), `${BOSSES[i].id} closed when the level rose`);
+    assert.ok(bossUnlocked(BOSSES[i], level, [...cleared, "oblivion"]), `${BOSSES[i].id} closed when clears grew`);
+  }
+});
+
 test("the final boss is a best-of-five gauntlet", () => {
   assert.equal(BOSSES[BOSSES.length - 1].bestOf, 5);
   for (const b of BOSSES.slice(0, -1)) assert.equal(b.bestOf, 3, `${b.id} should be best-of-three`);

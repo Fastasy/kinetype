@@ -6,7 +6,7 @@ import Link from "next/link";
 import { signInHref, useAuth } from "@/components/auth/AuthProvider";
 import { getClearedBossSet, getMyQuests, submitMatch } from "@/lib/kinetype-db";
 import { track } from "@/lib/analytics";
-import type { Boss } from "@/game/progression";
+import { BOSSES, bossIndex, bossUnlocked, levelProgress, type Boss } from "@/game/progression";
 import { questById } from "@/game/quests";
 import PromptCard from "./PromptCard";
 import { BOT_WPM_LADDER, COMBO_FIRE_CHAIN, COMBO_MAX_STEPS, COMBO_STEP } from "@/game/constants";
@@ -107,7 +107,7 @@ const [focused, setFocused] = useState(false);
  const muted = save.muted;
 
  // ---- accounts / boss campaign -------------------------------------------------
- const { configured: authConfigured, ready: authReady, userId, profile, adoptProfile } = useAuth();
+ const { configured: authConfigured, ready: authReady, userId, profile, profileLoading, adoptProfile } = useAuth();
  /** Set when a match has been banked server-side, for the earned-this-match line. */
  const [banked, setBanked] = useState<{
    gained: number;
@@ -135,6 +135,12 @@ const [focused, setFocused] = useState(false);
  const claimedQuestsRef = useRef<Set<string> | null>(null);
  /** Bosses already beaten, so a first clear can pay its coin reward exactly once. */
  const [clearedBosses, setClearedBosses] = useState<Set<string>>(new Set());
+ /**
+  * True once the cleared set has been read (or its read has failed). Not progress itself — it is
+  * "we asked the server and hold the answer", which is what lets the unlock gate below stop
+  * guessing. Kept apart from the set so an empty set and an unanswered question are not confused.
+  */
+ const [clearedLoaded, setClearedLoaded] = useState(false);
  const clearedRef = useRef<Set<string>>(new Set());
  /** XP at the last server sync, so a payout can be shown as a delta. */
  const lastXpRef = useRef(0);
@@ -151,8 +157,10 @@ const [focused, setFocused] = useState(false);
    if (!boss || !userId) return;
    let active = true;
    void getClearedBossSet()
-     .then((s) => { if (active) setClearedBosses(s); })
-     .catch(() => {});
+     .then((s) => { if (active) { setClearedBosses(s); setClearedLoaded(true); } })
+     // A failed read still resolves the question: the gate must not sit on "checking" forever, and
+     // the empty set it falls back to is the conservative answer.
+     .catch(() => { if (active) setClearedLoaded(true); });
    return () => { active = false; };
  }, [boss, userId]);
 
@@ -180,6 +188,29 @@ const [focused, setFocused] = useState(false);
  // Boss mode is account-only: the unlock ladder must persist. Guests can still play
  // free play, and /bosses sends them here only after they sign in.
  const bossBlocked = Boolean(boss) && authConfigured && authReady && !userId;
+
+ /**
+  * The unlock gate.
+  *
+  * `/play?boss=<id>` renders the arena for ANY id in the roster, which made the URL a second front
+  * door: the campaign page gates its BUTTONS, never the route. The gate below is the fix — a boss
+  * the account has not unlocked does not get an arena, because the server refuses to bank that
+  * fight anyway (`submit_match` re-derives the same rule) and a fight that cannot be banked must
+  * not be played.
+  *
+  * It needs TWO server facts — the player's level and the bosses they have cleared — so it must
+  * WAIT for both rather than guess. Guessing "locked" throws a false wall at a player who earned
+  * the fight; guessing "open" mounts an arena the server then refuses. So there is a third state,
+  * deciding, which is honest and lasts one round trip. This is a UX half only: the load-bearing
+  * half is the server refusal, which no URL can skip.
+  */
+ const bossLevel = levelProgress(profile?.xp ?? 0).level;
+ const bossGateKnown =
+   authConfigured && authReady && Boolean(userId) && !profileLoading && clearedLoaded;
+ const bossDeciding = Boolean(boss) && authConfigured && !bossGateKnown;
+ // The `?? 0` above is a deliberate degrade: if the profile read FAILED, the level is unknown and
+ // the conservative answer — level 1 — is the one that cannot over-promise.
+ const bossLocked = Boolean(boss) && bossGateKnown && !bossUnlocked(boss!, bossLevel, clearedBosses);
 
  // In boss mode the bot's speed IS the boss's; the free-play picker is ignored.
  const botWpmInPlay = boss ? boss.botWpm : save.botWpm;
@@ -550,11 +581,75 @@ const [focused, setFocused] = useState(false);
            Play free play instead
          </Link>
        </p>
-     </section>
-   );
- }
+       </section>
+       );
+       }
 
- return (
+       // Boss mode, signed in, and the gate is still deciding. Say so rather than flash a wall (which
+       // would be a lie for a player who earned the fight) or an arena (which would be a lie for one who
+       // did not). One round trip — the same discipline /bosses uses while it reads the cleared set.
+       if (boss && bossDeciding) {
+       return (
+       <section
+       className="mx-auto max-w-md px-4 py-16 text-center"
+       data-testid="boss-checking"
+       data-boss={boss.id}
+       >
+       <p className="font-mono text-sm text-ink-faint">Checking your campaign…</p>
+       </section>
+       );
+       }
+
+       // Boss mode, signed in, and this fight is NOT unlocked. The arena is deliberately not mounted: the
+       // server refuses to bank a match for a locked boss, so letting the fight start would be a lie the
+       // player plays through and only discovers at the result card.
+       if (boss && bossLocked) {
+       const needsLevel = bossLevel < boss.unlockLevel;
+       const previous = BOSSES[bossIndex(boss.id) - 1];
+       return (
+       <section
+       className="mx-auto max-w-md px-4 py-16 text-center"
+       data-testid="boss-locked"
+       data-boss={boss.id}
+       data-reason={needsLevel ? "level" : "sequence"}
+       >
+       <h1 className="font-pixel text-base text-ink">{boss.name}</h1>
+       <p className="mt-2 font-mono text-xs uppercase tracking-wider text-secondary">{boss.title}</p>
+       <p className="mt-4 text-sm text-ink-faint">{boss.blurb}</p>
+       <p className="mt-6 font-mono text-xs uppercase tracking-wider text-heat">Locked</p>
+       <p className="mt-2 text-sm text-ink-faint">
+         {needsLevel ? (
+           <>
+             This fight opens at level {boss.unlockLevel}. You are level {bossLevel}.
+           </>
+         ) : (
+           <>Beat {previous?.name ?? "the previous boss"} first, then this fight opens.</>
+         )}
+       </p>
+       <p className="mt-4 text-sm text-ink-faint">
+         The ladder is a sequence, not a menu — climb it in order and every fight is one you have
+         been readied for.
+       </p>
+       <div className="mt-6 flex flex-wrap justify-center gap-3">
+         <Link
+           href="/bosses"
+           data-testid="boss-locked-campaign"
+           className="inline-block bg-brand px-6 py-2.5 text-sm font-bold text-page transition hover:bg-brand-bright"
+         >
+           See the campaign
+         </Link>
+         <Link
+           href="/play"
+           className="inline-block border-2 border-line-strong px-6 py-2.5 text-sm font-bold text-ink-soft transition hover:border-brand hover:text-brand"
+         >
+           Free play instead
+         </Link>
+       </div>
+       </section>
+       );
+       }
+
+       return (
 <section
   ref={sectionRef}
   data-testid="fight-section"

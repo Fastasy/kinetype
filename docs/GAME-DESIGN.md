@@ -1,10 +1,20 @@
 # Kinetype — Game Design Spec
 
-**Version** 1.4 · **Date** 2026-10-07 · **Status** MVP implementation
+**Version** 1.5 · **Date** 2026-10-08 · **Status** MVP implementation
 **Companion research** vault `Kinetype/Research/2026-09-28-design-evidence-knockback-and-typing.md`
 **Companion balance note** vault `Kinetype/Research/2026-10-05-balance-recovery-ladder-and-match-length.md`
 
 This document is the build contract. Every number here is either sourced from the design research or an explicit tuning constant that lives in `game/constants.ts`. If the code and this document disagree, the code is wrong.
+
+**1.5 changelog (2026-10-08).** The boss ladder was enterable from the address bar. `/play?boss=<id>`
+turned the arena into ANY boss in the roster whatever the account had earned, and `submit_match()`
+paid whatever boss payload it was handed — so a level-1 account could paste `/play?boss=oblivion`,
+fight the final boss, and be paid the XP, the boss bonus, the one-time coin bounty and the CLEAR.
+Both halves are fixed and the fix is specified in the new §17: the client refuses to mount an
+unearned arena, and the server refuses to bank one, from the same rule stated once in TypeScript and
+mirrored in SQL (`boss_defs` + `boss_unlocked()`), pinned by a drift verifier. §14's boss paragraph
+gained a pointer to it and §13 gained four acceptance criteria. Nothing about the ladder itself,
+free play, or any reward changed.
 
 **1.4 changelog (2026-10-07).** The first-visit tour arrives: a nine-step walk through the front door
 and into the arena that opens itself once per browser, then can be replayed from Your account or
@@ -403,6 +413,13 @@ The MVP is done when all of these are true.
 35. It can be brought back deliberately, by `?tour=1` or by "Replay the walkthrough" on `Your account`, and neither is a dead end: the replay navigates to whatever page the first step lives on.
 36. Opening the tour never changes the first paint: the seen flag is read on the client, the server snapshot is "seen", and `node scripts/probe-tour.mjs` fails on a hydration warning on every page it visits.
 
+**Added for the locked boss gate (2026-10-08, §17).**
+
+37. A boss a signed-in account has not unlocked does not get an arena. `/play?boss=<id>` for a locked boss renders a gate that says WHICH condition is unmet — the level it needs, or the boss ahead of it by name — links to the campaign and offers free play, and `[data-testid="fight-section"]` is never mounted. A guest still gets the sign-in wall, and free play is unchanged.
+38. The server refuses a boss match for a boss the account has not unlocked, and a refusal pays NOTHING: `npx tsx scripts/probe-boss-gate.ts` submits the exact payload a pasted `/play?boss=oblivion` produces on a level-1 account, confirms the refusal, and asserts the profile's XP, coins, match count, clears and flag count are **byte-identical** afterwards. It then proves each condition in isolation — the level alone opens nothing, a level far past every gate skips nothing, and the rung whose ONE prerequisite is beaten does open.
+39. The gate is stated twice and pinned: `kinetype.boss_defs` + `kinetype.boss_unlocked()` mirror `BOSSES` + `bossUnlocked()`, and `npx tsx scripts/verify-bosses.ts` fails on one unit of drift — the roster field by field, then 702 combinations of boss, level and cleared set. It also reads the live `submit_match()` body and fails if the refusal block is gone, because the helper being right proves nothing about the payout path calling it.
+40. `node scripts/probe-boss-gate-ui.mjs` opens the locked route in a real browser, signed out and signed in, and confirms the level reason, the sequence reason, the earned fight opening, the untouched free-play arena and the campaign page's agreement — on localhost AND production, failing on a hydration warning.
+
 ## 13.5 The measured ladder (added 2026-10-05)
 
 `scripts/probe-balance.ts` drives the framework-free core with no browser: a scripted human (its own WPM, accuracy, per-sentence read delay and parry roll, typing through the real `Match.type()` input path) against each bot rung, 8 matches per cell. Raw matrices live in the balance note.
@@ -536,7 +553,8 @@ so the HUD and the leaderboard can never disagree about someone's level.
 (20..120 WPM). A boss is a NAMED rung, not a new difficulty system: `game/progression.ts`
 holds the roster. Each fight needs BOTH the player's level to clear `unlockLevel` AND
 the previous boss to be beaten, and the final boss is best-of-five. The free WPM
-picker in /play is untouched — the campaign is additive.
+picker in /play is untouched — the campaign is additive. **That gate is enforced on both
+sides of the wire and a URL cannot skip it — see §17 (added 2026-10-08).**
 
 **Leaderboards** rank by XP earned in a window (today from 00:00 UTC, this ISO week
 from Monday, or all time), via the `kinetype.leaderboard()` RPC, which is SECURITY
@@ -876,3 +894,108 @@ the replay button inside the hydration window, where a click is dispatched to ma
 attached yet. Both are probe defects rather than product defects — but only one of them was visible
 from the dev box, which is exactly why the production run exists.
 
+## 17. A locked boss is not enterable, on either side of the wire (added 2026-10-08)
+
+### 17.1 The hole
+
+`/play?boss=<id>` turns the arena into a campaign fight. `bossById()` resolves the id and
+`FightClient` renders that boss — and until this change it rendered **any** id in the roster,
+whatever the account had earned. The campaign page at `/bosses` gated its **buttons**; it never
+gated the **route**. So a level-1 account could paste `/play?boss=oblivion` and start the final
+fight, and the ladder — the entire progression the campaign exists to sell — was a text box.
+
+The UI hole was only half of it, and the quieter half was worse. `submit_match()` paid every boss
+payload it was handed: the flat +60 boss term, the level-scaled win, the one-time coin bounty out of
+`boss_rewards`, and the **clear** it registered in `boss_clears`. So the paste did not merely let a
+player *preview* the final boss — it **skipped the ladder outright**, with the same authority the
+server uses for an honest match. A gate the client enforces and the server does not is decoration.
+
+### 17.2 The rule, and why it lives in two places
+
+The rule already existed, in full, in `game/progression.ts` as `bossUnlocked()`: the player's level
+must clear the boss's `unlockLevel`, **and** the previous boss must already be beaten. Two conditions,
+both required. What was missing was a server that could derive it.
+
+So the rule moved to SQL as a mirror, exactly like the reward tables (§14) and the quest rotation
+(§15.7) before it:
+
+| Fact the rule reads | TypeScript | SQL |
+|---|---|---|
+| The ladder's order and each level gate | `BOSSES` order, `BOSSES[].unlockLevel` | `kinetype.boss_defs` (`ord`, `unlock_level`) |
+| Which bosses are beaten | the `cleared` set passed in | `kinetype.boss_clears` |
+| The rule itself | `bossUnlocked(boss, level, cleared)` | `kinetype.boss_unlocked(level, boss_id, cleared[])` |
+
+The coin bounty already lived in `boss_rewards` (§14), so with `boss_defs` the roster is now fully
+described in data rather than compiled into the payout function. Two copies of one rule is normally a
+defect; here the client must answer **instantly and without a round trip** (a lock state is a render,
+not a request) while the server must **own the refusal** and cannot be handed the answer. The guard
+is the same one §15.7 uses: drift is a failing test, `scripts/verify-bosses.ts`, which compares the
+roster field by field and then walks both functions against each other over **every boss × every
+level 1..13 × six cleared sets — 702 combinations.**
+
+### 17.3 The client half: a URL is not an unlock
+
+`FightClient` now resolves one of four states before it draws anything a player can type into:
+
+- **guest** — the existing sign-in wall. Boss mode needs an account, because a lock state that
+  evaporates on refresh is not a campaign.
+- **deciding** — `Checking your campaign…`. The gate needs two server facts (the level, and the
+  cleared set) and it must WAIT for both.
+- **locked** — a gate that names the unmet condition (the level it needs, or the boss ahead of it)
+  and links to the campaign. The arena is not mounted.
+- **open** — the fight.
+
+**The `deciding` state is the part worth keeping.** Guessing "locked" while the profile is in flight
+would throw a false wall at a player who has earned the fight; guessing "open" would mount an arena
+the server then refuses. Both are worse than a one-round-trip message, so the gate reports that it
+does not know yet. The failure mode is bounded: if the profile read fails outright, the level falls
+back to 1, which is the conservative direction — it can under-promise, never over-promise — and the
+server is the authority regardless.
+
+Two reasons are named, not one, because they are different problems for the player: *you are not this
+level yet* is answered by playing more, *the boss ahead of you is unbeaten* is answered by beating
+that boss by name. `data-reason` carries which one the probe reads.
+
+### 17.4 The server half: the refusal is the load-bearing one
+
+`submit_match()` now refuses, alongside the round-count and WPM impossibilities it already checks:
+
+- boss mode with no boss id → refused;
+- a boss id not in `boss_defs` → refused (a rule that guessed about a name it had never heard of
+  would be the wrong default);
+- a boss the player has not unlocked → refused, with the rule re-derived from `profiles.level` and
+  their own `boss_clears`.
+
+**A refusal must pay nothing, and the refusal is placed before every write** — so the transaction
+rolls back and the account is left byte-identical. That is what `scripts/probe-boss-gate.ts` asserts,
+rather than merely that an error came back: the profile's XP, coins, match count, clears and flag
+count are compared before and after, and the match table is asserted empty. Paying a partial bounty
+for a refused fight, or registering the clear anyway, would be the exploit surviving the fix.
+
+It is also the reason the migration landed before the deploy: for the window between them, the server
+refuses a fight the old client would still offer — which is the safe direction to be inconsistent in.
+
+### 17.5 What the probe found that was worth writing down
+
+The campaign's own economy makes the **sequence** the load-bearing condition, not the level. Beating
+boss 1 at level 1 pays 302 XP against a level-2 threshold of 100, so the first clear levels the player
+past the next gate in the same breath — the probe's first draft asserted "boss 2 is still locked after
+boss 1" and was simply wrong about the game. §14 already said the level gate "delays the ladder, it
+cannot skip it"; the measured version is sharper — at the bottom of the ladder the delay is zero and
+the sequence does all the work; at the top (level 8, 10, 12 gates against 12 100 XP) the gate is the
+real wait. Neither condition is redundant, which is why both are still enforced and both are tested
+in isolation.
+
+### 17.6 Verified, not argued
+
+| What | Where |
+|---|---|
+| The rule's shape, the roster's order and level gates, and the gate's monotonicity | `game/tests/progression.test.ts` |
+| TypeScript vs live Postgres: the roster field by field, then 702 combinations of boss, level and cleared set; plus the live `submit_match()` body still calling the rule | `npx tsx scripts/verify-bosses.ts` (16 checks) |
+| The refusal, and that a refusal pays NOTHING — byte-identical profile, no match row, no clear | `npx tsx scripts/probe-boss-gate.ts` (30 checks) |
+| The browser never offers an unearned arena, and names the reason | `node scripts/probe-boss-gate-ui.mjs` (21 checks) |
+
+`scripts/verify-bosses.ts` deliberately checks the live **body of `submit_match()`** as well as the
+helper: a verifier that proves `boss_unlocked()` is correct while the payout path has stopped calling
+it would be a green light on a broken gate. The same instinct as the probe's byte-identical check —
+test the thing that pays, not the thing that explains.
