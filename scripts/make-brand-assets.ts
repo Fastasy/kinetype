@@ -62,10 +62,18 @@ async function main(): Promise<void> {
   // iOS home screen.
   writeFileSync(`${APP}/apple-icon.png`, await png(180));
 
-  // 16 and 32 frames: 16 for the tab strip, 32 for everything else. From the same source.
+  // 16 for the tab strip, 32 for everything else, and 48/96/192 because Google's
+  // favicon crawler only accepts raster formats (BMP, GIF, ICO, PNG, JPEG, PPM,
+  // TIFF) and recommends an icon larger than 48x48 so it survives every surface.
+  // The SVG we also ship is crisp in browsers but is NOT on Google's supported
+  // list, so it cannot be the only thing on offer: without the big ICO frames the
+  // only Google-readable source above 48px would be the 180px apple-touch-icon.
   const frames = [
     { size: 16, data: await png(16) },
     { size: 32, data: await png(32) },
+    { size: 48, data: await png(48) },
+    { size: 96, data: await png(96) },
+    { size: 192, data: await png(192) },
   ];
   writeFileSync(`${APP}/favicon.ico`, ico(frames));
 
