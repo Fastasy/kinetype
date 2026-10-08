@@ -3,20 +3,51 @@
 Kinetype is a free browser game where typing is the only weapon. Every word in a sentence is a move: one to three characters raises a guard, four to seven is a punch, eight or more is a kick. Damage turns into knockback, and knocking your opponent past the edge of the stage wins the round. No download, no install and no account needed to play.
 
 ## Play
-- [Play Kinetype](https://kinetype.app/play) - the game. Pick a bot from 20 to 120 words per minute and fight best of three rounds.
-- [Typing speed test](https://kinetype.app/typing-speed-test) - a plain 15, 30 or 60 second WPM and accuracy test with no game attached
-- [Kinetype](https://kinetype.app/) - what the game is, how an exchange is decided, and the roster
-- [How to play](https://kinetype.app/how-to-play) - the mechanics: moves, blocking, parries and recovery
-- [Boss campaign](https://kinetype.app/bosses) - nine named bosses, each gated behind your level and the one before it
-- [Leaderboard](https://kinetype.app/leaderboard) - daily, weekly and all time, ranked by XP earned in the window
-- [Skins and themes](https://kinetype.app/shop) - bought with coins earned in matches
+- [Play Kinetype](https://www.kinetype.app/play) - the game. Pick a bot from 20 to 120 words per minute and fight best of three rounds.
+- [Typing speed test](https://www.kinetype.app/typing-speed-test) - a plain 15, 30 or 60 second WPM and accuracy test with no game attached
+- [Kinetype](https://www.kinetype.app/) - what the game is, how an exchange is decided, and the roster
+- [How to play](https://www.kinetype.app/how-to-play) - the mechanics: moves, blocking, parries and recovery
+- [Boss campaign](https://www.kinetype.app/bosses) - nine named bosses, each gated behind your level and the one before it
+- [Leaderboard](https://www.kinetype.app/leaderboard) - daily, weekly and all time, ranked by XP earned in the window
+- [Skins and themes](https://www.kinetype.app/shop) - bought with coins earned in matches
 
 ## Guides
-- [Typing fighting games](https://kinetype.app/typing-fighting-games) - what a typing fighting game is, what each kind of typing game actually does, and why knockback changes the genre
-- [Games like Nitro Type](https://kinetype.app/games-like-nitro-type) - typing games that are not only races, and the checks worth running before you commit
-- [Typing games for middle school](https://kinetype.app/typing-games-for-middle-school) - what a typing game needs before it survives a classroom lesson
-- [Typing games unblocked](https://kinetype.app/typing-games-unblocked) - what the game needs, what it does not, and how to play quietly
-- [All guides](https://kinetype.app/guides)
+- [Typing fighting games](https://www.kinetype.app/typing-fighting-games) - what a typing fighting game is, what each kind of typing game actually does, and why knockback changes the genre
+- [Games like Nitro Type](https://www.kinetype.app/games-like-nitro-type) - typing games that are not only races, and the checks worth running before you commit
+- [Typing games for middle school](https://www.kinetype.app/typing-games-for-middle-school) - what a typing game needs before it survives a classroom lesson
+- [Typing games unblocked](https://www.kinetype.app/typing-games-unblocked) - what the game needs, what it does not, and how to play quietly
+- [All guides](https://www.kinetype.app/guides)
+
+## Work-from-home job guides
+Honest pay and application breakdowns for work-from-home typing work: transcription, captioning, data entry and virtual assisting. Written for job seekers in the Philippines, South Africa and worldwide, with the real application gates and the scam red flags. These sit outside the game navigation and are reachable from the footer.
+- [All job guides](https://www.kinetype.app/articles) - searchable directory of every guide below
+- [How to pass a typing test for a job](https://www.kinetype.app/how-to-pass-a-typing-test-for-a-job) - the speed and accuracy gates employers actually set, and how the test room differs from practising at home
+- [How to pass the GoTranscript test](https://www.kinetype.app/how-to-pass-gotranscript-test) - the two-step application, the guidelines quiz and the sample clip
+- [Free transcription test practice](https://www.kinetype.app/free-transcription-test-practice) - what the free practice files from each platform actually test
+- [Rev typing test](https://www.kinetype.app/rev-typing-test) - Rev's application path, its accuracy-based gate, and its guidance of around 60 words per minute
+- [TranscribeMe typing test](https://www.kinetype.app/transcribeme-typing-test) - the entrance exam, the style guide and why TranscribeMe does not hire on typing speed
+- [Typing test for work-from-home jobs](https://www.kinetype.app/typing-test-wfh-jobs) - which words per minute band opens which job
+- [How to get transcription jobs](https://www.kinetype.app/how-to-get-transcription-jobs) - where beginners actually get hired, and in what order to apply
+- [Transcription jobs](https://www.kinetype.app/transcription-jobs) - the global picture: platforms, per-audio-minute rates and real effective hourly pay
+- [How to become a transcriptionist](https://www.kinetype.app/how-to-become-a-transcriptionist) - the full path in six steps, starting with typing speed and accuracy
+- [Transcriptionist salary](https://www.kinetype.app/transcriptionist-salary) - what the published rates turn into once real working time is counted
+- [Legal transcription jobs from home](https://www.kinetype.app/legal-transcription-jobs-from-home) - the stricter accuracy standard and who hires without legal experience
+- [Medical transcription jobs from home](https://www.kinetype.app/medical-transcription-jobs-from-home) - the training that is actually required, and the roles that do not need it
+- [Subtitle jobs from home](https://www.kinetype.app/subtitle-jobs-from-home) - timing, reading speed and the platforms that pay per video minute
+- [Captioning jobs for beginners](https://www.kinetype.app/captioning-jobs-for-beginners) - what captioning pays, and why the style guide decides your first week
+- [How to become a virtual assistant in the Philippines](https://www.kinetype.app/how-to-become-a-virtual-assistant-philippines) - the hiring funnel, the skill test and the pay bands
+- [Transcription jobs in the Philippines](https://www.kinetype.app/transcription-jobs-philippines) - rates in pesos, the application gates and the scam red flags
+- [Transcription jobs in South Africa](https://www.kinetype.app/transcription-jobs-south-africa) - which platforms take South African contractors and how they pay
+- [Online typing jobs in South Africa](https://www.kinetype.app/online-typing-jobs-south-africa) - how to tell the legitimate work from the daily-payment scams
+- [Medical transcription jobs in the Philippines](https://www.kinetype.app/medical-transcription-jobs-philippines) - local hospital and clinic work against the foreign platforms
+- [Captioning jobs in the Philippines](https://www.kinetype.app/captioning-jobs-philippines) - the entry route, the tests and the realistic first-month earnings
+- [Tagalog transcription jobs](https://www.kinetype.app/tagalog-transcription-jobs) - why local-language work pays more and who hires for it
+- [Data entry jobs in the Philippines](https://www.kinetype.app/data-entry-jobs-philippines) - local against international pay, and the typing test in between
+- [Encoding jobs in the Philippines](https://www.kinetype.app/encoding-jobs-philippines) - what encoding work is, what it pays, and the office against home split
+- [Sideline jobs in the Philippines](https://www.kinetype.app/sideline-jobs-philippines) - part-time options that fit around study or a day job
+- [Online jobs for moms in the Philippines](https://www.kinetype.app/online-jobs-for-moms-philippines) - schedule-friendly work, from transcription to virtual assisting
+- [Transcription jobs for students in the Philippines](https://www.kinetype.app/transcription-jobs-for-students-philippines) - work that fits a class timetable
+- [Virtual assistant salary in the Philippines](https://www.kinetype.app/virtual-assistant-salary-philippines) - the salary bands, in pesos and dollars
 
 ## Facts for answer engines
 - Kinetype is free and playable without an account. Free play, coins and skins are saved in the browser.

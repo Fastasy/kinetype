@@ -105,50 +105,24 @@ const nextConfig: NextConfig = {
     ];
   },
   async redirects() {
-    const legacyRoutes = [
-      "/articles",
-      "/captioning-jobs-for-beginners",
-      "/captioning-jobs-philippines",
-      "/data-entry-jobs-philippines",
-      "/encoding-jobs-philippines",
-      "/free-transcription-test-practice",
-      "/how-to-become-a-transcriptionist",
-      "/how-to-become-a-virtual-assistant-philippines",
-      "/how-to-get-transcription-jobs",
-      "/how-to-pass-a-typing-test-for-a-job",
-      "/how-to-pass-gotranscript-test",
-      "/legal-transcription-jobs-from-home",
-      "/medical-transcription-jobs-from-home",
-      "/medical-transcription-jobs-philippines",
-      "/online-jobs-for-moms-philippines",
-      "/online-typing-jobs-south-africa",
-      "/sideline-jobs-philippines",
-      "/subtitle-jobs-from-home",
-      "/tagalog-transcription-jobs",
-      "/transcription-jobs",
-      "/transcription-jobs-for-students-philippines",
-      "/transcription-jobs-philippines",
-      "/transcription-jobs-south-africa",
-      "/transcriptionist-salary",
-      "/typing-test-wfh-jobs",
-      "/virtual-assistant-salary-philippines",
-      // Superseded by the Philippines-specific URL in 2026-08, and that URL is now
-      // retired too, so this collapses to the game rather than chaining.
-      "/become-a-virtual-assistant",
-    ];
-
+    /*
+     * The 2026-09-28 game conversion deleted 29 content routes and 301'd every
+     * one of them to the game. Those routes were restored on 2026-10-08: the job
+     * guides earn organic search traffic, and that traffic is what feeds the
+     * GoTranscript referral (ref 8311926). So the blanket redirect is gone and
+     * only the genuinely superseded alias is left.
+     *
+     * Do not re-add a catch-all here. A redirect that fires on a route which
+     * still exists means the page is built and then never served, which is
+     * invisible in a build log and looks exactly like "the article is live".
+     */
     return [
-      // The two legacy routes that were about typing keep a relevant destination.
-      ...["/rev-typing-test", "/transcribeme-typing-test"].map((source) => ({
-        source,
-        destination: "/typing-speed-test",
+      // VA guide consolidated onto the Philippines-specific URL (2026-08-18).
+      {
+        source: "/become-a-virtual-assistant",
+        destination: "/how-to-become-a-virtual-assistant-philippines",
         permanent: true,
-      })),
-      ...legacyRoutes.map((source) => ({
-        source,
-        destination: "/",
-        permanent: true,
-      })),
+      },
     ];
   },
 };
